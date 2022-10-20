@@ -28,7 +28,7 @@ export RUST_LONG_VERSION
 DEB_DESTDIR := $(CURDIR)/debian/tmp
 
 # Use system LLVM (comment out to use vendored LLVM)
-LLVM_VERSION = 14
+LLVM_VERSION = 13
 OLD_LLVM_VERSION = 13
 # Make it easier to test against a custom LLVM
 ifneq (,$(LLVM_DESTDIR))
@@ -216,7 +216,7 @@ check-no-old-llvm:
 	! grep --color=always -i '\(clang\|ll\(..\|d\)\)-\?$(subst .,\.,$(OLD_LLVM_VERSION))' --exclude=changelog --exclude=copyright --exclude='*.patch' --exclude-dir='.debhelper' -R debian
 .PHONY: check-no-old-llvm
 
-debian/dh_auto_configure.stamp: debian/config.toml check-no-old-llvm
+debian/dh_auto_configure.stamp: debian/config.toml
 	# fail the build if we accidentally vendored openssl, indicates we pulled in unnecessary dependencies
 	test ! -e vendor/openssl
 	# fail the build if our version contains ~exp and we are not releasing to experimental
