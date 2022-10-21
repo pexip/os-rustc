@@ -1,3 +1,9 @@
+rustc (1.61.0+dfsg1-2pexip2) pexip; urgency=medium
+
+  * Rebuild rustc in CI using bootstrapped compiler.
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Fri, 21 Oct 2022 13:02:30 +0100
+
 rustc (1.61.0+dfsg1-2pexip1) pexip; urgency=medium
 
   * Prepare Pexip packaging
