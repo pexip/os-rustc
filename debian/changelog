@@ -1,3 +1,9 @@
+rustc (1.63.0+dfsg1-1pexip1) pexip; urgency=medium
+
+  * New upstream release
+
+ -- Huw Jones <huw@pexip.com>  Thu, 12 Jan 2023 11:12:41 +0000
+
 rustc (1.63.0+dfsg1-1) unstable; urgency=medium
 
   * Upload to unstable (Closes: #1018859)
