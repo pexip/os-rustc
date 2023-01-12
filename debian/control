@@ -46,7 +46,7 @@ Standards-Version: 4.2.1
 Homepage: http://www.rust-lang.org/
 Vcs-Git: https://salsa.debian.org/rust-team/rust.git
 Vcs-Browser: https://salsa.debian.org/rust-team/rust
-XS-Pexip-Upstream: http://ftp.debian.org/debian/ sid
+XS-Pexip-Upstream: http://ftp.debian.org/debian/ bookworm
 
 Package: rustc
 Architecture: any
