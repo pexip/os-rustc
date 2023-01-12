@@ -1,6 +1,7 @@
 rustc (1.63.0+dfsg1-1pexip1) pexip; urgency=medium
 
   * New upstream release
+  * Use cargo 0.63
 
  -- Huw Jones <huw@pexip.com>  Thu, 12 Jan 2023 11:12:41 +0000
 
