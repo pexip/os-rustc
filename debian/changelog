@@ -1,3 +1,11 @@
+rustc (1.63.0+dfsg1-2) unstable; urgency=medium
+
+  [ Fabian Grünbichler ]
+  * fix compiler_builtins linkage on arm(el)
+  * add compiler_builtins sync fallbacks for arm(el)
+
+ -- Fabian Gruenbichler <debian@fabian.gruenbichler.email>  Sat, 14 Jan 2023 09:38:46 +0100
+
 rustc (1.63.0+dfsg1-1) unstable; urgency=medium
 
   * Upload to unstable (Closes: #1018859)
