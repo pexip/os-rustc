@@ -1,3 +1,9 @@
+rustc (1.63.0+dfsg1-1pexip2) pexip; urgency=medium
+
+  * Rebuild against cargo 0.66
+
+ -- Huw Jones <huw@pexip.com>  Tue, 21 Feb 2023 12:22:44 +0000
+
 rustc (1.63.0+dfsg1-1pexip1) pexip; urgency=medium
 
   * New upstream release
