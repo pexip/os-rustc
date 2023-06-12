@@ -9,6 +9,9 @@ u-ignore-endian-big-diff.patch
 u-arm-compiler-builtins-weak-linkage-arm.patch
 u-arm-compiler-builtins-add-sync-builtin-fallbacks.patch
 
+# can be dropped once upstream updates rustix
+u-fix-rustix-for-sparc64.patch
+
 # not forwarded, or forwarded but unlikely to be merged
 u-ignore-ppc-hangs.patch
 u-ignore-bpf-test.patch
@@ -18,6 +21,7 @@ u-make-tests-work-without-rpath.patch
 #u-allow-system-compiler-rt.patch
 
 # Debian-specific patches, not suitable for upstream
+d-fix-rustix-outline.patch
 
 ## Patches needed by debian/prune-unused-deps, for building bootstrap
 d-0000-ignore-removed-submodules.patch
@@ -41,6 +45,9 @@ d-bootstrap-old-cargo-compat.patch
 d-bootstrap-custom-debuginfo-path.patch
 d-bootstrap-permit-symlink-in-docs.patch
 d-test-ignore-avx-44056.patch
+d-bootstrap-cargo-check-cfg.patch
+d-armel-fix-lldb.patch
+
 # Work around for some porterboxes, keep this commented
 #d-test-host-duplicates.patch
 # Experimental patch not yet working
@@ -56,5 +63,8 @@ d-rustc-i686-baseline.patch
 # Experimental patch not yet working
 #d-rustc-prefer-dynamic.patch
 d-rustdoc-disable-embedded-fonts.patch
+
+# cherry-picked from ubuntu
 ubuntu-disable-ppc64el-asm-tests.patch
 ubuntu-ignore-arm-doctest.patch
+ubuntu-Revert-Use-constant-eval-to-do-strict-validity-check.patch
