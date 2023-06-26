@@ -1,0 +1,54 @@
+From 3d8b3e6ca179dc2ac79c038ad607b2321be70e8d Mon Sep 17 00:00:00 2001
+From: Aaron Hill <aa1ronham@gmail.com>
+Date: Wed, 21 Sep 2022 10:24:16 -0500
+Subject: [PATCH] Set 'exec-env:RUST_BACKTRACE=0' in const-eval-select tests
+
+This allows the tests to pass even if the user has RUST_BACKTRACE
+set when running 'x.py'
+---
+ src/test/ui/intrinsics/const-eval-select-backtrace-std.rs       | 1 +
+ .../ui/intrinsics/const-eval-select-backtrace-std.run.stderr    | 2 +-
+ src/test/ui/intrinsics/const-eval-select-backtrace.rs           | 1 +
+ src/test/ui/intrinsics/const-eval-select-backtrace.run.stderr   | 2 +-
+ 4 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/src/test/ui/intrinsics/const-eval-select-backtrace-std.rs b/src/test/ui/intrinsics/const-eval-select-backtrace-std.rs
+index 29aefe07162b3..1164a3a5b0180 100644
+--- a/src/test/ui/intrinsics/const-eval-select-backtrace-std.rs
++++ b/src/test/ui/intrinsics/const-eval-select-backtrace-std.rs
+@@ -1,6 +1,7 @@
+ // See issue #100696.
+ // run-fail
+ // check-run-results
++// exec-env:RUST_BACKTRACE=0
+ fn main() {
+     &""[1..];
+ }
+diff --git a/src/test/ui/intrinsics/const-eval-select-backtrace-std.run.stderr b/src/test/ui/intrinsics/const-eval-select-backtrace-std.run.stderr
+index e53e6034620ca..463cd52c5aa7b 100644
+--- a/src/test/ui/intrinsics/const-eval-select-backtrace-std.run.stderr
++++ b/src/test/ui/intrinsics/const-eval-select-backtrace-std.run.stderr
+@@ -1,2 +1,2 @@
+-thread 'main' panicked at 'byte index 1 is out of bounds of ``', $DIR/const-eval-select-backtrace-std.rs:5:6
++thread 'main' panicked at 'byte index 1 is out of bounds of ``', $DIR/const-eval-select-backtrace-std.rs:6:6
+ note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+diff --git a/src/test/ui/intrinsics/const-eval-select-backtrace.rs b/src/test/ui/intrinsics/const-eval-select-backtrace.rs
+index 99f0725200c1d..ef1c7c4195b91 100644
+--- a/src/test/ui/intrinsics/const-eval-select-backtrace.rs
++++ b/src/test/ui/intrinsics/const-eval-select-backtrace.rs
+@@ -2,6 +2,7 @@
+ // See issue #100696.
+ // run-fail
+ // check-run-results
++// exec-env:RUST_BACKTRACE=0
+ 
+ #[track_caller]
+ fn uhoh() {
+diff --git a/src/test/ui/intrinsics/const-eval-select-backtrace.run.stderr b/src/test/ui/intrinsics/const-eval-select-backtrace.run.stderr
+index 2fd730ac7a68a..54e28db5e533d 100644
+--- a/src/test/ui/intrinsics/const-eval-select-backtrace.run.stderr
++++ b/src/test/ui/intrinsics/const-eval-select-backtrace.run.stderr
+@@ -1,2 +1,2 @@
+-thread 'main' panicked at 'Aaah!', $DIR/const-eval-select-backtrace.rs:16:9
++thread 'main' panicked at 'Aaah!', $DIR/const-eval-select-backtrace.rs:17:9
+ note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
