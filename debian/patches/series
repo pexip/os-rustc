@@ -5,10 +5,7 @@ u-ignore-reproducible-failure.patch
 u-reproducible-build.patch
 u-ignore-endian-big-diff.patch
 u-make-compiletest-work-without-rpath.patch
-u-fix-backtrace-tests.patch # fixed in 1.66
-
-# can be dropped once upstream updates compiler_builtins
-u-arm-compiler-builtins-weak-linkage-arm.patch
+u-fix-get-toml-when-test.patch
 
 # can be dropped once upstream updates rustix
 u-fix-rustix-for-sparc64.patch

@@ -1,3 +1,19 @@
+rustc (1.66.0+dfsg1-1) unstable; urgency=medium
+
+  * Upload to unstable
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Tue, 27 Jun 2023 17:12:20 +0200
+
+rustc (1.66.0+dfsg1-1~exp1) experimental; urgency=medium
+
+  [ Blair Noctis ]
+  * New upstream version 1.66.0+dfsg1
+  * Drop outdated patches
+  * Work around incorrect config handling (picking up initial rustc) when
+    running tests
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Sun, 23 Apr 2023 20:45:41 +0200
+
 rustc (1.65.0+dfsg1-2) unstable; urgency=medium
 
   * Team upload

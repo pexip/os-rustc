@@ -8,11 +8,9 @@ Subject: d-bootstrap-custom-debuginfo-path
  src/test/codegen/remap_path_prefix/issue-73167-remap-std.rs | 2 +-
  2 files changed, 3 insertions(+), 4 deletions(-)
 
-diff --git a/src/bootstrap/lib.rs b/src/bootstrap/lib.rs
-index ddc92ba..259b56e 100644
 --- a/src/bootstrap/lib.rs
 +++ b/src/bootstrap/lib.rs
-@@ -1026,10 +1026,9 @@ impl Build {
+@@ -1040,10 +1040,9 @@
  
          match which {
              GitRepo::Rustc => {
