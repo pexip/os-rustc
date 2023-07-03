@@ -1,16 +1,51 @@
+rustc (1.64.0+dfsg1-1) unstable; urgency=medium
+
+  * Upload to unstable
+  * Add myself to Uploaders
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Mon, 12 Jun 2023 18:36:56 +0200
+
+rustc (1.64.0+dfsg1-1~exp4) experimental; urgency=medium
+
+  [ John Paul Adrian Glaubitz ]
+  * fix sparc64 rustix build (Closes: #1030053)
+
+ -- Fabian Gruenbichler <debian@fabian.gruenbichler.email>  Tue, 31 Jan 2023 19:55:48 +0100
+
+rustc (1.64.0+dfsg1-1~exp3) experimental; urgency=medium
+
+  [ Simon Chopin ]
+  * cherry-pick riscv64 fix from ubuntu
+
+ -- Fabian Gruenbichler <debian@fabian.gruenbichler.email>  Fri, 20 Jan 2023 20:48:11 +0100
+
+rustc (1.64.0+dfsg1-1~exp2) experimental; urgency=medium
+
+  [ Fabian Grünbichler ]
+  * d/prune-unused-deps: unify cargo update calls
+  * fix rustix on arches requiring outline building
+  * fix libstd-rust-dev-windows lintian override
+  * fix compiler_builtins linkage on arm(el)
+  * add compiler_builtins sync fallbacks for arm(el)
+  * fix panicking lldb check on armel
+
+ -- Fabian Gruenbichler <debian@fabian.gruenbichler.email>  Wed, 11 Jan 2023 17:22:16 +0100
+
+rustc (1.64.0+dfsg1-1~exp1) experimental; urgency=medium
+
+  * New upstream release
+  * d/rules: auto_clean: preserve .cargo/config.toml
+  * d/rules: also clear bootstrap/rust-analyzer Cargo.lock
+  * d/rules: extend privacy-breach removal
+  * ship rust-analyzer-proc-macro-srv binary
+
+ -- Fabian Gruenbichler <debian@fabian.gruenbichler.email>  Thu, 08 Dec 2022 09:17:59 +0100
+
 rustc (1.63.0+dfsg1-2pexip1) pexip; urgency=medium
 
   * New upstream release
 
  -- Huw Jones <huw@pexip.com>  Thu, 16 Mar 2023 13:24:17 +0000
-
-rustc (1.63.0+dfsg1-2) unstable; urgency=medium
-
-  [ Fabian Grünbichler ]
-  * fix compiler_builtins linkage on arm(el)
-  * add compiler_builtins sync fallbacks for arm(el)
-
- -- Fabian Gruenbichler <debian@fabian.gruenbichler.email>  Sat, 14 Jan 2023 09:38:46 +0100
 
 rustc (1.63.0+dfsg1-1pexip2) pexip; urgency=medium
 

@@ -228,7 +228,7 @@ debian/dh_auto_configure.stamp: debian/config.toml
 	if test $$(grep "127.0.0.1\s*localhost" /etc/hosts | wc -l) -gt 1; then \
 	  debian/ensure-patch -N debian/patches/d-test-host-duplicates.patch; fi
 	# don't care about lock changes
-	rm -f Cargo.lock
+	rm -f Cargo.lock src/bootstrap/Cargo.lock src/tools/rust-analyzer/Cargo.lock
 	# We patched some crates so have to rm the checksums
 	find vendor -name .cargo-checksum.json -execdir "$(CURDIR)/debian/prune-checksums" "{}" +
 	# Link against system liblzma, see https://github.com/alexcrichton/xz2-rs/issues/16
@@ -245,7 +245,7 @@ ifeq (true,$(BUILD_DOCS))
 endif
 
 override_dh_auto_clean:
-	$(RM) -rf build tmp .cargo debian/cargo_home config.stamp config.mk Makefile
+	$(RM) -rf build tmp debian/cargo_home config.stamp config.mk Makefile
 	$(RM) -rf $(TEST_LOG) debian/config.toml debian/*.stamp
 	$(RM) -rf $(SRC_CLEAN) config.toml
 
@@ -398,6 +398,7 @@ ifeq (true,$(BUILD_DOCS))
 	  topdir=$$(echo "$$file" | sed 's,^$(DEB_DESTDIR)/usr/share/doc/rust/html/,,; s,/[^/]*$$,/,; s,^[^/]*$$,,; s,[^/]\+/,../,g'); \
 	  sed -i \
 	    -e "s,https://\(doc\|www\).rust-lang.org/\(favicon.ico\|logos/rust-logo-32x32-blk.png\),$${topdir}rust-logo-32x32-blk.png," \
+	    -e 's,<img src="https://github.com/rust-lang/rust-clippy/workflows/Clippy%20Test/badge.svg[^"]*" alt="\([^"]*\)" />,<span class="deb-privacy-replace--github.com-badge">\1</span>,g' \
 	    -e 's,<img src="https://img.shields.io/[^"]*" alt="\([^"]*\)" />,<span class="deb-privacy-replace--shields-io">\1</span>,g' "$$file"; \
 	done
 	find $(DEB_DESTDIR) \( -iname '*.html' -empty -o -name .lock -o -name '*.inc' \) -delete;
