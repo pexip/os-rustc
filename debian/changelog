@@ -1,3 +1,42 @@
+rustc (1.65.0+dfsg1-2) unstable; urgency=medium
+
+  * Team upload
+  * Source-only upload
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 26 Jun 2023 17:16:27 -0400
+
+rustc (1.65.0+dfsg1-1) unstable; urgency=medium
+
+  * Upload to unstable
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Tue, 20 Jun 2023 20:16:50 +0200
+
+rustc (1.65.0+dfsg1-1~exp3) experimental; urgency=medium
+
+  * d/rules: fix typo in mipsel workaround
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Sun, 12 Mar 2023 08:54:15 +0100
+
+rustc (1.65.0+dfsg1-1~exp2) experimental; urgency=medium
+
+  [ Fabian Grünbichler ]
+  * d/control: add myself to Uploaders
+  * cherry-pick fix for failing backtrace test
+  * bump mipsel test failure allowance to work around broken gdb 13.1
+  * drop duplicate lintian override
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Sat, 11 Mar 2023 18:50:19 +0100
+
+rustc (1.65.0+dfsg1-1~exp1) experimental; urgency=medium
+
+  [ Fabian Grünbichler ]
+  * New upstream version 1.65.0+dfsg1
+  * switch to LLVM-15
+  * cherry-pick fix for compiletest with rpath=false
+  * add overrides for rust-analyzer test data
+
+ -- Fabian Gruenbichler <debian@fabian.gruenbichler.email>  Wed, 15 Feb 2023 20:12:05 +0100
+
 rustc (1.64.0+dfsg1-1pexip1) pexip; urgency=medium
 
   * New upstream release
