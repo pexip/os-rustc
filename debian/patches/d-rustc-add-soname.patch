@@ -24,17 +24,15 @@ using a GNU linker).
  compiler/rustc_codegen_ssa/src/back/link.rs | 7 +++++++
  1 file changed, 7 insertions(+)
 
-diff --git a/compiler/rustc_codegen_ssa/src/back/link.rs b/compiler/rustc_codegen_ssa/src/back/link.rs
-index 04ec1e7..67296ca 100644
 --- a/compiler/rustc_codegen_ssa/src/back/link.rs
 +++ b/compiler/rustc_codegen_ssa/src/back/link.rs
-@@ -2240,6 +2240,13 @@ fn add_order_independent_options(
+@@ -2280,6 +2280,13 @@
      }
  
      add_rpath_args(cmd, sess, codegen_results, out_filename);
 +
 +    if (crate_type == config::CrateType::Dylib || crate_type == config::CrateType::Cdylib)
-+       && sess.target.linker_is_gnu {
++       && sess.target.linker_flavor.is_gnu() {
 +        let filename = String::from(out_filename.file_name().unwrap().to_str().unwrap());
 +        let soname = [String::from("-Wl,-soname=") + &filename];
 +        cmd.args(&soname);

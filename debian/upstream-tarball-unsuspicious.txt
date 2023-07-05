@@ -57,8 +57,10 @@ src/doc/unstable-book/src/*/*.md
 src/etc/third-party/README.txt
 src/librustdoc/html/highlight/fixtures/sample.html
 src/librustdoc/html/static/scrape-examples-help.md
+src/test/rustdoc/inline_cross/assoc_item_trait_bounds.out*.html
 src/tools/clippy/src/docs/trailing_empty_array.txt
 src/tools/rust-analyzer/crates/rust-analyzer/src/diagnostics/to_proto.rs
+src/tools/rust-analyzer/crates/ide-completion/src/completions/env_vars.rs
 src/tools/rust-analyzer/docs/user/manual.adoc
 src/tools/rustfmt/*.md
 vendor/*/*/*/LICENSE
@@ -71,8 +73,8 @@ vendor/*/LICENSE-MIT
 vendor/*/README.md
 vendor/ahash/FAQ.md
 vendor/ammonia/src/lib.rs
-vendor/clap/examples/demo.md
-vendor/clap/examples/tutorial_*/*.md
+vendor/clap-*/examples/demo.md
+vendor/clap-*/examples/tutorial_*/*.md
 vendor/generic-array/DESIGN.md
 vendor/handlebars/src/lib.rs
 vendor/handlebars/src/render.rs
@@ -85,7 +87,7 @@ vendor/pulldown-cmark/tests/suite/footnotes.rs
 vendor/rustc-demangle/src/legacy.rs
 vendor/stable_deref_trait/src/lib.rs
 vendor/tinyvec/LICENSE-*.md
-vendor/tracing-subscriber/src/fmt/format/json.rs
+vendor/tracing-subscriber-*/src/fmt/format/json.rs
 vendor/unicase/src/lib.rs
 vendor/unicode-normalization/src/stream_safe.rs
 vendor/winapi/src/lib.rs
@@ -159,7 +161,6 @@ src/doc/embedded-book/src/assets/f3.jpg
 src/doc/embedded-book/src/assets/verify.jpeg
 src/doc/nomicon/src/img/safeandunsafe.svg
 src/doc/rustc-dev-guide/src/img/*.png
-src/doc/rustc-dev-guide/src/img/rustc_stages.svg
 src/doc/rustc-dev-guide/src/queries/example-0.png
 src/doc/rustc/src/images/*.png
 src/etc/installer/gfx/
@@ -206,7 +207,6 @@ src/test/mir-opt/*/*.mir
 src/test/run-make/*-sgx-lvi/enclave/*.c
 src/test/run-make/*-sgx-lvi/enclave/*/*/*.c
 src/test/rustdoc/*.html
-src/test/rustdoc/tuples.link2_i32.html
 src/test/ui/macros/not-utf8.bin
 src/tools/*/tests/*/*.stderr
 src/tools/clippy/tests/ui-toml/*/*.stderr
@@ -305,6 +305,7 @@ src/tools/clippy/clippy_lints/src/needless_pass_by_value.rs
 src/tools/clippy/clippy_lints/src/pass_by_ref_or_value.rs
 src/tools/clippy/src/docs/from_str_radix_10.txt
 src/tools/rust-analyzer/crates/ide-assists/src/handlers/number_representation.rs
+src/tools/rust-analyzer/crates/ide-db/src/syntax_helpers/format_string_exprs.rs
 src/tools/rustfmt/src/formatting.rs
 src/tools/rustfmt/src/parse/parser.rs
 src/tools/rustfmt/src/string.rs
@@ -313,7 +314,7 @@ vendor/ahash/src/lib.rs
 vendor/aho-corasick/src/nfa.rs
 vendor/askama_shared/src/generator.rs
 vendor/block-buffer/tests/mod.rs
-vendor/clap/src/derive.rs
+vendor/clap-*/src/derive.rs
 vendor/compiler_builtins/libm/src/math/atan.rs
 vendor/datafrog/src/lib.rs
 vendor/digest/src/core_api/rt_variable.rs

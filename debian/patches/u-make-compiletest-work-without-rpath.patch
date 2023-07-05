@@ -48,20 +48,20 @@ index 64df76e2772..98a35810cfd 100644
  use lazycell::LazyCell;
  use test::ColorConfig;
  
-@@ -389,7 +390,7 @@ impl Config {
-     }
+@@ -386,7 +387,7 @@
  
      fn target_cfg(&self) -> &TargetCfg {
--        self.target_cfg.borrow_with(|| TargetCfg::new(&self.rustc_path, &self.target))
-+        self.target_cfg.borrow_with(|| TargetCfg::new(self))
+         self.target_cfg
+-            .borrow_with(|| TargetCfg::new(&self.rustc_path, &self.target, &self.target_rustcflags))
++            .borrow_with(|| TargetCfg::new(self))
      }
  
      pub fn matches_arch(&self, arch: &str) -> bool {
-@@ -455,20 +456,22 @@ pub enum Endian {
+@@ -457,21 +458,22 @@
  }
  
  impl TargetCfg {
--    fn new(rustc_path: &Path, target: &str) -> TargetCfg {
+-    fn new(rustc_path: &Path, target: &str, target_rustcflags: &Vec<String>) -> TargetCfg {
 -        let output = match Command::new(rustc_path)
 +    fn new(config: &Config) -> TargetCfg {
 +        let mut command = Command::new(&config.rustc_path);
@@ -70,6 +70,7 @@ index 64df76e2772..98a35810cfd 100644
              .arg("--print=cfg")
              .arg("--target")
 -            .arg(target)
+-            .args(target_rustcflags)
 +            .arg(&config.target)
              .output()
          {
@@ -126,7 +127,7 @@ index 8f289876f73..eb467170249 100644
  /// The platform-specific library name
  pub fn get_lib_name(lib: &str, dylib: bool) -> String {
      // In some casess (e.g. MUSL), we build a static
-@@ -1826,16 +1814,7 @@ impl<'test> TestCx<'test> {
+@@ -1811,16 +1799,7 @@
  
          // Need to be sure to put both the lib_path and the aux path in the dylib
          // search path for the child.
@@ -156,7 +157,7 @@ index 9d047b63c85..4b73be0fbb9 100644
  
  use tracing::*;
  
-@@ -105,3 +106,25 @@ impl PathBufExt for PathBuf {
+@@ -111,3 +112,25 @@
          }
      }
  }
@@ -182,6 +183,3 @@ index 9d047b63c85..4b73be0fbb9 100644
 +    let new_paths = paths.map(Into::into).chain(old_paths.into_iter().flatten());
 +    cmd.env(dylib_env_var(), env::join_paths(new_paths).unwrap());
 +}
--- 
-2.30.2
-

@@ -106,7 +106,7 @@ diff --git a/src/doc/reference/src/conditional-compilation.md b/src/doc/referenc
 index 6966cec..0ca3589 100644
 --- a/src/doc/reference/src/conditional-compilation.md
 +++ b/src/doc/reference/src/conditional-compilation.md
-@@ -351,6 +351,6 @@ println!("I'm running on a {} machine!", machine_kind);
+@@ -370,6 +370,6 @@
  [`target_feature` attribute]: attributes/codegen.md#the-target_feature-attribute
  [attribute]: attributes.md
  [attributes]: attributes.md

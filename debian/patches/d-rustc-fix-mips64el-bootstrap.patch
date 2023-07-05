@@ -38,21 +38,17 @@ index e0d5f6f..57ad8c4 100644
              max_atomic_width: Some(64),
              mcount: "_mcount".into(),
  
-diff --git a/src/bootstrap/bootstrap.py b/src/bootstrap/bootstrap.py
-index 92d29d6..23c0764 100644
 --- a/src/bootstrap/bootstrap.py
 +++ b/src/bootstrap/bootstrap.py
-@@ -734,6 +734,8 @@ class RustBuild(object):
+@@ -745,6 +745,8 @@
  
          # preserve existing RUSTFLAGS
          env.setdefault("RUSTFLAGS", "")
 +        if self.build_triple().startswith('mips'):
 +            env["RUSTFLAGS"] += " -Ctarget-feature=+xgot"
-         build_section = "target.{}".format(self.build)
          target_features = []
          if self.get_toml("crt-static", build_section) == "true":
-diff --git a/src/test/assembly/asm/mips-types.rs b/src/test/assembly/asm/mips-types.rs
-index 04bf49a..a7c6056 100644
+             target_features += ["+crt-static"]
 --- a/src/test/assembly/asm/mips-types.rs
 +++ b/src/test/assembly/asm/mips-types.rs
 @@ -1,3 +1,4 @@

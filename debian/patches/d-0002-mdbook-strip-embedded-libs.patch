@@ -14,7 +14,7 @@ Comment: Use https://github.com/infinity0/mdBook/tree/debian to help you rebase 
  7 files changed, 35 insertions(+), 203 deletions(-)
 
 diff --git a/src/tools/linkchecker/main.rs b/src/tools/linkchecker/main.rs
-index a7c78d8..22927f8 100644
+index 7842611..4ccccf1 100644
 --- a/src/tools/linkchecker/main.rs
 +++ b/src/tools/linkchecker/main.rs
 @@ -183,7 +183,17 @@ impl Checker {
@@ -53,7 +53,7 @@ index a7c78d8..22927f8 100644
              FileEntry::Dir => unreachable!("never with `check` path"),
              FileEntry::OtherFile => return,
              FileEntry::Redirect { .. } => return,
-@@ -261,6 +279,12 @@ impl Checker {
+@@ -262,6 +280,12 @@ impl Checker {
              let (target_pretty_path, target_entry) = self.load_file(&path, report);
              let (target_source, target_ids) = match target_entry {
                  FileEntry::Missing => {
