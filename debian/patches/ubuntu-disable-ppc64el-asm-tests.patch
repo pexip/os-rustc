@@ -16,7 +16,7 @@
      ///     unsafe { asm!("", options(noreturn)); }
 --- a/compiler/rustc_lint/src/builtin.rs
 +++ b/compiler/rustc_lint/src/builtin.rs
-@@ -3130,7 +3130,10 @@
+@@ -3238,7 +3238,10 @@
      /// ### Example
      ///
      /// ```rust,compile_fail

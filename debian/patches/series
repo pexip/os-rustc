@@ -4,8 +4,8 @@
 u-ignore-reproducible-failure.patch
 u-reproducible-build.patch
 u-ignore-endian-big-diff.patch
-u-make-compiletest-work-without-rpath.patch
 u-fix-get-toml-when-test.patch
+u-fix-sysroot-detection-logic.patch
 
 # can be dropped once upstream updates rustix
 u-fix-rustix-for-sparc64.patch

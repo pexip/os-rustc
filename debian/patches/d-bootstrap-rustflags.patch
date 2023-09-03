@@ -9,7 +9,7 @@ Subject: d-bootstrap-rustflags
 
 --- a/src/bootstrap/builder.rs
 +++ b/src/bootstrap/builder.rs
-@@ -1507,6 +1507,18 @@
+@@ -1268,6 +1268,18 @@
              }
          }
  

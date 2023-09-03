@@ -4,7 +4,7 @@ diff --git a/src/bootstrap/test.rs b/src/bootstrap/test.rs
 index c0fa8c9acb..2b5559efc7 100644
 --- a/src/bootstrap/test.rs
 +++ b/src/bootstrap/test.rs
-@@ -1462,7 +1462,11 @@
+@@ -1524,7 +1524,11 @@
              .ok();
          if let Some(ref vers) = lldb_version {
              cmd.arg("--lldb-version").arg(vers);

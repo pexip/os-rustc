@@ -1,0 +1,44 @@
+Description: Fix sysroot detection which would result in /usr/lib/lib/rustlib
+ This patch is a mixture of two upstream fix attempts. The first from
+ https://github.com/rust-lang/rust/pull/108376 didn't actually solve the
+ problem in Debian's case. After reporting that in $Bug, a second attempt is
+ made at https://github.com/rust-lang/rust/pull/110281, which worked.
+Bug: https://github.com/rust-lang/rust/issues/109994
+--- a/compiler/rustc_session/src/filesearch.rs
++++ b/compiler/rustc_session/src/filesearch.rs
+@@ -180,18 +180,29 @@
+         ))?;
+ 
+         // if `dir` points target's dir, move up to the sysroot
+-        if dir.ends_with(crate::config::host_triple()) {
++        let mut sysroot_dir = if dir.ends_with(crate::config::host_triple()) {
+             dir.parent() // chop off `$target`
+                 .and_then(|p| p.parent()) // chop off `rustlib`
+                 .and_then(|p| p.parent()) // chop off `lib`
+                 .map(|s| s.to_owned())
+-                .ok_or(format!(
+-                    "Could not move 3 levels upper using `parent()` on {}",
+-                    dir.display()
+-                ))
++                .ok_or_else(|| {
++                    format!("Could not move 3 levels upper using `parent()` on {}", dir.display())
++                })?
+         } else {
+-            Ok(dir.to_owned())
++            dir.to_owned()
++        };
++
++        // On multiarch linux systems, there will be multiarch directory named
++        // with the architecture(e.g `x86_64-linux-gnu`) under the `lib` directory.
++        // Which cause us to mistakenly end up in the lib directory instead of the sysroot directory.
++        if sysroot_dir.ends_with("lib") {
++            sysroot_dir =
++                sysroot_dir.parent().map(|real_sysroot| real_sysroot.to_owned()).ok_or_else(
++                    || format!("Could not move to parent path of {}", sysroot_dir.display()),
++                )?
+         }
++
++        Ok(sysroot_dir)
+     }
+ 
+     // Use env::args().next() to get the path of the executable without

@@ -228,7 +228,7 @@ diff --git a/src/tools/linkchecker/main.rs b/src/tools/linkchecker/main.rs
 index a22dc5f..c8d521a 100644
 --- a/src/tools/linkchecker/main.rs
 +++ b/src/tools/linkchecker/main.rs
-@@ -285,6 +285,12 @@ impl Checker {
+@@ -262,6 +262,12 @@
                              return;
                          }
                      }

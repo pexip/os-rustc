@@ -1,3 +1,23 @@
+rustc (1.67.1+dfsg1-1) unstable; urgency=medium
+
+  * Upload to unstable
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Sun, 03 Sep 2023 19:58:53 +0200
+
+rustc (1.67.1+dfsg1-1~exp1) experimental; urgency=medium
+
+  [ Fabian Grünbichler ]
+  * update/rebase/drop patches (based on work by Blair Noctis)
+  * d/copyright: add missing statements
+  * add missing lintian overrides for test cases
+
+  [ Blair Noctis ]
+  * New upstream release
+  * Cherry-pick sysroot detection fix
+  * Update d/copyright for some vendored
+
+ -- Fabian Grünbichler <f.gruenbichler@proxmox.com>  Fri, 07 Jul 2023 10:01:33 +0200
+
 rustc (1.66.0+dfsg1-1) unstable; urgency=medium
 
   * Upload to unstable

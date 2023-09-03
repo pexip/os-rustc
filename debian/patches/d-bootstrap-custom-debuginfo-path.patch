@@ -10,7 +10,7 @@ Subject: d-bootstrap-custom-debuginfo-path
 
 --- a/src/bootstrap/lib.rs
 +++ b/src/bootstrap/lib.rs
-@@ -1040,10 +1040,9 @@
+@@ -1053,10 +1053,9 @@
  
          match which {
              GitRepo::Rustc => {

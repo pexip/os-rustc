@@ -40,7 +40,7 @@ index e0d5f6f..57ad8c4 100644
  
 --- a/src/bootstrap/bootstrap.py
 +++ b/src/bootstrap/bootstrap.py
-@@ -745,6 +745,8 @@
+@@ -746,6 +746,8 @@
  
          # preserve existing RUSTFLAGS
          env.setdefault("RUSTFLAGS", "")
