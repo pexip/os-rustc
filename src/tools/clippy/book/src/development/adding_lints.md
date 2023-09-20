@@ -18,6 +18,7 @@ because that's clearly a non-descriptive name.
     - [Cargo lints](#cargo-lints)
   - [Rustfix tests](#rustfix-tests)
   - [Testing manually](#testing-manually)
+  - [Running directly](#running-directly)
   - [Lint declaration](#lint-declaration)
   - [Lint registration](#lint-registration)
   - [Lint passes](#lint-passes)
@@ -146,7 +147,8 @@ For cargo lints, the process of testing differs in that we are interested in the
 manifest.
 
 If our new lint is named e.g. `foo_categories`, after running `cargo dev
-new_lint` we will find by default two new crates, each with its manifest file:
+new_lint --name=foo_categories --type=cargo --category=cargo` we will find by
+default two new crates, each with its manifest file:
 
 * `tests/ui-cargo/foo_categories/fail/Cargo.toml`: this file should cause the
   new lint to raise an error.
@@ -184,6 +186,15 @@ cargo dev lint input.rs
 
 from the working copy root. With tests in place, let's have a look at
 implementing our lint now.
+
+## Running directly
+
+While it's easier to just use `cargo dev lint`, it might be desirable to get
+`target/release/cargo-clippy` and `target/release/clippy-driver` to work as well in some cases.
+By default, they don't work because clippy dynamically links rustc. To help them find rustc,
+add the path printed by`rustc --print target-libdir` (ran inside this workspace so that the rustc version matches)
+to your library search path.
+On linux, this can be done by setting the `LD_LIBRARY_PATH` environment variable to that path.
 
 ## Lint declaration
 
@@ -264,7 +275,7 @@ When declaring a new lint by hand and `cargo dev update_lints` is used, the lint
 pass may have to be registered manually in the `register_plugins` function in
 `clippy_lints/src/lib.rs`:
 
-```rust
+```rust,ignore
 store.register_early_pass(|| Box::new(foo_functions::FooFunctions));
 ```
 
@@ -290,7 +301,7 @@ either [`EarlyLintPass`][early_lint_pass] or [`LateLintPass`][late_lint_pass].
 
 In short, the `LateLintPass` has access to type information while the
 `EarlyLintPass` doesn't. If you don't need access to type information, use the
-`EarlyLintPass`. The `EarlyLintPass` is also faster. However linting speed
+`EarlyLintPass`. The `EarlyLintPass` is also faster. However, linting speed
 hasn't really been a concern with Clippy so far.
 
 Since we don't need type information for checking the function name, we used
@@ -307,7 +318,7 @@ implementation of the lint logic.
 
 Let's start by implementing the `EarlyLintPass` for our `FooFunctions`:
 
-```rust
+```rust,ignore
 impl EarlyLintPass for FooFunctions {
     fn check_fn(&mut self, cx: &EarlyContext<'_>, fn_kind: FnKind<'_>, span: Span, _: NodeId) {
         // TODO: Emit lint here
@@ -326,10 +337,10 @@ variety of lint emission functions. They can all be found in
 [`clippy_utils/src/diagnostics.rs`][diagnostics].
 
 `span_lint_and_help` seems most appropriate in this case. It allows us to
-provide an extra help message and we can't really suggest a better name
+provide an extra help message, and we can't really suggest a better name
 automatically. This is how it looks:
 
-```rust
+```rust,ignore
 impl EarlyLintPass for FooFunctions {
     fn check_fn(&mut self, cx: &EarlyContext<'_>, fn_kind: FnKind<'_>, span: Span, _: NodeId) {
         span_lint_and_help(
@@ -443,32 +454,32 @@ value is passed to the constructor in `clippy_lints/lib.rs`.
 
 ```rust
 pub struct ManualStrip {
-    msrv: Option<RustcVersion>,
+    msrv: Msrv,
 }
 
 impl ManualStrip {
     #[must_use]
-    pub fn new(msrv: Option<RustcVersion>) -> Self {
+    pub fn new(msrv: Msrv) -> Self {
         Self { msrv }
     }
 }
 ```
 
 The project's MSRV can then be matched against the feature MSRV in the LintPass
-using the `meets_msrv` utility function.
+using the `Msrv::meets` method.
 
 ``` rust
-if !meets_msrv(self.msrv, msrvs::STR_STRIP_PREFIX) {
+if !self.msrv.meets(msrvs::STR_STRIP_PREFIX) {
     return;
 }
 ```
 
-The project's MSRV can also be specified as an inner attribute, which overrides
+The project's MSRV can also be specified as an attribute, which overrides
 the value from `clippy.toml`. This can be accounted for using the
 `extract_msrv_attr!(LintContext)` macro and passing
 `LateContext`/`EarlyContext`.
 
-```rust
+```rust,ignore
 impl<'tcx> LateLintPass<'tcx> for ManualStrip {
     fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx Expr<'_>) {
         ...
@@ -482,20 +493,16 @@ the lint's test file, `tests/ui/manual_strip.rs` in this example. It should
 have a case for the version below the MSRV and one with the same contents but
 for the MSRV version itself.
 
-```rust
-#![feature(custom_inner_attributes)]
-
+```rust,ignore
 ...
 
+#[clippy::msrv = "1.44"]
 fn msrv_1_44() {
-    #![clippy::msrv = "1.44"]
-
     /* something that would trigger the lint */
 }
 
+#[clippy::msrv = "1.45"]
 fn msrv_1_45() {
-    #![clippy::msrv = "1.45"]
-
     /* something that would trigger the lint */
 }
 ```
@@ -517,7 +524,7 @@ define_Conf! {
 
 If you have trouble implementing your lint, there is also the internal `author`
 lint to generate Clippy code that detects the offending pattern. It does not
-work for all of the Rust syntax, but can give a good starting point.
+work for all the Rust syntax, but can give a good starting point.
 
 The quickest way to use it, is the [Rust playground:
 play.rust-lang.org][author_example]. Put the code you want to lint into the
@@ -610,7 +617,7 @@ output in the `stdout` part.
 
 ## PR Checklist
 
-Before submitting your PR make sure you followed all of the basic requirements:
+Before submitting your PR make sure you followed all the basic requirements:
 
 <!-- Sync this with `.github/PULL_REQUEST_TEMPLATE` -->
 
@@ -630,7 +637,7 @@ for some users. Adding a configuration is done in the following steps:
 
 1. Adding a new configuration entry to [`clippy_lints::utils::conf`] like this:
 
-   ```rust
+   ```rust,ignore
    /// Lint: LINT_NAME.
    ///
    /// <The configuration field doc comment>
@@ -683,7 +690,7 @@ for some users. Adding a configuration is done in the following steps:
    configuration value is now cloned or copied into a local value that is then
    passed to the impl struct like this:
 
-   ```rust
+   ```rust,ignore
    // Default generated registration:
    store.register_*_pass(|| box module::StructName);
 
@@ -702,6 +709,10 @@ for some users. Adding a configuration is done in the following steps:
        Simply add a new subfolder with a fitting name. This folder contains a
        `clippy.toml` file with the configuration value and a rust file that
        should be linted by Clippy. The test can otherwise be written as usual.
+
+5. Update [Lint Configuration](../lint_configuration.md)
+
+   Run `cargo collect-metadata` to generate documentation changes for the book.
 
 [`clippy_lints::utils::conf`]: https://github.com/rust-lang/rust-clippy/blob/master/clippy_lints/src/utils/conf.rs
 [`clippy_lints` lib file]: https://github.com/rust-lang/rust-clippy/blob/master/clippy_lints/src/lib.rs

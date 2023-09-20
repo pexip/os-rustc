@@ -37,7 +37,8 @@ s! {
         pub stx_dev_major: u32,
         pub stx_dev_minor: u32,
         pub stx_mnt_id: u64,
-        __statx_pad2: u64,
+        pub stx_dio_mem_align: u32,
+        pub stx_dio_offset_align: u32,
         __statx_pad3: [u64; 12],
     }
 
@@ -874,6 +875,10 @@ pub const PTRACE_INTERRUPT: ::c_uint = 0x4207;
 pub const PTRACE_LISTEN: ::c_uint = 0x4208;
 pub const PTRACE_PEEKSIGINFO: ::c_uint = 0x4209;
 pub const PTRACE_GET_SYSCALL_INFO: ::c_uint = 0x420e;
+pub const PTRACE_SYSCALL_INFO_NONE: ::__u8 = 0;
+pub const PTRACE_SYSCALL_INFO_ENTRY: ::__u8 = 1;
+pub const PTRACE_SYSCALL_INFO_EXIT: ::__u8 = 2;
+pub const PTRACE_SYSCALL_INFO_SECCOMP: ::__u8 = 3;
 
 // linux/fs.h
 
@@ -1018,6 +1023,7 @@ pub const STATX_BLOCKS: ::c_uint = 0x0400;
 pub const STATX_BASIC_STATS: ::c_uint = 0x07ff;
 pub const STATX_BTIME: ::c_uint = 0x0800;
 pub const STATX_MNT_ID: ::c_uint = 0x1000;
+pub const STATX_DIOALIGN: ::c_uint = 0x2000;
 pub const STATX_ALL: ::c_uint = 0x0fff;
 pub const STATX__RESERVED: ::c_int = 0x80000000;
 pub const STATX_ATTR_COMPRESSED: ::c_int = 0x0004;
@@ -1206,14 +1212,6 @@ extern "C" {
     pub fn ntp_gettime(buf: *mut ntptimeval) -> ::c_int;
     pub fn clock_adjtime(clk_id: ::clockid_t, buf: *mut ::timex) -> ::c_int;
 
-    pub fn copy_file_range(
-        fd_in: ::c_int,
-        off_in: *mut ::off64_t,
-        fd_out: ::c_int,
-        off_out: *mut ::off64_t,
-        len: ::size_t,
-        flags: ::c_uint,
-    ) -> ::ssize_t;
     pub fn fanotify_mark(
         fd: ::c_int,
         flags: ::c_uint,
@@ -1335,6 +1333,25 @@ extern "C" {
 
     pub fn euidaccess(pathname: *const ::c_char, mode: ::c_int) -> ::c_int;
     pub fn eaccess(pathname: *const ::c_char, mode: ::c_int) -> ::c_int;
+
+    pub fn asctime_r(tm: *const ::tm, buf: *mut ::c_char) -> *mut ::c_char;
+    pub fn ctime_r(timep: *const time_t, buf: *mut ::c_char) -> *mut ::c_char;
+
+    pub fn strftime(
+        s: *mut ::c_char,
+        max: ::size_t,
+        format: *const ::c_char,
+        tm: *const ::tm,
+    ) -> ::size_t;
+    pub fn strptime(s: *const ::c_char, format: *const ::c_char, tm: *mut ::tm) -> *mut ::c_char;
+
+    pub fn dirname(path: *mut ::c_char) -> *mut ::c_char;
+    /// POSIX version of `basename(3)`, defined in `libgen.h`.
+    #[link_name = "__xpg_basename"]
+    pub fn posix_basename(path: *mut ::c_char) -> *mut ::c_char;
+    /// GNU version of `basename(3)`, defined in `string.h`.
+    #[link_name = "basename"]
+    pub fn gnu_basename(path: *const ::c_char) -> *mut ::c_char;
 }
 
 extern "C" {
@@ -1352,6 +1369,30 @@ extern "C" {
 extern "C" {
     pub fn gnu_get_libc_release() -> *const ::c_char;
     pub fn gnu_get_libc_version() -> *const ::c_char;
+}
+
+// posix/spawn.h
+extern "C" {
+    // Added in `glibc` 2.29
+    pub fn posix_spawn_file_actions_addchdir_np(
+        actions: *mut ::posix_spawn_file_actions_t,
+        path: *const ::c_char,
+    ) -> ::c_int;
+    // Added in `glibc` 2.29
+    pub fn posix_spawn_file_actions_addfchdir_np(
+        actions: *mut ::posix_spawn_file_actions_t,
+        fd: ::c_int,
+    ) -> ::c_int;
+    // Added in `glibc` 2.34
+    pub fn posix_spawn_file_actions_addclosefrom_np(
+        actions: *mut ::posix_spawn_file_actions_t,
+        from: ::c_int,
+    ) -> ::c_int;
+    // Added in `glibc` 2.35
+    pub fn posix_spawn_file_actions_addtcsetpgrp_np(
+        actions: *mut ::posix_spawn_file_actions_t,
+        tcfd: ::c_int,
+    ) -> ::c_int;
 }
 
 cfg_if! {

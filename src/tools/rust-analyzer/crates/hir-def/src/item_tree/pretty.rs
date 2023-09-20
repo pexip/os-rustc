@@ -3,7 +3,6 @@
 use std::fmt::{self, Write};
 
 use crate::{
-    attr::RawAttrs,
     generics::{TypeOrConstParamData, WherePredicate, WherePredicateTypeTarget},
     pretty::{print_path, print_type_bounds, print_type_ref},
     visibility::RawVisibility,
@@ -382,6 +381,16 @@ impl<'a> Printer<'a> {
                     }
                 });
                 wln!(self, "}}");
+            }
+            ModItem::TraitAlias(it) => {
+                let TraitAlias { name, visibility, generic_params, ast_id: _ } = &self.tree[it];
+                self.print_visibility(*visibility);
+                w!(self, "trait {}", name);
+                self.print_generic_params(generic_params);
+                w!(self, " = ");
+                self.print_where_clause(generic_params);
+                w!(self, ";");
+                wln!(self);
             }
             ModItem::Impl(it) => {
                 let Impl { target_trait, self_ty, is_negative, items, generic_params, ast_id: _ } =

@@ -367,7 +367,7 @@ fn import_for_item(
     let expected_import_end = if item_as_assoc(db, original_item).is_some() {
         unresolved_qualifier.to_string()
     } else {
-        format!("{}::{}", unresolved_qualifier, item_name(db, original_item)?)
+        format!("{unresolved_qualifier}::{}", item_name(db, original_item)?)
     };
     if !import_path_string.contains(unresolved_first_segment)
         || !import_path_string.ends_with(&expected_import_end)
@@ -528,7 +528,7 @@ fn trait_applicable_items(
             },
         )
     } else {
-        trait_candidate.receiver_ty.iterate_method_candidates(
+        trait_candidate.receiver_ty.iterate_method_candidates_with_traits(
             db,
             scope,
             &trait_candidates,

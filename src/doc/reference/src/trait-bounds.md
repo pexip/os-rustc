@@ -27,7 +27,7 @@ provided on any type in a [where clause]. There are also shorter forms for
 certain common cases:
 
 * Bounds written after declaring a [generic parameter][generic]:
-  `fn f<A: Copy>() {}` is the same as `fn f<A> where A: Copy () {}`.
+  `fn f<A: Copy>() {}` is the same as `fn f<A>() where A: Copy {}`.
 * In trait declarations as [supertraits]: `trait Circle : Shape {}` is
   equivalent to `trait Circle where Self : Shape {}`.
 * In trait declarations as bounds on [associated types]:
@@ -121,7 +121,7 @@ For example, if `'a` is an unconstrained lifetime parameter, then `i32: 'static`
 > _ForLifetimes_ :\
 > &nbsp;&nbsp; `for` [_GenericParams_]
 
-Type bounds may be *higher ranked* over lifetimes. These bounds specify a bound
+Trait bounds may be *higher ranked* over lifetimes. These bounds specify a bound
 that is true *for all* lifetimes. For example, a bound such as `for<'a> &'a T:
 PartialEq<i32>` would require an implementation like
 

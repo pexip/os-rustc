@@ -1,8 +1,9 @@
 use super::Scripter;
 use super::Tarballer;
-use crate::compression::CompressionFormats;
+use crate::compression::{CompressionFormats, CompressionProfile};
 use crate::util::*;
 use anyhow::{bail, format_err, Context, Result};
+use std::collections::BTreeSet;
 use std::io::Write;
 use std::path::Path;
 
@@ -52,6 +53,10 @@ actor! {
         /// The location to put the final image and tarball
         #[clap(value_name = "DIR")]
         output_dir: String = "./dist",
+
+        /// The profile used to compress the tarball.
+        #[clap(value_name = "FORMAT", default_value_t)]
+        compression_profile: CompressionProfile,
 
         /// The formats used to compress the tarball
         #[clap(value_name = "FORMAT", default_value_t)]
@@ -112,6 +117,7 @@ impl Generator {
             .work_dir(self.work_dir)
             .input(self.package_name)
             .output(path_to_str(&output)?.into())
+            .compression_profile(self.compression_profile)
             .compression_formats(self.compression_formats.clone());
         tarballer.run()?;
 
@@ -121,13 +127,14 @@ impl Generator {
 
 /// Copies the `src` directory recursively to `dst`, writing `manifest.in` too.
 fn copy_and_manifest(src: &Path, dst: &Path, bulk_dirs: &str) -> Result<()> {
-    let manifest = create_new_file(dst.join("manifest.in"))?;
+    let mut manifest = create_new_file(dst.join("manifest.in"))?;
     let bulk_dirs: Vec<_> = bulk_dirs
         .split(',')
         .filter(|s| !s.is_empty())
         .map(Path::new)
         .collect();
 
+    let mut paths = BTreeSet::new();
     copy_with_callback(src, dst, |path, file_type| {
         // We need paths to be compatible with both Unix and Windows.
         if path
@@ -157,14 +164,20 @@ fn copy_and_manifest(src: &Path, dst: &Path, bulk_dirs: &str) -> Result<()> {
         if file_type.is_dir() {
             // Only manifest directories that are explicitly bulk.
             if bulk_dirs.contains(&path) {
-                writeln!(&manifest, "dir:{}", string)?;
+                paths.insert(format!("dir:{}\n", string));
             }
         } else {
             // Only manifest files that aren't under bulk directories.
             if !bulk_dirs.iter().any(|d| path.starts_with(d)) {
-                writeln!(&manifest, "file:{}", string)?;
+                paths.insert(format!("file:{}\n", string));
             }
         }
         Ok(())
-    })
+    })?;
+
+    for path in paths {
+        manifest.write_all(path.as_bytes())?;
+    }
+
+    Ok(())
 }

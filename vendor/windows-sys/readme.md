@@ -1,24 +1,17 @@
-[![crates.io](https://img.shields.io/crates/v/windows.svg)](https://crates.io/crates/windows)
-[![build](https://github.com/microsoft/windows-rs/workflows/build/badge.svg?event=push)](https://github.com/microsoft/windows-rs/actions)
-
 ## Rust for Windows
 
-The `windows` crate lets you call any Windows API past, present, and future using code generated on the fly directly from the metadata describing the API and right into your Rust package where you can call them as if they were just another Rust module. The Rust language projection follows in the tradition established by [C++/WinRT](https://github.com/microsoft/cppwinrt) of building language projections for Windows using standard languages and compilers, providing a natural and idiomatic way for Rust developers to call Windows APIs.
+The [windows](https://crates.io/crates/windows) and [windows-sys](https://crates.io/crates/windows-sys) crates let you call any Windows API past, present, and future using code generated on the fly directly from the [metadata describing the API](https://github.com/microsoft/windows-rs/tree/master/crates/libs/metadata/default) and right into your Rust package where you can call them as if they were just another Rust module. The Rust language projection follows in the tradition established by [C++/WinRT](https://github.com/microsoft/cppwinrt) of building language projections for Windows using standard languages and compilers, providing a natural and idiomatic way for Rust developers to call Windows APIs.
 
-* Crate documentation
-    * [windows](https://microsoft.github.io/windows-docs-rs/)
-    * [windows-sys](https://docs.rs/windows-sys)
-* [Frequently Asked Questions](https://github.com/microsoft/windows-rs/tree/master/docs/FAQ.md)
-* [Samples](https://github.com/microsoft/windows-rs/tree/master/crates/samples)
-* [Changelog](https://github.com/microsoft/windows-rs/releases)
+* [Getting started](https://kennykerr.ca/rust-getting-started/)
+* [Samples](https://github.com/microsoft/windows-rs/tree/0.45.0/crates/samples)
+* [Releases](https://github.com/microsoft/windows-rs/releases)
 
 Start by adding the following to your Cargo.toml file:
 
 ```toml
 [dependencies.windows]
-version = "0.36.1"
+version = "0.44.0"
 features = [
-    "alloc",
     "Data_Xml_Dom",
     "Win32_Foundation",
     "Win32_Security",
@@ -29,7 +22,7 @@ features = [
 
 Make use of any Windows APIs as needed.
 
-```rust
+```rust,no_run
 use windows::{
     core::*, Data::Xml::Dom::*, Win32::Foundation::*, Win32::System::Threading::*,
     Win32::UI::WindowsAndMessaging::*,
@@ -37,19 +30,20 @@ use windows::{
 
 fn main() -> Result<()> {
     let doc = XmlDocument::new()?;
-    doc.LoadXml("<html>hello world</html>")?;
+    doc.LoadXml(h!("<html>hello world</html>"))?;
 
     let root = doc.DocumentElement()?;
     assert!(root.NodeName()? == "html");
     assert!(root.InnerText()? == "hello world");
 
     unsafe {
-        let event = CreateEventW(std::ptr::null(), true, false, None)?;
+        let event = CreateEventW(None, true, false, None)?;
         SetEvent(event).ok()?;
         WaitForSingleObject(event, 0);
         CloseHandle(event).ok()?;
 
-        MessageBoxA(None, "Text", "Caption", MB_OK);
+        MessageBoxA(None, s!("Ansi"), s!("Caption"), MB_OK);
+        MessageBoxW(None, w!("Wide"), w!("Caption"), MB_OK);
     }
 
     Ok(())
@@ -64,7 +58,7 @@ Start by adding the following to your Cargo.toml file:
 
 ```toml
 [dependencies.windows-sys]
-version = "0.36.1"
+version = "0.45.0"
 features = [
     "Win32_Foundation",
     "Win32_Security",
@@ -75,9 +69,9 @@ features = [
 
 Make use of any Windows APIs as needed.
 
-```rust
+```rust,no_run
 use windows_sys::{
-    Win32::Foundation::*, Win32::System::Threading::*, Win32::UI::WindowsAndMessaging::*,
+    core::*, Win32::Foundation::*, Win32::System::Threading::*, Win32::UI::WindowsAndMessaging::*,
 };
 
 fn main() {
@@ -87,7 +81,8 @@ fn main() {
         WaitForSingleObject(event, 0);
         CloseHandle(event);
 
-        MessageBoxA(0, b"Text\0".as_ptr(), b"Caption\0".as_ptr(), MB_OK);
+        MessageBoxA(0, s!("Ansi"), s!("Caption"), MB_OK);
+        MessageBoxW(0, w!("Wide"), w!("Caption"), MB_OK);
     }
 }
 ```

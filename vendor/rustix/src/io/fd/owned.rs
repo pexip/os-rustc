@@ -92,14 +92,14 @@ impl OwnedFd {
         // CLOEXEC flag, and currently that's done via F_DUPFD_CLOEXEC. This
         // is a POSIX flag that was added to Linux in 2.6.24.
         #[cfg(not(target_os = "espidf"))]
-        let fd = crate::fs::fcntl_dupfd_cloexec(self, 0)?;
+        let fd = crate::io::fcntl_dupfd_cloexec(self, 0)?;
 
         // For ESP-IDF, F_DUPFD is used instead, because the CLOEXEC semantics
         // will never be supported, as this is a bare metal framework with
         // no capabilities for multi-process execution. While F_DUPFD is also
         // not supported yet, it might be (currently it returns ENOSYS).
         #[cfg(target_os = "espidf")]
-        let fd = crate::fs::fcntl_dupfd(self)?;
+        let fd = crate::io::fcntl_dupfd(self)?;
 
         Ok(fd.into())
     }
@@ -168,7 +168,7 @@ impl Drop for OwnedFd {
             // the file descriptor was closed or not, and if we retried (for
             // something like EINTR), we might close another valid file
             // descriptor opened after we closed ours.
-            let _ = close(self.fd as _);
+            close(self.fd as _);
         }
     }
 }
@@ -198,7 +198,7 @@ pub trait AsFd {
     ///
     /// # Example
     ///
-    /// ```rust,no_run
+    /// ```no_run
     /// # #![feature(io_safety)]
     /// use std::fs::File;
     /// # use std::io;
@@ -244,7 +244,7 @@ impl AsFd for BorrowedFd<'_> {
 impl AsFd for OwnedFd {
     #[inline]
     fn as_fd(&self) -> BorrowedFd<'_> {
-        // Safety: `OwnedFd` and `BorrowedFd` have the same validity
+        // SAFETY: `OwnedFd` and `BorrowedFd` have the same validity
         // invariants, and the `BorrowedFd` is bounded by the lifetime
         // of `&self`.
         unsafe { BorrowedFd::borrow_raw(self.as_raw_fd()) }

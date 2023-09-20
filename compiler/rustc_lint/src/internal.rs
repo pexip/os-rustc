@@ -1,9 +1,12 @@
 //! Some lints that are only useful in the compiler or crates that use compiler internals, such as
 //! Clippy.
 
+use crate::lints::{
+    BadOptAccessDiag, DefaultHashTypesDiag, DiagOutOfImpl, LintPassByHand, NonExistentDocKeyword,
+    QueryInstability, TyQualified, TykindDiag, TykindKind, UntranslatableDiag,
+};
 use crate::{EarlyContext, EarlyLintPass, LateContext, LateLintPass, LintContext};
 use rustc_ast as ast;
-use rustc_errors::{fluent, Applicability};
 use rustc_hir::def::Res;
 use rustc_hir::{def_id::DefId, Expr, ExprKind, GenericArg, PatKind, Path, PathSegment, QPath};
 use rustc_hir::{HirId, Impl, Item, ItemKind, Node, Pat, Ty, TyKind};
@@ -14,6 +17,11 @@ use rustc_span::symbol::{kw, sym, Symbol};
 use rustc_span::Span;
 
 declare_tool_lint! {
+    /// The `default_hash_type` lint detects use of [`std::collections::HashMap`]/[`std::collections::HashSet`],
+    /// suggesting the use of `FxHashMap`/`FxHashSet`.
+    ///
+    /// This can help as `FxHasher` can perform better than the default hasher. DOS protection is not
+    /// required as input is assumed to be trusted.
     pub rustc::DEFAULT_HASH_TYPES,
     Allow,
     "forbid HashMap and HashSet and suggest the FxHash* variants",
@@ -29,20 +37,15 @@ impl LateLintPass<'_> for DefaultHashTypes {
             // don't lint imports, only actual usages
             return;
         }
-        let replace = match cx.tcx.get_diagnostic_name(def_id) {
+        let preferred = match cx.tcx.get_diagnostic_name(def_id) {
             Some(sym::HashMap) => "FxHashMap",
             Some(sym::HashSet) => "FxHashSet",
             _ => return,
         };
-        cx.struct_span_lint(
+        cx.emit_spanned_lint(
             DEFAULT_HASH_TYPES,
             path.span,
-            fluent::lint_default_hash_types,
-            |lint| {
-                lint.set_arg("preferred", replace)
-                    .set_arg("used", cx.tcx.item_name(def_id))
-                    .note(fluent::note)
-            },
+            DefaultHashTypesDiag { preferred, used: cx.tcx.item_name(def_id) },
         );
     }
 }
@@ -69,6 +72,12 @@ fn typeck_results_of_method_fn<'tcx>(
 }
 
 declare_tool_lint! {
+    /// The `potential_query_instability` lint detects use of methods which can lead to
+    /// potential query instability, such as iterating over a `HashMap`.
+    ///
+    /// Due to the [incremental compilation](https://rustc-dev-guide.rust-lang.org/queries/incremental-compilation.html) model,
+    /// queries must return deterministic, stable results. `HashMap` iteration order can change between compilations,
+    /// and will introduce instability if query results expose the order.
     pub rustc::POTENTIAL_QUERY_INSTABILITY,
     Allow,
     "require explicit opt-in when using potentially unstable methods or functions",
@@ -83,18 +92,19 @@ impl LateLintPass<'_> for QueryStability {
         if let Ok(Some(instance)) = ty::Instance::resolve(cx.tcx, cx.param_env, def_id, substs) {
             let def_id = instance.def_id();
             if cx.tcx.has_attr(def_id, sym::rustc_lint_query_instability) {
-                cx.struct_span_lint(
+                cx.emit_spanned_lint(
                     POTENTIAL_QUERY_INSTABILITY,
                     span,
-                    fluent::lint_query_instability,
-                    |lint| lint.set_arg("query", cx.tcx.item_name(def_id)).note(fluent::note),
-                )
+                    QueryInstability { query: cx.tcx.item_name(def_id) },
+                );
             }
         }
     }
 }
 
 declare_tool_lint! {
+    /// The `usage_of_ty_tykind` lint detects usages of `ty::TyKind::<kind>`,
+    /// where `ty::<kind>` would suffice.
     pub rustc::USAGE_OF_TY_TYKIND,
     Allow,
     "usage of `ty::TyKind` outside of the `ty::sty` module",
@@ -102,6 +112,8 @@ declare_tool_lint! {
 }
 
 declare_tool_lint! {
+    /// The `usage_of_qualified_ty` lint detects usages of `ty::TyKind`,
+    /// where `Ty` should be used instead.
     pub rustc::USAGE_OF_QUALIFIED_TY,
     Allow,
     "using `ty::{Ty,TyCtxt}` instead of importing it",
@@ -117,7 +129,7 @@ impl<'tcx> LateLintPass<'tcx> for TyTyKind {
     fn check_path(
         &mut self,
         cx: &LateContext<'tcx>,
-        path: &'tcx rustc_hir::Path<'tcx>,
+        path: &rustc_hir::Path<'tcx>,
         _: rustc_hir::HirId,
     ) {
         if let Some(segment) = path.segments.iter().nth_back(1)
@@ -126,14 +138,8 @@ impl<'tcx> LateLintPass<'tcx> for TyTyKind {
             let span = path.span.with_hi(
                 segment.args.map_or(segment.ident.span, |a| a.span_ext).hi()
             );
-            cx.struct_span_lint(USAGE_OF_TY_TYKIND, path.span, fluent::lint_tykind_kind, |lint| {
-                lint
-                    .span_suggestion(
-                        span,
-                        fluent::suggestion,
-                        "ty",
-                        Applicability::MaybeIncorrect, // ty maybe needs an import
-                    )
+            cx.emit_spanned_lint(USAGE_OF_TY_TYKIND, path.span, TykindKind {
+                suggestion: span,
             });
         }
     }
@@ -143,7 +149,7 @@ impl<'tcx> LateLintPass<'tcx> for TyTyKind {
             TyKind::Path(QPath::Resolved(_, path)) => {
                 if lint_ty_kind_usage(cx, &path.res) {
                     let hir = cx.tcx.hir();
-                    let span = match hir.find(hir.get_parent_node(ty.hir_id)) {
+                    let span = match hir.find_parent(ty.hir_id) {
                         Some(Node::Pat(Pat {
                             kind:
                                 PatKind::Path(qpath)
@@ -190,39 +196,17 @@ impl<'tcx> LateLintPass<'tcx> for TyTyKind {
 
                     match span {
                         Some(span) => {
-                            cx.struct_span_lint(
-                                USAGE_OF_TY_TYKIND,
-                                path.span,
-                                fluent::lint_tykind_kind,
-                                |lint| lint.span_suggestion(
-                                    span,
-                                    fluent::suggestion,
-                                    "ty",
-                                    Applicability::MaybeIncorrect, // ty maybe needs an import
-                                )
-                            )
+                            cx.emit_spanned_lint(USAGE_OF_TY_TYKIND, path.span, TykindKind {
+                                suggestion: span,
+                            });
                         },
-                        None => cx.struct_span_lint(
-                            USAGE_OF_TY_TYKIND,
-                            path.span,
-                            fluent::lint_tykind,
-                            |lint| lint.help(fluent::help)
-                        )
+                        None => cx.emit_spanned_lint(USAGE_OF_TY_TYKIND, path.span, TykindDiag),
                     }
-                } else if !ty.span.from_expansion() && let Some(t) = is_ty_or_ty_ctxt(cx, &path) {
-                    if path.segments.len() > 1 {
-                        cx.struct_span_lint(USAGE_OF_QUALIFIED_TY, path.span, fluent::lint_ty_qualified, |lint| {
-                            lint
-                                .set_arg("ty", t.clone())
-                                .span_suggestion(
-                                    path.span,
-                                    fluent::suggestion,
-                                    t,
-                                    // The import probably needs to be changed
-                                    Applicability::MaybeIncorrect,
-                                )
-                        })
-                    }
+                } else if !ty.span.from_expansion() && path.segments.len() > 1 && let Some(ty) = is_ty_or_ty_ctxt(cx, &path) {
+                    cx.emit_spanned_lint(USAGE_OF_QUALIFIED_TY, path.span, TyQualified {
+                        ty,
+                        suggestion: path.span,
+                    });
                 }
             }
             _ => {}
@@ -247,7 +231,7 @@ fn is_ty_or_ty_ctxt(cx: &LateContext<'_>, path: &Path<'_>) -> Option<String> {
         }
         // Only lint on `&Ty` and `&TyCtxt` if it is used outside of a trait.
         Res::SelfTyAlias { alias_to: did, is_trait_impl: false, .. } => {
-            if let ty::Adt(adt, substs) = cx.tcx.type_of(did).kind() {
+            if let ty::Adt(adt, substs) = cx.tcx.type_of(did).subst_identity().kind() {
                 if let Some(name @ (sym::Ty | sym::TyCtxt)) = cx.tcx.get_diagnostic_name(adt.did())
                 {
                     // NOTE: This path is currently unreachable as `Ty<'tcx>` is
@@ -272,11 +256,7 @@ fn gen_args(segment: &PathSegment<'_>) -> String {
             .args
             .iter()
             .filter_map(|arg| {
-                if let GenericArg::Lifetime(lt) = arg {
-                    Some(lt.name.ident().to_string())
-                } else {
-                    None
-                }
+                if let GenericArg::Lifetime(lt) = arg { Some(lt.ident.to_string()) } else { None }
             })
             .collect::<Vec<_>>();
 
@@ -289,6 +269,8 @@ fn gen_args(segment: &PathSegment<'_>) -> String {
 }
 
 declare_tool_lint! {
+    /// The `lint_pass_impl_without_macro` detects manual implementations of a lint
+    /// pass, without using [`declare_lint_pass`] or [`impl_lint_pass`].
     pub rustc::LINT_PASS_IMPL_WITHOUT_MACRO,
     Allow,
     "`impl LintPass` without the `declare_lint_pass!` or `impl_lint_pass!` macros"
@@ -307,12 +289,11 @@ impl EarlyLintPass for LintPassImpl {
                         && call_site.ctxt().outer_expn_data().kind
                             != ExpnKind::Macro(MacroKind::Bang, sym::declare_lint_pass)
                     {
-                        cx.struct_span_lint(
+                        cx.emit_spanned_lint(
                             LINT_PASS_IMPL_WITHOUT_MACRO,
                             lint_pass.path.span,
-                            fluent::lint_lintpass_by_hand,
-                            |lint| lint.help(fluent::help),
-                        )
+                            LintPassByHand,
+                        );
                     }
                 }
             }
@@ -321,6 +302,8 @@ impl EarlyLintPass for LintPassImpl {
 }
 
 declare_tool_lint! {
+    /// The `existing_doc_keyword` lint detects use `#[doc()]` keywords
+    /// that don't exist, e.g. `#[doc(keyword = "..")]`.
     pub rustc::EXISTING_DOC_KEYWORD,
     Allow,
     "Check that documented keywords in std and core actually exist",
@@ -342,17 +325,16 @@ impl<'tcx> LateLintPass<'tcx> for ExistingDocKeyword {
             if let Some(list) = attr.meta_item_list() {
                 for nested in list {
                     if nested.has_name(sym::keyword) {
-                        let v = nested
+                        let keyword = nested
                             .value_str()
                             .expect("#[doc(keyword = \"...\")] expected a value!");
-                        if is_doc_keyword(v) {
+                        if is_doc_keyword(keyword) {
                             return;
                         }
-                        cx.struct_span_lint(
+                        cx.emit_spanned_lint(
                             EXISTING_DOC_KEYWORD,
                             attr.span,
-                            fluent::lint_non_existant_doc_keyword,
-                            |lint| lint.set_arg("keyword", v).help(fluent::help),
+                            NonExistentDocKeyword { keyword },
                         );
                     }
                 }
@@ -362,6 +344,10 @@ impl<'tcx> LateLintPass<'tcx> for ExistingDocKeyword {
 }
 
 declare_tool_lint! {
+    /// The `untranslatable_diagnostic` lint detects diagnostics created
+    /// without using translatable Fluent strings.
+    ///
+    /// More details on translatable diagnostics can be found [here](https://rustc-dev-guide.rust-lang.org/diagnostics/translation.html).
     pub rustc::UNTRANSLATABLE_DIAGNOSTIC,
     Allow,
     "prevent creation of diagnostics which cannot be translated",
@@ -369,6 +355,11 @@ declare_tool_lint! {
 }
 
 declare_tool_lint! {
+    /// The `diagnostic_outside_of_impl` lint detects diagnostics created manually,
+    /// and inside an `IntoDiagnostic`/`AddToDiagnostic` implementation,
+    /// or a `#[derive(Diagnostic)]`/`#[derive(Subdiagnostic)]` expansion.
+    ///
+    /// More details on diagnostics implementations can be found [here](https://rustc-dev-guide.rust-lang.org/diagnostics/diagnostic-structs.html).
     pub rustc::DIAGNOSTIC_OUTSIDE_OF_IMPL,
     Allow,
     "prevent creation of diagnostics outside of `IntoDiagnostic`/`AddToDiagnostic` impls",
@@ -395,7 +386,7 @@ impl LateLintPass<'_> for Diagnostics {
         for (hir_id, parent) in cx.tcx.hir().parent_iter(expr.hir_id) {
             if let Some(owner_did) = hir_id.as_owner() {
                 found_parent_with_attr = found_parent_with_attr
-                    || cx.tcx.has_attr(owner_did.to_def_id(), sym::rustc_lint_diagnostics);
+                    || cx.tcx.has_attr(owner_did, sym::rustc_lint_diagnostics);
             }
 
             debug!(?parent);
@@ -411,12 +402,7 @@ impl LateLintPass<'_> for Diagnostics {
         }
         debug!(?found_impl);
         if !found_parent_with_attr && !found_impl {
-            cx.struct_span_lint(
-                DIAGNOSTIC_OUTSIDE_OF_IMPL,
-                span,
-                fluent::lint_diag_out_of_impl,
-                |lint| lint,
-            )
+            cx.emit_spanned_lint(DIAGNOSTIC_OUTSIDE_OF_IMPL, span, DiagOutOfImpl);
         }
 
         let mut found_diagnostic_message = false;
@@ -432,17 +418,14 @@ impl LateLintPass<'_> for Diagnostics {
         }
         debug!(?found_diagnostic_message);
         if !found_parent_with_attr && !found_diagnostic_message {
-            cx.struct_span_lint(
-                UNTRANSLATABLE_DIAGNOSTIC,
-                span,
-                fluent::lint_untranslatable_diag,
-                |lint| lint,
-            )
+            cx.emit_spanned_lint(UNTRANSLATABLE_DIAGNOSTIC, span, UntranslatableDiag);
         }
     }
 }
 
 declare_tool_lint! {
+    /// The `bad_opt_access` lint detects accessing options by field instead of
+    /// the wrapper function.
     pub rustc::BAD_OPT_ACCESS,
     Deny,
     "prevent using options by field access when there is a wrapper function",
@@ -466,12 +449,12 @@ impl LateLintPass<'_> for BadOptAccess {
                 let Some(attr) = cx.tcx.get_attr(field.did, sym::rustc_lint_opt_deny_field_access) &&
                 let Some(items) = attr.meta_item_list()  &&
                 let Some(item) = items.first()  &&
-                let Some(literal) = item.literal()  &&
-                let ast::LitKind::Str(val, _) = literal.kind
+                let Some(lit) = item.lit()  &&
+                let ast::LitKind::Str(val, _) = lit.kind
             {
-                cx.struct_span_lint(BAD_OPT_ACCESS, expr.span, val.as_str(), |lint|
-                    lint
-                );
+                cx.emit_spanned_lint(BAD_OPT_ACCESS, expr.span, BadOptAccessDiag {
+                    msg: val.as_str(),
+                });
             }
         }
     }

@@ -1,12 +1,10 @@
 use std::collections::BTreeMap;
-use std::convert::TryFrom;
 use std::ffi::OsStr;
 use std::fmt;
 use std::path::PathBuf;
 use std::str::FromStr;
 
 use rustc_data_structures::fx::FxHashMap;
-use rustc_driver::print_flag_list;
 use rustc_session::config::{
     self, parse_crate_types_from_list, parse_externs, parse_target_triple, CrateType,
 };
@@ -31,16 +29,11 @@ use crate::passes::{self, Condition};
 use crate::scrape_examples::{AllCallLocations, ScrapeExamplesOptions};
 use crate::theme;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub(crate) enum OutputFormat {
     Json,
+    #[default]
     Html,
-}
-
-impl Default for OutputFormat {
-    fn default() -> OutputFormat {
-        OutputFormat::Html
-    }
 }
 
 impl OutputFormat {
@@ -69,6 +62,8 @@ pub(crate) struct Options {
     pub(crate) input: PathBuf,
     /// The name of the crate being documented.
     pub(crate) crate_name: Option<String>,
+    /// Whether or not this is a bin crate
+    pub(crate) bin_crate: bool,
     /// Whether or not this is a proc-macro crate
     pub(crate) proc_macro_crate: bool,
     /// How to format errors and warnings.
@@ -176,6 +171,7 @@ impl fmt::Debug for Options {
         f.debug_struct("Options")
             .field("input", &self.input)
             .field("crate_name", &self.crate_name)
+            .field("bin_crate", &self.bin_crate)
             .field("proc_macro_crate", &self.proc_macro_crate)
             .field("error_format", &self.error_format)
             .field("libs", &self.libs)
@@ -232,16 +228,13 @@ pub(crate) struct RenderOptions {
     pub(crate) extension_css: Option<PathBuf>,
     /// A map of crate names to the URL to use instead of querying the crate's `html_root_url`.
     pub(crate) extern_html_root_urls: BTreeMap<String, String>,
-    /// Whether to give precedence to `html_root_url` or `--exten-html-root-url`.
+    /// Whether to give precedence to `html_root_url` or `--extern-html-root-url`.
     pub(crate) extern_html_root_takes_precedence: bool,
     /// A map of the default settings (values are as for DOM storage API). Keys should lack the
     /// `rustdoc-` prefix.
     pub(crate) default_settings: FxHashMap<String, String>,
     /// If present, suffix added to CSS/JavaScript files when referencing them in generated pages.
     pub(crate) resource_suffix: String,
-    /// Whether to run the static CSS/JavaScript through a minifier when outputting them. `true` by
-    /// default.
-    pub(crate) enable_minification: bool,
     /// Whether to create an index page in the root of the output directory. If this is true but
     /// `enable_index_page` is None, generate a static listing of crates instead.
     pub(crate) enable_index_page: bool,
@@ -329,18 +322,11 @@ impl Options {
             crate::usage("rustdoc");
             return Err(0);
         } else if matches.opt_present("version") {
-            rustc_driver::version("rustdoc", matches);
+            rustc_driver::version!("rustdoc", matches);
             return Err(0);
         }
 
-        let z_flags = matches.opt_strs("Z");
-        if z_flags.iter().any(|x| *x == "help") {
-            print_flag_list("-Z", config::Z_OPTIONS);
-            return Err(0);
-        }
-        let c_flags = matches.opt_strs("C");
-        if c_flags.iter().any(|x| *x == "help") {
-            print_flag_list("-C", config::CG_OPTIONS);
+        if rustc_driver::describe_flag_categories(&matches) {
             return Err(0);
         }
 
@@ -416,10 +402,12 @@ impl Options {
 
         let to_check = matches.opt_strs("check-theme");
         if !to_check.is_empty() {
-            let paths = match theme::load_css_paths(static_files::themes::LIGHT) {
+            let paths = match theme::load_css_paths(
+                std::str::from_utf8(static_files::STATIC_FILES.theme_light_css.bytes).unwrap(),
+            ) {
                 Ok(p) => p,
                 Err(e) => {
-                    diag.struct_err(&e.to_string()).emit();
+                    diag.struct_err(e).emit();
                     return Err(1);
                 }
             };
@@ -507,7 +495,7 @@ impl Options {
                 // these values up both in `dataset` and in the storage API, so it needs to be able
                 // to convert the names back and forth.  Despite doing this kebab-case to
                 // StudlyCaps transformation automatically, the JS DOM API does not provide a
-                // mechanism for doing the just transformation on a string.  So we want to avoid
+                // mechanism for doing just the transformation on a string.  So we want to avoid
                 // the StudlyCaps representation in the `dataset` property.
                 //
                 // We solve this by replacing all the `-`s with `_`s.  We do that here, when we
@@ -557,10 +545,12 @@ impl Options {
 
         let mut themes = Vec::new();
         if matches.opt_present("theme") {
-            let paths = match theme::load_css_paths(static_files::themes::LIGHT) {
+            let paths = match theme::load_css_paths(
+                std::str::from_utf8(static_files::STATIC_FILES.theme_light_css.bytes).unwrap(),
+            ) {
                 Ok(p) => p,
                 Err(e) => {
-                    diag.struct_err(&e.to_string()).emit();
+                    diag.struct_err(e).emit();
                     return Err(1);
                 }
             };
@@ -666,6 +656,7 @@ impl Options {
             None => OutputFormat::default(),
         };
         let crate_name = matches.opt_str("crate-name");
+        let bin_crate = crate_types.contains(&CrateType::Executable);
         let proc_macro_crate = crate_types.contains(&CrateType::ProcMacro);
         let playground_url = matches.opt_str("playground-url");
         let maybe_sysroot = matches.opt_str("sysroot").map(PathBuf::from);
@@ -675,7 +666,6 @@ impl Options {
             ModuleSorting::Alphabetical
         };
         let resource_suffix = matches.opt_str("resource-suffix").unwrap_or_default();
-        let enable_minification = !matches.opt_present("disable-minification");
         let markdown_no_toc = matches.opt_present("markdown-no-toc");
         let markdown_css = matches.opt_strs("markdown-css");
         let markdown_playground_url = matches.opt_str("markdown-playground-url");
@@ -718,6 +708,7 @@ impl Options {
             rustc_feature::UnstableFeatures::from_environment(crate_name.as_deref());
         let options = Options {
             input,
+            bin_crate,
             proc_macro_crate,
             error_format,
             diagnostic_width,
@@ -768,7 +759,6 @@ impl Options {
             extern_html_root_takes_precedence,
             default_settings,
             resource_suffix,
-            enable_minification,
             enable_index_page,
             index_page,
             static_root_path,

@@ -37,7 +37,7 @@ use rustc_data_structures::graph::WithSuccessors;
 use rustc_index::vec::{Idx, IndexVec};
 use rustc_middle::mir::coverage::CoverageKind;
 use rustc_middle::mir::*;
-use rustc_middle::ty::{self, Ty, TyCtxt};
+use rustc_middle::ty;
 use rustc_span::{self, BytePos, Pos, Span, DUMMY_SP};
 
 // All `TEMP_BLOCK` targets should be replaced before calling `to_body() -> mir::Body`.
@@ -47,7 +47,6 @@ struct MockBlocks<'tcx> {
     blocks: IndexVec<BasicBlock, BasicBlockData<'tcx>>,
     dummy_place: Place<'tcx>,
     next_local: usize,
-    bool_ty: Ty<'tcx>,
 }
 
 impl<'tcx> MockBlocks<'tcx> {
@@ -56,7 +55,6 @@ impl<'tcx> MockBlocks<'tcx> {
             blocks: IndexVec::new(),
             dummy_place: Place { local: RETURN_PLACE, projection: ty::List::empty() },
             next_local: 0,
-            bool_ty: TyCtxt::BOOL_TY_FOR_UNIT_TESTING,
         }
     }
 
@@ -67,7 +65,7 @@ impl<'tcx> MockBlocks<'tcx> {
     }
 
     fn push(&mut self, kind: TerminatorKind<'tcx>) -> BasicBlock {
-        let next_lo = if let Some(last) = self.blocks.last() {
+        let next_lo = if let Some(last) = self.blocks.last_index() {
             self.blocks[last].terminator().source_info.span.hi()
         } else {
             BytePos(1)
@@ -88,7 +86,6 @@ impl<'tcx> MockBlocks<'tcx> {
             TerminatorKind::Assert { ref mut target, .. }
             | TerminatorKind::Call { target: Some(ref mut target), .. }
             | TerminatorKind::Drop { ref mut target, .. }
-            | TerminatorKind::DropAndReplace { ref mut target, .. }
             | TerminatorKind::FalseEdge { real_target: ref mut target, .. }
             | TerminatorKind::FalseUnwind { real_target: ref mut target, .. }
             | TerminatorKind::Goto { ref mut target }
@@ -143,7 +140,7 @@ impl<'tcx> MockBlocks<'tcx> {
                 args: vec![],
                 destination: self.dummy_place.clone(),
                 target: Some(TEMP_BLOCK),
-                cleanup: None,
+                unwind: UnwindAction::Continue,
                 from_hir_call: false,
                 fn_span: DUMMY_SP,
             },
@@ -157,7 +154,6 @@ impl<'tcx> MockBlocks<'tcx> {
     fn switchint(&mut self, some_from_block: Option<BasicBlock>) -> BasicBlock {
         let switchint_kind = TerminatorKind::SwitchInt {
             discr: Operand::Move(Place::from(self.new_temp())),
-            switch_ty: self.bool_ty, // just a dummy value
             targets: SwitchTargets::static_if(0, TEMP_BLOCK, TEMP_BLOCK),
         };
         self.add_block_from(some_from_block, switchint_kind)
@@ -172,7 +168,7 @@ impl<'tcx> MockBlocks<'tcx> {
     }
 }
 
-fn debug_basic_blocks<'tcx>(mir_body: &Body<'tcx>) -> String {
+fn debug_basic_blocks(mir_body: &Body<'_>) -> String {
     format!(
         "{:?}",
         mir_body
@@ -187,7 +183,6 @@ fn debug_basic_blocks<'tcx>(mir_body: &Body<'tcx>) -> String {
                     TerminatorKind::Assert { target, .. }
                     | TerminatorKind::Call { target: Some(target), .. }
                     | TerminatorKind::Drop { target, .. }
-                    | TerminatorKind::DropAndReplace { target, .. }
                     | TerminatorKind::FalseEdge { real_target: target, .. }
                     | TerminatorKind::FalseUnwind { real_target: target, .. }
                     | TerminatorKind::Goto { target }

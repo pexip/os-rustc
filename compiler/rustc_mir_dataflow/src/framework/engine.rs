@@ -12,10 +12,10 @@ use rustc_ast as ast;
 use rustc_data_structures::work_queue::WorkQueue;
 use rustc_graphviz as dot;
 use rustc_hir::def_id::DefId;
-use rustc_index::bit_set::BitSet;
 use rustc_index::vec::{Idx, IndexVec};
 use rustc_middle::mir::{self, traversal, BasicBlock};
 use rustc_middle::mir::{create_dump_file, dump_enabled};
+use rustc_middle::ty::print::with_no_trimmed_paths;
 use rustc_middle::ty::TyCtxt;
 use rustc_span::symbol::{sym, Symbol};
 
@@ -78,7 +78,6 @@ where
 {
     tcx: TyCtxt<'tcx>,
     body: &'a mir::Body<'tcx>,
-    dead_unwinds: Option<&'a BitSet<BasicBlock>>,
     entry_sets: IndexVec<BasicBlock, A::Domain>,
     pass_name: Option<&'static str>,
     analysis: A,
@@ -154,25 +153,7 @@ where
             bug!("`initialize_start_block` is not yet supported for backward dataflow analyses");
         }
 
-        Engine {
-            analysis,
-            tcx,
-            body,
-            dead_unwinds: None,
-            pass_name: None,
-            entry_sets,
-            apply_trans_for_block,
-        }
-    }
-
-    /// Signals that we do not want dataflow state to propagate across unwind edges for these
-    /// `BasicBlock`s.
-    ///
-    /// You must take care that `dead_unwinds` does not contain a `BasicBlock` that *can* actually
-    /// unwind during execution. Otherwise, your dataflow results will not be correct.
-    pub fn dead_unwinds(mut self, dead_unwinds: &'a BitSet<BasicBlock>) -> Self {
-        self.dead_unwinds = Some(dead_unwinds);
-        self
+        Engine { analysis, tcx, body, pass_name: None, entry_sets, apply_trans_for_block }
     }
 
     /// Adds an identifier to the graphviz output for this particular run of a dataflow analysis.
@@ -190,14 +171,7 @@ where
         A::Domain: DebugWithContext<A>,
     {
         let Engine {
-            analysis,
-            body,
-            dead_unwinds,
-            mut entry_sets,
-            tcx,
-            apply_trans_for_block,
-            pass_name,
-            ..
+            analysis, body, mut entry_sets, tcx, apply_trans_for_block, pass_name, ..
         } = self;
 
         let mut dirty_queue: WorkQueue<BasicBlock> = WorkQueue::with_none(body.basic_blocks.len());
@@ -236,7 +210,6 @@ where
                 &analysis,
                 tcx,
                 body,
-                dead_unwinds,
                 &mut state,
                 (bb, bb_data),
                 |target: BasicBlock, state: &A::Domain| {
@@ -294,14 +267,7 @@ where
         None if tcx.sess.opts.unstable_opts.dump_mir_dataflow
             && dump_enabled(tcx, A::NAME, def_id) =>
         {
-            create_dump_file(
-                tcx,
-                ".dot",
-                None,
-                A::NAME,
-                &pass_name.unwrap_or("-----"),
-                body.source,
-            )?
+            create_dump_file(tcx, ".dot", false, A::NAME, &pass_name.unwrap_or("-----"), body)?
         }
 
         _ => return Ok(()),
@@ -320,7 +286,7 @@ where
     if tcx.sess.opts.unstable_opts.graphviz_dark_mode {
         render_opts.push(dot::RenderOption::DarkTheme);
     }
-    dot::render_opts(&graphviz, &mut buf, &render_opts)?;
+    with_no_trimmed_paths!(dot::render_opts(&graphviz, &mut buf, &render_opts)?);
 
     file.write_all(&buf)?;
 

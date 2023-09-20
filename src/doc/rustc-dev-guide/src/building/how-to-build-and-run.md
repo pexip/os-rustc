@@ -1,10 +1,12 @@
-# How to Build and Run the Compiler
+# How to build and run the compiler
+
+<!-- toc -->
 
 The compiler is built using a tool called `x.py`. You will need to
 have Python installed to run it.
 
 For instructions on how to install Python and other prerequisites,
-see [the next page](./prerequisites.md).
+see [the `rust-lang/rust` README][readme].
 
 ## Get the source code
 
@@ -13,6 +15,7 @@ the standard library (including `core`, `alloc`, `test`, `proc_macro`, etc),
 and a bunch of tools (e.g. `rustdoc`, the bootstrapping infrastructure, etc).
 
 [repo]: https://github.com/rust-lang/rust
+[readme]: https://github.com/rust-lang/rust#building-on-a-unix-like-system
 
 The very first step to work on `rustc` is to clone the repository:
 
@@ -21,67 +24,38 @@ git clone https://github.com/rust-lang/rust.git
 cd rust
 ```
 
-There are also submodules for things like LLVM, `clippy`, `miri`, etc. The
-build tool will automatically clone and sync these for you. But if you want to,
-you can do the following:
+### Shallow clone the repository
 
-```sh
-# first time
-git submodule update --init --recursive
+Due to the size of the repository, cloning on a slower internet connection can take a long time.
+To sidestep this, you can use the `--depth N` option with the `git clone` command.
+This instructs `git` to perform a "shallow clone", cloning the repository but truncating it to
+the last `N` commits.
 
-# subsequent times (to pull new commits)
-git submodule update
+Passing `--depth 1` tells `git` to clone the repository but truncate the history to the latest
+commit that is on the `master` branch, which is usually fine for browsing the source code or
+building the compiler.
+
+```bash
+git clone --depth 1 https://github.com/rust-lang/rust.git
+cd rust
 ```
 
-## Create a `config.toml`
-
-To start, run `./x.py setup`. This will do some initialization and create a
-`config.toml` for you with reasonable defaults. These defaults are specified
-indirectly via the `profile` setting, which points to one of the TOML files in
-`src/bootstrap/defaults.`
-
-Alternatively, you can write `config.toml` by hand. See `config.toml.example`
-for all the available settings and explanations of them. The following settings
-are of particular interest, and `config.toml.example` has full explanations.
-
-You may want to change some of the following settings (and possibly others, such as
-`llvm.ccache`):
-
-```toml
-[llvm]
-# Whether to use Rust CI built LLVM instead of locally building it.
-download-ci-llvm = true     # Download a pre-built LLVM?
-assertions = true           # LLVM assertions on?
-ccache = "/path/to/ccache"  # Use ccache when building LLVM?
-
-[rust]
-debug-logging = true        # Leave debug! and trace! calls in rustc?
-incremental = true          # Build rustc with incremental compilation?
-```
-
-If you set `download-ci-llvm = true`, in some circumstances, such as when
-updating the version of LLVM used by `rustc`, you may want to temporarily
-disable this feature. See the ["Updating LLVM" section] for more.
-
-["Updating LLVM" section]: ../backend/updating-llvm.md#feature-updates
-
-If you have already built `rustc` and you change settings related to LLVM, then you may have to
-execute `rm -rf build` for subsequent configuration changes to take effect. Note that `./x.py
-clean` will not cause a rebuild of LLVM.
+> **NOTE**: A shallow clone limits which `git` commands can be run.
+> If you intend to work on and contribute to the compiler, it is
+> generally recommended to fully clone the repository [as shown above](#get-the-source-code).
+> 
+> For example, `git bisect` and `git blame` require access to the commit history,
+> so they don't work if the repository was cloned with `--depth 1`.
 
 ## What is `x.py`?
 
-`x.py` is the script used to orchestrate the tooling in the `rustc` repository.
-It is the script that can build docs, run tests, and compile `rustc`.
-It is the now preferred way to build `rustc` and it replaces the old makefiles
-from before. Below are the different ways to utilize `x.py` in order to
-effectively deal with the repo for various common tasks.
+`x.py` is the build tool for the `rust` repository. It can build docs, run tests, and compile the
+compiler and standard library.
 
 This chapter focuses on the basics to be productive, but
-if you want to learn more about `x.py`, read its README.md
-[here](https://github.com/rust-lang/rust/blob/master/src/bootstrap/README.md).
-To read more about the bootstrap process and why `x.py` is necessary,
-[read this chapter][bootstrap].
+if you want to learn more about `x.py`, [read this chapter][bootstrap].
+
+[bootstrap]: ./bootstrapping.md
 
 ### Running `x.py` slightly more conveniently
 
@@ -91,48 +65,53 @@ of a checkout. It also looks up the appropriate version of `python` to use.
 
 You can install it with `cargo install --path src/tools/x`.
 
-[bootstrap]: ./bootstrapping.md
+## Create a `config.toml`
 
-## Building the Compiler
+To start, run `./x.py setup`. This will do some initialization and create a
+`config.toml` for you with reasonable defaults.
 
-To build a compiler, run `./x.py build`. This will build up to the stage1 compiler,
-including `rustdoc`, producing a usable compiler toolchain from the source
-code you have checked out.
+Alternatively, you can write `config.toml` by hand. See `config.example.toml` for all the available
+settings and explanations of them. See `src/bootstrap/defaults` for common settings to change.
+
+If you have already built `rustc` and you change settings related to LLVM, then you may have to
+execute `rm -rf build` for subsequent configuration changes to take effect. Note that `./x.py
+clean` will not cause a rebuild of LLVM.
+
+## Common `x.py` commands
+
+Here are the basic invocations of the `x.py` commands most commonly used when
+working on `rustc`, `std`, `rustdoc`, and other tools.
+
+| Command | When to use it |
+| --- | --- |
+| `./x.py check` | Quick check to see if most things compile; [rust-analyzer can run this automatically for you][rust-analyzer] |
+| `./x.py build` | Builds `rustc`, `std`, and `rustdoc` |
+| `./x.py test` | Runs all tests |
+| `./x.py fmt` | Formats all code |
+
+As written, these commands are reasonable starting points. However, there are
+additional options and arguments for each of them that are worth learning for
+serious development work. In particular, `./x.py build` and `./x.py test`
+provide many ways to compile or test a subset of the code, which can save a lot
+of time.
+
+Also, note that `x.py` supports all kinds of path suffixes for `compiler`, `library`,
+and `src/tools` directories. So, you can simply run `x.py test tidy` instead of
+`x.py test src/tools/tidy`. Or, `x.py build std` instead of `x.py build library/std`.
+
+[rust-analyzer]: ./building/suggested.html#configuring-rust-analyzer-for-rustc
+
+See the chapters on [building](./building/how-to-build-and-run.md),
+[testing](./tests/intro.md), and [rustdoc](./rustdoc.md) for more details.
+
+### Building the compiler
 
 Note that building will require a relatively large amount of storage space.
 You may want to have upwards of 10 or 15 gigabytes available to build the compiler.
 
-There are many flags you can pass to the build command of `x.py` that can be
-beneficial to cutting down compile times or fitting other things you might
-need to change. They are:
-
-```txt
-Options:
-    -v, --verbose       use verbose output (-vv for very verbose)
-    -i, --incremental   use incremental compilation
-        --config FILE   TOML configuration file for build
-        --build BUILD   build target of the stage0 compiler
-        --host HOST     host targets to build
-        --target TARGET target targets to build
-        --on-fail CMD   command to run on failure
-        --stage N       stage to build
-        --keep-stage N  stage to keep without recompiling
-        --src DIR       path to the root of the Rust checkout
-    -j, --jobs JOBS     number of jobs to run in parallel
-    -h, --help          print this help message
-```
-
-For hacking, often building the stage 1 compiler is enough, which saves a lot
-of time. But for final testing and release, the stage 2 compiler is used.
-
-`./x.py check` is really fast to build the Rust compiler.
-It is, in particular, very useful when you're doing some kind of
-"type-based refactoring", like renaming a method, or changing the
-signature of some function.
-
 Once you've created a `config.toml`, you are now ready to run
 `x.py`. There are a lot of options here, but let's start with what is
-probably the best "go to" command for building a local rust:
+probably the best "go to" command for building a local compiler:
 
 ```bash
 ./x.py build library
@@ -152,7 +131,13 @@ is what you need to build other Rust programs (unless you use `#![no_std]` or
 
 You will probably find that building the stage1 `std` is a bottleneck for you,
 but fear not, there is a (hacky) workaround...
-see [the section on "recommended workflows"](./suggested.md) below.
+see [the section on avoiding rebuilds for std][keep-stage].
+
+[keep-stage]: ./suggested.md#faster-builds-with---keep-stage
+
+Sometimes you don't need a full build. When doing some kind of
+"type-based refactoring", like renaming a method, or changing the
+signature of some function, you can use `./x.py check` instead for a much faster build.
 
 Note that this whole command just gives you a subset of the full `rustc`
 build. The **full** `rustc` build (what you get with `./x.py build
@@ -165,7 +150,7 @@ build. The **full** `rustc` build (what you get with `./x.py build
 
 You almost never need to do this.
 
-## Build specific components
+### Build specific components
 
 If you are working on the standard library, you probably don't need to build
 the compiler unless you are planning to use a recently added nightly feature.
@@ -174,6 +159,9 @@ Instead, you can just build using the bootstrap compiler.
 ```bash
 ./x.py build --stage 0 library
 ```
+
+If you choose the `library` profile when running `x.py setup`, you can omit `--stage 0` (it's the
+default).
 
 ## Creating a rustup toolchain
 
@@ -186,15 +174,10 @@ you will likely need to build at some point; for example, if you want
 to run the entire test suite).
 
 ```bash
-rustup toolchain link stage1 build/<host-triple>/stage1
-rustup toolchain link stage2 build/<host-triple>/stage2
+rustup toolchain link stage0 build/host/stage0-sysroot # beta compiler + stage0 std
+rustup toolchain link stage1 build/host/stage1
+rustup toolchain link stage2 build/host/stage2
 ```
-
-The `<host-triple>` would typically be one of the following:
-
-- Linux: `x86_64-unknown-linux-gnu`
-- Mac: `x86_64-apple-darwin` or `aarch64-apple-darwin`
-- Windows: `x86_64-pc-windows-msvc`
 
 Now you can run the `rustc` you built with. If you run with `-vV`, you
 should see a version number ending in `-dev`, indicating a build from
@@ -257,7 +240,7 @@ Note that building for some targets requires having external dependencies instal
 (e.g. building musl targets requires a local copy of musl).
 Any target-specific configuration (e.g. the path to a local copy of musl)
 will need to be provided by your `config.toml`.
-Please see `config.toml.example` for information on target-specific configuration keys.
+Please see `config.example.toml` for information on target-specific configuration keys.
 
 For examples of the complete configuration necessary to build a target, please visit
 [the rustc book](https://doc.rust-lang.org/rustc/platform-support.html),
@@ -283,14 +266,14 @@ in other sections:
   - `./x.py build` – builds everything using the stage 1 compiler,
     not just up to `std`
   - `./x.py build --stage 2` – builds everything with the stage 2 compiler including
-    `rustdoc` (which doesn't take too long)
+    `rustdoc`
 - Running tests (see the [section on running tests](../tests/running.html) for
   more details):
   - `./x.py test library/std` – runs the unit tests and integration tests from `std`
-  - `./x.py test src/test/ui` – runs the `ui` test suite
-  - `./x.py test src/test/ui/const-generics` - runs all the tests in
+  - `./x.py test tests/ui` – runs the `ui` test suite
+  - `./x.py test tests/ui/const-generics` - runs all the tests in
   the `const-generics/` subdirectory of the `ui` test suite
-  - `./x.py test src/test/ui/const-generics/const-types.rs` - runs
+  - `./x.py test tests/ui/const-generics/const-types.rs` - runs
   the single test `const-types.rs` from the `ui` test suite
 
 ### Cleaning out build directories

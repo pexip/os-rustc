@@ -13,8 +13,7 @@ use object::{
 use snap::write::FrameEncoder;
 
 use rustc_data_structures::memmap::Mmap;
-use rustc_data_structures::owning_ref::OwningRef;
-use rustc_data_structures::rustc_erase_owner;
+use rustc_data_structures::owned_slice::try_slice_owned;
 use rustc_data_structures::sync::MetadataRef;
 use rustc_metadata::fs::METADATA_FILENAME;
 use rustc_metadata::EncodedMetadata;
@@ -33,6 +32,7 @@ use rustc_target::spec::{RelocModel, Target};
 /// <dt>dylib</dt>
 /// <dd>The metadata can be found in the `.rustc` section of the shared library.</dd>
 /// </dl>
+#[derive(Debug)]
 pub struct DefaultMetadataLoader;
 
 fn load_metadata_with(
@@ -41,10 +41,10 @@ fn load_metadata_with(
 ) -> Result<MetadataRef, String> {
     let file =
         File::open(path).map_err(|e| format!("failed to open file '{}': {}", path.display(), e))?;
-    let data = unsafe { Mmap::map(file) }
-        .map_err(|e| format!("failed to mmap file '{}': {}", path.display(), e))?;
-    let metadata = OwningRef::new(data).try_map(f)?;
-    return Ok(rustc_erase_owner!(metadata.map_owner_box()));
+
+    unsafe { Mmap::map(file) }
+        .map_err(|e| format!("failed to mmap file '{}': {}", path.display(), e))
+        .and_then(|mmap| try_slice_owned(mmap, |mmap| f(mmap)))
 }
 
 impl MetadataLoader for DefaultMetadataLoader {
@@ -60,7 +60,7 @@ impl MetadataLoader for DefaultMetadataLoader {
                     let data = entry
                         .data(data)
                         .map_err(|e| format!("failed to parse rlib '{}': {}", path.display(), e))?;
-                    return search_for_metadata(path, data, ".rmeta");
+                    return search_for_section(path, data, ".rmeta");
                 }
             }
 
@@ -69,11 +69,11 @@ impl MetadataLoader for DefaultMetadataLoader {
     }
 
     fn get_dylib_metadata(&self, _target: &Target, path: &Path) -> Result<MetadataRef, String> {
-        load_metadata_with(path, |data| search_for_metadata(path, data, ".rustc"))
+        load_metadata_with(path, |data| search_for_section(path, data, ".rustc"))
     }
 }
 
-fn search_for_metadata<'a>(
+pub(super) fn search_for_section<'a>(
     path: &Path,
     bytes: &'a [u8],
     section: &str,
@@ -100,7 +100,13 @@ pub(crate) fn create_object_file(sess: &Session) -> Option<write::Object<'static
     };
     let architecture = match &sess.target.arch[..] {
         "arm" => Architecture::Arm,
-        "aarch64" => Architecture::Aarch64,
+        "aarch64" => {
+            if sess.target.pointer_width == 32 {
+                Architecture::Aarch64_Ilp32
+            } else {
+                Architecture::Aarch64
+            }
+        }
         "x86" => Architecture::I386,
         "s390x" => Architecture::S390x,
         "mips" => Architecture::Mips,
@@ -121,6 +127,7 @@ pub(crate) fn create_object_file(sess: &Session) -> Option<write::Object<'static
         "msp430" => Architecture::Msp430,
         "hexagon" => Architecture::Hexagon,
         "bpf" => Architecture::Bpf,
+        "loongarch64" => Architecture::LoongArch64,
         // Unsupported architecture.
         _ => return None,
     };
@@ -165,12 +172,28 @@ pub(crate) fn create_object_file(sess: &Session) -> Option<write::Object<'static
                 };
             e_flags
         }
-        Architecture::Riscv64 if sess.target.options.features.contains("+d") => {
-            // copied from `riscv64-linux-gnu-gcc foo.c -c`, note though
-            // that the `+d` target feature represents whether the double
-            // float abi is enabled.
-            let e_flags = elf::EF_RISCV_RVC | elf::EF_RISCV_FLOAT_ABI_DOUBLE;
+        Architecture::Riscv32 | Architecture::Riscv64 => {
+            // Source: https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/079772828bd10933d34121117a222b4cc0ee2200/riscv-elf.adoc
+            let mut e_flags: u32 = 0x0;
+            let features = &sess.target.options.features;
+            // Check if compressed is enabled
+            if features.contains("+c") {
+                e_flags |= elf::EF_RISCV_RVC;
+            }
+
+            // Select the appropriate floating-point ABI
+            if features.contains("+d") {
+                e_flags |= elf::EF_RISCV_FLOAT_ABI_DOUBLE;
+            } else if features.contains("+f") {
+                e_flags |= elf::EF_RISCV_FLOAT_ABI_SINGLE;
+            } else {
+                e_flags |= elf::EF_RISCV_FLOAT_ABI_SOFT;
+            }
             e_flags
+        }
+        Architecture::LoongArch64 => {
+            // Source: https://loongson.github.io/LoongArch-Documentation/LoongArch-ELF-ABI-EN.html#_e_flags_identifies_abi_type_and_version
+            elf::EF_LARCH_OBJABI_V1 | elf::EF_LARCH_ABI_DOUBLE_FLOAT
         }
         _ => 0,
     };
@@ -191,39 +214,43 @@ pub enum MetadataPosition {
     Last,
 }
 
-// For rlibs we "pack" rustc metadata into a dummy object file.
-//
-// Historically it was needed because rustc linked rlibs as whole-archive in some cases.
-// In that case linkers try to include all files located in an archive, so if metadata is stored
-// in an archive then it needs to be of a form that the linker is able to process.
-// Now it's not clear whether metadata still needs to be wrapped into an object file or not.
-//
-// Note, though, that we don't actually want this metadata to show up in any
-// final output of the compiler. Instead this is purely for rustc's own
-// metadata tracking purposes.
-//
-// With the above in mind, each "flavor" of object format gets special
-// handling here depending on the target:
-//
-// * MachO - macos-like targets will insert the metadata into a section that
-//   is sort of fake dwarf debug info. Inspecting the source of the macos
-//   linker this causes these sections to be skipped automatically because
-//   it's not in an allowlist of otherwise well known dwarf section names to
-//   go into the final artifact.
-//
-// * WebAssembly - we actually don't have any container format for this
-//   target. WebAssembly doesn't support the `dylib` crate type anyway so
-//   there's no need for us to support this at this time. Consequently the
-//   metadata bytes are simply stored as-is into an rlib.
-//
-// * COFF - Windows-like targets create an object with a section that has
-//   the `IMAGE_SCN_LNK_REMOVE` flag set which ensures that if the linker
-//   ever sees the section it doesn't process it and it's removed.
-//
-// * ELF - All other targets are similar to Windows in that there's a
-//   `SHF_EXCLUDE` flag we can set on sections in an object file to get
-//   automatically removed from the final output.
-pub fn create_rmeta_file(sess: &Session, metadata: &[u8]) -> (Vec<u8>, MetadataPosition) {
+/// For rlibs we "pack" rustc metadata into a dummy object file.
+///
+/// Historically it was needed because rustc linked rlibs as whole-archive in some cases.
+/// In that case linkers try to include all files located in an archive, so if metadata is stored
+/// in an archive then it needs to be of a form that the linker is able to process.
+/// Now it's not clear whether metadata still needs to be wrapped into an object file or not.
+///
+/// Note, though, that we don't actually want this metadata to show up in any
+/// final output of the compiler. Instead this is purely for rustc's own
+/// metadata tracking purposes.
+///
+/// With the above in mind, each "flavor" of object format gets special
+/// handling here depending on the target:
+///
+/// * MachO - macos-like targets will insert the metadata into a section that
+///   is sort of fake dwarf debug info. Inspecting the source of the macos
+///   linker this causes these sections to be skipped automatically because
+///   it's not in an allowlist of otherwise well known dwarf section names to
+///   go into the final artifact.
+///
+/// * WebAssembly - we actually don't have any container format for this
+///   target. WebAssembly doesn't support the `dylib` crate type anyway so
+///   there's no need for us to support this at this time. Consequently the
+///   metadata bytes are simply stored as-is into an rlib.
+///
+/// * COFF - Windows-like targets create an object with a section that has
+///   the `IMAGE_SCN_LNK_REMOVE` flag set which ensures that if the linker
+///   ever sees the section it doesn't process it and it's removed.
+///
+/// * ELF - All other targets are similar to Windows in that there's a
+///   `SHF_EXCLUDE` flag we can set on sections in an object file to get
+///   automatically removed from the final output.
+pub fn create_wrapper_file(
+    sess: &Session,
+    section_name: Vec<u8>,
+    data: &[u8],
+) -> (Vec<u8>, MetadataPosition) {
     let Some(mut file) = create_object_file(sess) else {
         // This is used to handle all "other" targets. This includes targets
         // in two categories:
@@ -241,11 +268,11 @@ pub fn create_rmeta_file(sess: &Session, metadata: &[u8]) -> (Vec<u8>, MetadataP
         // WebAssembly and for targets not supported by the `object` crate
         // yet it means that work will need to be done in the `object` crate
         // to add a case above.
-        return (metadata.to_vec(), MetadataPosition::Last);
+        return (data.to_vec(), MetadataPosition::Last);
     };
     let section = file.add_section(
         file.segment_name(StandardSegment::Debug).to_vec(),
-        b".rmeta".to_vec(),
+        section_name,
         SectionKind::Debug,
     );
     match file.format() {
@@ -259,7 +286,7 @@ pub fn create_rmeta_file(sess: &Session, metadata: &[u8]) -> (Vec<u8>, MetadataP
         }
         _ => {}
     };
-    file.append_section_data(section, metadata, 1);
+    file.append_section_data(section, data, 1);
     (file.write().unwrap(), MetadataPosition::First)
 }
 
@@ -283,7 +310,13 @@ pub fn create_compressed_metadata_file(
     symbol_name: &str,
 ) -> Vec<u8> {
     let mut compressed = rustc_metadata::METADATA_HEADER.to_vec();
+    // Our length will be backfilled once we're done writing
+    compressed.write_all(&[0; 4]).unwrap();
     FrameEncoder::new(&mut compressed).write_all(metadata.raw_data()).unwrap();
+    let meta_len = rustc_metadata::METADATA_HEADER.len();
+    let data_len = (compressed.len() - meta_len - 4) as u32;
+    compressed[meta_len..meta_len + 4].copy_from_slice(&data_len.to_be_bytes());
+
     let Some(mut file) = create_object_file(sess) else {
         return compressed.to_vec();
     };

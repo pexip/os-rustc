@@ -33,7 +33,9 @@ pub(crate) fn complete_type_path(
             // Don't suggest attribute macros and derives.
             ScopeDef::ModuleDef(Macro(mac)) => mac.is_fn_like(ctx.db),
             // Type things are fine
-            ScopeDef::ModuleDef(BuiltinType(_) | Adt(_) | Module(_) | Trait(_) | TypeAlias(_))
+            ScopeDef::ModuleDef(
+                BuiltinType(_) | Adt(_) | Module(_) | Trait(_) | TraitAlias(_) | TypeAlias(_),
+            )
             | ScopeDef::AdtSelfType(_)
             | ScopeDef::Unknown
             | ScopeDef::GenericParam(TypeParam(_)) => true,
@@ -58,7 +60,7 @@ pub(crate) fn complete_type_path(
             trait_.items(ctx.sema.db).into_iter().for_each(|item| add_assoc_item(acc, item))
         }
         Qualified::TypeAnchor { ty: Some(ty), trait_: None } => {
-            ctx.iterate_path_candidates(&ty, |item| {
+            ctx.iterate_path_candidates(ty, |item| {
                 add_assoc_item(acc, item);
             });
 

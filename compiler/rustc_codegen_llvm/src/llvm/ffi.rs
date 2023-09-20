@@ -35,7 +35,7 @@ pub enum LLVMRustResult {
 pub struct LLVMRustCOFFShortExport {
     pub name: *const c_char,
     pub ordinal_present: bool,
-    // value of `ordinal` only important when `ordinal_present` is true
+    /// value of `ordinal` only important when `ordinal_present` is true
     pub ordinal: u16,
 }
 
@@ -79,6 +79,7 @@ pub enum LLVMModFlagBehavior {
     Append = 5,
     AppendUnique = 6,
     Max = 7,
+    Min = 8,
 }
 
 // Consts for the LLVM CallConv type, pre-cast to usize.
@@ -183,7 +184,6 @@ pub enum AttributeKind {
     OptimizeNone = 24,
     ReturnsTwice = 25,
     ReadNone = 26,
-    InaccessibleMemOnly = 27,
     SanitizeHWAddress = 28,
     WillReturn = 29,
     StackProtectReq = 30,
@@ -428,6 +428,7 @@ pub enum MetadataType {
     MD_type = 19,
     MD_vcall_visibility = 28,
     MD_noundef = 29,
+    MD_kcfi_type = 36,
 }
 
 /// LLVMRustAsmDialect
@@ -481,6 +482,8 @@ pub struct SanitizerOptions {
     pub sanitize_thread: bool,
     pub sanitize_hwaddress: bool,
     pub sanitize_hwaddress_recover: bool,
+    pub sanitize_kernel_address: bool,
+    pub sanitize_kernel_address_recover: bool,
 }
 
 /// LLVMRelocMode
@@ -590,6 +593,15 @@ pub enum ChecksumKind {
     SHA256,
 }
 
+/// LLVMRustMemoryEffects
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub enum MemoryEffects {
+    None,
+    ReadOnly,
+    InaccessibleMemOnly,
+}
+
 extern "C" {
     type Opaque;
 }
@@ -628,9 +640,6 @@ extern "C" {
 pub struct Builder<'a>(InvariantOpaque<'a>);
 #[repr(C)]
 pub struct PassManager<'a>(InvariantOpaque<'a>);
-extern "C" {
-    pub type PassManagerBuilder;
-}
 extern "C" {
     pub type Pass;
 }
@@ -937,15 +946,27 @@ pub mod debuginfo {
         NoDebug,
         FullDebug,
         LineTablesOnly,
+        DebugDirectivesOnly,
     }
 
     impl DebugEmissionKind {
         pub fn from_generic(kind: rustc_session::config::DebugInfo) -> Self {
+            // We should be setting LLVM's emission kind to `LineTablesOnly` if
+            // we are compiling with "limited" debuginfo. However, some of the
+            // existing tools relied on slightly more debuginfo being generated than
+            // would be the case with `LineTablesOnly`, and we did not want to break
+            // these tools in a "drive-by fix", without a good idea or plan about
+            // what limited debuginfo should exactly look like. So for now we are
+            // instead adding a new debuginfo option "line-tables-only" so as to
+            // not break anything and to allow users to have 'limited' debug info.
+            //
+            // See https://github.com/rust-lang/rust/issues/60020 for details.
             use rustc_session::config::DebugInfo;
             match kind {
                 DebugInfo::None => DebugEmissionKind::NoDebug,
-                DebugInfo::Limited => DebugEmissionKind::LineTablesOnly,
-                DebugInfo::Full => DebugEmissionKind::FullDebug,
+                DebugInfo::LineDirectivesOnly => DebugEmissionKind::DebugDirectivesOnly,
+                DebugInfo::LineTablesOnly => DebugEmissionKind::LineTablesOnly,
+                DebugInfo::Limited | DebugInfo::Full => DebugEmissionKind::FullDebug,
             }
         }
     }
@@ -975,6 +996,9 @@ pub type SelfProfileBeforePassCallback =
     unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char);
 pub type SelfProfileAfterPassCallback = unsafe extern "C" fn(*mut c_void);
 
+pub type GetSymbolsCallback = unsafe extern "C" fn(*mut c_void, *const c_char) -> *mut c_void;
+pub type GetSymbolsErrorCallback = unsafe extern "C" fn(*const c_char) -> *mut c_void;
+
 extern "C" {
     pub fn LLVMRustInstallFatalErrorHandler();
     pub fn LLVMRustDisableSystemDialogsOnCrash();
@@ -994,7 +1018,7 @@ extern "C" {
     pub fn LLVMSetDataLayout(M: &Module, Triple: *const c_char);
 
     /// See Module::setModuleInlineAsm.
-    pub fn LLVMRustAppendModuleInlineAsm(M: &Module, Asm: *const c_char, AsmLen: size_t);
+    pub fn LLVMAppendModuleInlineAsm(M: &Module, Asm: *const c_char, Len: size_t);
 
     /// See llvm::LLVMTypeKind::getTypeID.
     pub fn LLVMRustGetTypeKind(Ty: &Type) -> TypeKind;
@@ -1041,7 +1065,7 @@ extern "C" {
 
     // Operations on other types
     pub fn LLVMVoidTypeInContext(C: &Context) -> &Type;
-    pub fn LLVMRustMetadataTypeInContext(C: &Context) -> &Type;
+    pub fn LLVMMetadataTypeInContext(C: &Context) -> &Type;
 
     // Operations on all values
     pub fn LLVMTypeOf(Val: &Value) -> &Type;
@@ -1052,13 +1076,20 @@ extern "C" {
     pub fn LLVMGlobalSetMetadata<'a>(Val: &'a Value, KindID: c_uint, Metadata: &'a Metadata);
     pub fn LLVMRustGlobalAddMetadata<'a>(Val: &'a Value, KindID: c_uint, Metadata: &'a Metadata);
     pub fn LLVMValueAsMetadata(Node: &Value) -> &Metadata;
+    pub fn LLVMIsAFunction(Val: &Value) -> Option<&Value>;
 
     // Operations on constants of any type
     pub fn LLVMConstNull(Ty: &Type) -> &Value;
     pub fn LLVMGetUndef(Ty: &Type) -> &Value;
+    pub fn LLVMGetPoison(Ty: &Type) -> &Value;
 
     // Operations on metadata
+    // FIXME: deprecated, replace with LLVMMDStringInContext2
     pub fn LLVMMDStringInContext(C: &Context, Str: *const c_char, SLen: c_uint) -> &Value;
+
+    pub fn LLVMMDStringInContext2(C: &Context, Str: *const c_char, SLen: size_t) -> &Metadata;
+
+    // FIXME: deprecated, replace with LLVMMDNodeInContext2
     pub fn LLVMMDNodeInContext<'a>(
         C: &'a Context,
         Vals: *const &'a Value,
@@ -1097,6 +1128,8 @@ extern "C" {
         Packed: Bool,
     ) -> &'a Value;
 
+    // FIXME: replace with LLVMConstArray2 when bumped minimal version to llvm-17
+    // https://github.com/llvm/llvm-project/commit/35276f16e5a2cae0dfb49c0fbf874d4d2f177acc
     pub fn LLVMConstArray<'a>(
         ElementTy: &'a Type,
         ConstantVals: *const &'a Value,
@@ -1175,6 +1208,7 @@ extern "C" {
     pub fn LLVMRustCreateUWTableAttr(C: &Context, async_: bool) -> &Attribute;
     pub fn LLVMRustCreateAllocSizeAttr(C: &Context, size_arg: u32) -> &Attribute;
     pub fn LLVMRustCreateAllocKindAttr(C: &Context, size_arg: u64) -> &Attribute;
+    pub fn LLVMRustCreateMemoryEffectsAttr(C: &Context, effects: MemoryEffects) -> &Attribute;
 
     // Operations on functions
     pub fn LLVMRustGetOrInsertFunction<'a>(
@@ -1235,7 +1269,7 @@ extern "C" {
     pub fn LLVMDisposeBuilder<'a>(Builder: &'a mut Builder<'a>);
 
     // Metadata
-    pub fn LLVMSetCurrentDebugLocation<'a>(Builder: &Builder<'a>, L: &'a Value);
+    pub fn LLVMSetCurrentDebugLocation2<'a>(Builder: &Builder<'a>, Loc: &'a Metadata);
 
     // Terminators
     pub fn LLVMBuildRetVoid<'a>(B: &Builder<'a>) -> &'a Value;
@@ -1261,7 +1295,8 @@ extern "C" {
         NumArgs: c_uint,
         Then: &'a BasicBlock,
         Catch: &'a BasicBlock,
-        Bundle: Option<&OperandBundleDef<'a>>,
+        OpBundles: *const Option<&OperandBundleDef<'a>>,
+        NumOpBundles: c_uint,
         Name: *const c_char,
     ) -> &'a Value;
     pub fn LLVMBuildLandingPad<'a>(
@@ -1274,38 +1309,38 @@ extern "C" {
     pub fn LLVMBuildResume<'a>(B: &Builder<'a>, Exn: &'a Value) -> &'a Value;
     pub fn LLVMBuildUnreachable<'a>(B: &Builder<'a>) -> &'a Value;
 
-    pub fn LLVMRustBuildCleanupPad<'a>(
+    pub fn LLVMBuildCleanupPad<'a>(
         B: &Builder<'a>,
         ParentPad: Option<&'a Value>,
-        ArgCnt: c_uint,
         Args: *const &'a Value,
+        NumArgs: c_uint,
         Name: *const c_char,
     ) -> Option<&'a Value>;
-    pub fn LLVMRustBuildCleanupRet<'a>(
+    pub fn LLVMBuildCleanupRet<'a>(
         B: &Builder<'a>,
         CleanupPad: &'a Value,
-        UnwindBB: Option<&'a BasicBlock>,
+        BB: Option<&'a BasicBlock>,
     ) -> Option<&'a Value>;
-    pub fn LLVMRustBuildCatchPad<'a>(
+    pub fn LLVMBuildCatchPad<'a>(
         B: &Builder<'a>,
         ParentPad: &'a Value,
-        ArgCnt: c_uint,
         Args: *const &'a Value,
+        NumArgs: c_uint,
         Name: *const c_char,
     ) -> Option<&'a Value>;
-    pub fn LLVMRustBuildCatchRet<'a>(
+    pub fn LLVMBuildCatchRet<'a>(
         B: &Builder<'a>,
-        Pad: &'a Value,
+        CatchPad: &'a Value,
         BB: &'a BasicBlock,
     ) -> Option<&'a Value>;
-    pub fn LLVMRustBuildCatchSwitch<'a>(
+    pub fn LLVMBuildCatchSwitch<'a>(
         Builder: &Builder<'a>,
         ParentPad: Option<&'a Value>,
-        BB: Option<&'a BasicBlock>,
+        UnwindBB: Option<&'a BasicBlock>,
         NumHandlers: c_uint,
         Name: *const c_char,
     ) -> Option<&'a Value>;
-    pub fn LLVMRustAddHandler<'a>(CatchSwitch: &'a Value, Handler: &'a BasicBlock);
+    pub fn LLVMAddHandler<'a>(CatchSwitch: &'a Value, Dest: &'a BasicBlock);
     pub fn LLVMSetPersonalityFn<'a>(Func: &'a Value, Pers: &'a Value);
 
     // Add a case to the switch instruction
@@ -1599,11 +1634,12 @@ extern "C" {
         DestTy: &'a Type,
         Name: *const c_char,
     ) -> &'a Value;
-    pub fn LLVMRustBuildIntCast<'a>(
+    pub fn LLVMBuildIntCast2<'a>(
         B: &Builder<'a>,
         Val: &'a Value,
         DestTy: &'a Type,
-        IsSigned: bool,
+        IsSigned: Bool,
+        Name: *const c_char,
     ) -> &'a Value;
 
     // Comparisons
@@ -1631,7 +1667,8 @@ extern "C" {
         Fn: &'a Value,
         Args: *const &'a Value,
         NumArgs: c_uint,
-        Bundle: Option<&OperandBundleDef<'a>>,
+        OpBundles: *const Option<&OperandBundleDef<'a>>,
+        NumOpBundles: c_uint,
     ) -> &'a Value;
     pub fn LLVMRustBuildMemCpy<'a>(
         B: &Builder<'a>,
@@ -1795,8 +1832,6 @@ extern "C" {
     /// Creates a legacy pass manager -- only used for final codegen.
     pub fn LLVMCreatePassManager<'a>() -> &'a mut PassManager<'a>;
 
-    pub fn LLVMInitializePasses();
-
     pub fn LLVMTimeTraceProfilerInitialize();
 
     pub fn LLVMTimeTraceProfilerFinishThread();
@@ -1893,7 +1928,7 @@ extern "C" {
     );
     pub fn LLVMRustHasModuleFlag(M: &Module, name: *const c_char, len: size_t) -> bool;
 
-    pub fn LLVMRustMetadataAsValue<'a>(C: &'a Context, MD: &'a Metadata) -> &'a Value;
+    pub fn LLVMMetadataAsValue<'a>(C: &'a Context, MD: &'a Metadata) -> &'a Value;
 
     pub fn LLVMRustDIBuilderCreate(M: &Module) -> &mut DIBuilder<'_>;
 
@@ -1949,6 +1984,21 @@ extern "C" {
         MaybeFn: Option<&'a Value>,
         TParam: &'a DIArray,
         Decl: Option<&'a DIDescriptor>,
+    ) -> &'a DISubprogram;
+
+    pub fn LLVMRustDIBuilderCreateMethod<'a>(
+        Builder: &DIBuilder<'a>,
+        Scope: &'a DIDescriptor,
+        Name: *const c_char,
+        NameLen: size_t,
+        LinkageName: *const c_char,
+        LinkageNameLen: size_t,
+        File: &'a DIFile,
+        LineNo: c_uint,
+        Ty: &'a DIType,
+        Flags: DIFlags,
+        SPFlags: DISPFlags,
+        TParam: &'a DIArray,
     ) -> &'a DISubprogram;
 
     pub fn LLVMRustDIBuilderCreateBasicType<'a>(
@@ -2118,7 +2168,8 @@ extern "C" {
         Builder: &DIBuilder<'a>,
         Name: *const c_char,
         NameLen: size_t,
-        Value: i64,
+        Value: *const u64,
+        SizeInBits: c_uint,
         IsUnsigned: bool,
     ) -> &'a DIEnumerator;
 
@@ -2201,6 +2252,7 @@ extern "C" {
     ) -> &'a DILocation;
     pub fn LLVMRustDIBuilderCreateOpDeref() -> u64;
     pub fn LLVMRustDIBuilderCreateOpPlusUconst() -> u64;
+    pub fn LLVMRustDIBuilderCreateOpLLVMFragment() -> u64;
 
     #[allow(improper_ctypes)]
     pub fn LLVMRustWriteTypeToString(Type: &Type, s: &RustString);
@@ -2240,6 +2292,7 @@ extern "C" {
         RelaxELFRelocations: bool,
         UseInitArray: bool,
         SplitDwarfFile: *const c_char,
+        ForceEmulatedTls: bool,
     ) -> Option<&'static mut TargetMachine>;
     pub fn LLVMRustDisposeTargetMachine(T: &'static mut TargetMachine);
     pub fn LLVMRustAddLibraryInfo<'a>(
@@ -2371,11 +2424,11 @@ extern "C" {
 
     pub fn LLVMRustSetDataLayoutFromTargetMachine<'a>(M: &'a Module, TM: &'a TargetMachine);
 
-    pub fn LLVMRustBuildOperandBundleDef<'a>(
+    pub fn LLVMRustBuildOperandBundleDef(
         Name: *const c_char,
-        Inputs: *const &'a Value,
+        Inputs: *const &'_ Value,
         NumInputs: c_uint,
-    ) -> &'a mut OperandBundleDef<'a>;
+    ) -> &mut OperandBundleDef<'_>;
     pub fn LLVMRustFreeOperandBundleDef<'a>(Bundle: &'a mut OperandBundleDef<'a>);
 
     pub fn LLVMRustPositionBuilderAtStart<'a>(B: &Builder<'a>, BB: &'a BasicBlock);
@@ -2389,6 +2442,8 @@ extern "C" {
     pub fn LLVMRustModuleBufferLen(p: &ModuleBuffer) -> usize;
     pub fn LLVMRustModuleBufferFree(p: &'static mut ModuleBuffer);
     pub fn LLVMRustModuleCost(M: &Module) -> u64;
+    #[allow(improper_ctypes)]
+    pub fn LLVMRustModuleInstructionStats(M: &Module, Str: &RustString);
 
     pub fn LLVMRustThinLTOBufferCreate(M: &Module, is_thin: bool) -> &'static mut ThinLTOBuffer;
     pub fn LLVMRustThinLTOBufferFree(M: &'static mut ThinLTOBuffer);
@@ -2463,4 +2518,14 @@ extern "C" {
     pub fn LLVMRustGetMangledName(V: &Value, out: &RustString);
 
     pub fn LLVMRustGetElementTypeArgIndex(CallSite: &Value) -> i32;
+
+    pub fn LLVMRustIsBitcode(ptr: *const u8, len: usize) -> bool;
+
+    pub fn LLVMRustGetSymbols(
+        buf_ptr: *const u8,
+        buf_len: usize,
+        state: *mut c_void,
+        callback: GetSymbolsCallback,
+        error_callback: GetSymbolsErrorCallback,
+    ) -> *mut c_void;
 }

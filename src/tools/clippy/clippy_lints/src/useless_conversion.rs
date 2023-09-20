@@ -1,11 +1,11 @@
 use clippy_utils::diagnostics::{span_lint_and_help, span_lint_and_sugg};
-use clippy_utils::source::{snippet, snippet_with_macro_callsite};
+use clippy_utils::source::{snippet, snippet_with_context};
 use clippy_utils::sugg::Sugg;
-use clippy_utils::ty::{is_type_diagnostic_item, same_type_and_consts};
-use clippy_utils::{get_parent_expr, is_trait_method, match_def_path, paths};
+use clippy_utils::ty::{is_copy, is_type_diagnostic_item, same_type_and_consts};
+use clippy_utils::{get_parent_expr, is_trait_method, match_def_path, path_to_local, paths};
 use if_chain::if_chain;
 use rustc_errors::Applicability;
-use rustc_hir::{Expr, ExprKind, HirId, LangItem, MatchSource};
+use rustc_hir::{BindingAnnotation, Expr, ExprKind, HirId, MatchSource, Node, PatKind};
 use rustc_lint::{LateContext, LateLintPass};
 use rustc_middle::ty;
 use rustc_session::{declare_tool_lint, impl_lint_pass};
@@ -68,29 +68,38 @@ impl<'tcx> LateLintPass<'tcx> for UselessConversion {
                     let a = cx.typeck_results().expr_ty(e);
                     let b = cx.typeck_results().expr_ty(recv);
                     if same_type_and_consts(a, b) {
-                        let sugg = snippet_with_macro_callsite(cx, recv.span, "<expr>").to_string();
+                        let mut app = Applicability::MachineApplicable;
+                        let sugg = snippet_with_context(cx, recv.span, e.span.ctxt(), "<expr>", &mut app).0;
                         span_lint_and_sugg(
                             cx,
                             USELESS_CONVERSION,
                             e.span,
                             &format!("useless conversion to the same type: `{b}`"),
                             "consider removing `.into()`",
-                            sugg,
-                            Applicability::MachineApplicable, // snippet
+                            sugg.into_owned(),
+                            app,
                         );
                     }
                 }
                 if is_trait_method(cx, e, sym::IntoIterator) && name.ident.name == sym::into_iter {
-                    if let Some(parent_expr) = get_parent_expr(cx, e) {
-                        if let ExprKind::MethodCall(parent_name, ..) = parent_expr.kind {
-                            if parent_name.ident.name != sym::into_iter {
-                                return;
-                            }
-                        }
+                    if get_parent_expr(cx, e).is_some() &&
+                       let Some(id) = path_to_local(recv) &&
+                       let Node::Pat(pat) = cx.tcx.hir().get(id) &&
+                       let PatKind::Binding(ann, ..) = pat.kind &&
+                       ann != BindingAnnotation::MUT
+                    {
+                        // Do not remove .into_iter() applied to a non-mutable local variable used in
+                        // a larger expression context as it would differ in mutability.
+                        return;
                     }
+
                     let a = cx.typeck_results().expr_ty(e);
                     let b = cx.typeck_results().expr_ty(recv);
-                    if same_type_and_consts(a, b) {
+
+                    // If the types are identical then .into_iter() can be removed, unless the type
+                    // implements Copy, in which case .into_iter() returns a copy of the receiver and
+                    // cannot be safely omitted.
+                    if same_type_and_consts(a, b) && !is_copy(cx, b) {
                         let sugg = snippet(cx, recv.span, "<expr>").into_owned();
                         span_lint_and_sugg(
                             cx,
@@ -153,11 +162,12 @@ impl<'tcx> LateLintPass<'tcx> for UselessConversion {
                         }
 
                         if_chain! {
-                            if cx.tcx.lang_items().require(LangItem::FromFrom).ok() == Some(def_id);
+                            if cx.tcx.is_diagnostic_item(sym::from_fn, def_id);
                             if same_type_and_consts(a, b);
 
                             then {
-                                let sugg = Sugg::hir_with_macro_callsite(cx, arg, "<expr>").maybe_par();
+                                let mut app = Applicability::MachineApplicable;
+                                let sugg = Sugg::hir_with_context(cx, arg, e.span.ctxt(), "<expr>", &mut app).maybe_par();
                                 let sugg_msg =
                                     format!("consider removing `{}()`", snippet(cx, path.span, "From::from"));
                                 span_lint_and_sugg(
@@ -167,7 +177,7 @@ impl<'tcx> LateLintPass<'tcx> for UselessConversion {
                                     &format!("useless conversion to the same type: `{b}`"),
                                     &sugg_msg,
                                     sugg.to_string(),
-                                    Applicability::MachineApplicable, // snippet
+                                    app,
                                 );
                             }
                         }

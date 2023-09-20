@@ -1,4 +1,3 @@
-use crate::build::matches::ArmHasGuard;
 use crate::build::ForGuard::OutsideGuard;
 use crate::build::{BlockAnd, BlockAndExtension, BlockFrame, Builder};
 use rustc_middle::middle::region::Scope;
@@ -116,9 +115,10 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
                     initializer: Some(initializer),
                     lint_level,
                     else_block: Some(else_block),
+                    span: _,
                 } => {
                     // When lowering the statement `let <pat> = <expr> else { <else> };`,
-                    // the `<else>` block is nested in the parent scope enclosing this statment.
+                    // the `<else>` block is nested in the parent scope enclosing this statement.
                     // That scope is usually either the enclosing block scope,
                     // or the remainder scope of the last statement.
                     // This is to make sure that temporaries instantiated in `<expr>` are dropped
@@ -231,8 +231,8 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
                                         visibility_scope,
                                         remainder_span,
                                         pattern,
-                                        ArmHasGuard(false),
-                                        Some((None, initializer_span)),
+                                        None,
+                                        Some((Some(&destination), initializer_span)),
                                     );
                                     this.visit_primary_bindings(
                                         pattern,
@@ -279,6 +279,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
                     initializer,
                     lint_level,
                     else_block: None,
+                    span: _,
                 } => {
                     let ignores_expr_result = matches!(pattern.kind, PatKind::Wild);
                     this.block_context.push(BlockFrame::Statement { ignores_expr_result });
@@ -308,7 +309,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
                                             visibility_scope,
                                             remainder_span,
                                             pattern,
-                                            ArmHasGuard(false),
+                                            None,
                                             Some((None, initializer_span)),
                                         );
                                         this.expr_into_pattern(block, &pattern, init)
@@ -324,7 +325,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
                                 visibility_scope,
                                 remainder_span,
                                 pattern,
-                                ArmHasGuard(false),
+                                None,
                                 None,
                             );
                             block.unit()
@@ -374,7 +375,9 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
             // the case of `!`, no return value is required, as the block will never return.
             // Opaque types of empty bodies also need this unit assignment, in order to infer that their
             // type is actually unit. Otherwise there will be no defining use found in the MIR.
-            if destination_ty.is_unit() || matches!(destination_ty.kind(), ty::Opaque(..)) {
+            if destination_ty.is_unit()
+                || matches!(destination_ty.kind(), ty::Alias(ty::Opaque, ..))
+            {
                 // We only want to assign an implicit `()` as the return value of the block if the
                 // block does not diverge. (Otherwise, we may try to assign a unit to a `!`-type.)
                 this.cfg.push_assign_unit(block, source_info, destination, this.tcx);

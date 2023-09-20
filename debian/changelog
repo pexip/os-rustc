@@ -1,3 +1,106 @@
+rustc (1.70.0+dfsg1-1) unstable; urgency=medium
+
+  * Upload to unstable
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Wed, 20 Sep 2023 20:18:40 +0200
+
+rustc (1.70.0+dfsg1-1~exp3) experimental; urgency=medium
+
+  * more test fixes
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Fri, 15 Sep 2023 15:07:01 +0200
+
+rustc (1.70.0+dfsg1-1~exp2) experimental; urgency=medium
+
+  * don't remove replace-version-placeholder from workspace
+  * disable download tests
+  * fix x86 tests checking for SSE2
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Fri, 15 Sep 2023 10:10:52 +0200
+
+rustc (1.70.0+dfsg1-1~exp1) experimental; urgency=medium
+
+  * New upstream release
+  * switch to LLVM 16
+  * properly drop more components
+  * rust-src: fix path of installed example config
+  * fix lintian overrides
+  * update d/copyright
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Thu, 14 Sep 2023 09:07:26 +0200
+
+rustc (1.69.0+dfsg1-1) unstable; urgency=medium
+
+  * Upload to unstable
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Wed, 13 Sep 2023 13:57:58 +0200
+
+rustc (1.69.0+dfsg1-1~exp2) experimental; urgency=medium
+
+  * config: also enable rustdoc explicitly
+  * bump wasi-libc to revert stack protection (Closes: #1051815)
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Wed, 13 Sep 2023 08:02:53 +0200
+
+rustc (1.69.0+dfsg1-1~exp1) experimental; urgency=medium
+
+  [ Eric Long ]
+  * New upstream release
+  * Manually include `rust-analyzer-proc-macro-srv` (again)
+
+  [ Fabian Grünbichler ]
+  * add libc with "extra_traits" to feature sync patch
+  * update d/copyright
+  * update lintian overrides
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Tue, 12 Sep 2023 10:17:15 +0200
+
+rustc (1.68.2+dfsg1-1) unstable; urgency=medium
+
+  * Upload to unstable
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Sun, 10 Sep 2023 19:22:53 +0200
+
+rustc (1.68.2+dfsg1-1~exp1) experimental; urgency=medium
+
+  [ Eric Long ]
+  * New upstream version 1.68.2+dfsg1
+  * Update patches to adapt to upstream test path change
+
+  [ Fabian Grünbichler ]
+  * Update wasi-libc to 4362b18
+  * Update doc path to fix linkcheck
+  * Update d/copyright
+  * Update lintian overrides
+  * Update privacy breach removal (github badge)
+  * Bump Standards-Version to 4.6.2
+
+  [Helmut Grohne]
+  * Fix FTCBFS: Do not pass host CFLAGS to the build compiler
+    (Closes: #1050975)
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Wed, 02 Aug 2023 13:17:47 +0200
+
+rustc (1.67.1+dfsg1-1) unstable; urgency=medium
+
+  * Upload to unstable
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Sun, 03 Sep 2023 19:58:53 +0200
+
+rustc (1.67.1+dfsg1-1~exp1) experimental; urgency=medium
+
+  [ Fabian Grünbichler ]
+  * update/rebase/drop patches (based on work by Blair Noctis)
+  * d/copyright: add missing statements
+  * add missing lintian overrides for test cases
+
+  [ Blair Noctis ]
+  * New upstream release
+  * Cherry-pick sysroot detection fix
+  * Update d/copyright for some vendored
+
+ -- Fabian Grünbichler <f.gruenbichler@proxmox.com>  Fri, 07 Jul 2023 10:01:33 +0200
+
 rustc (1.66.0+dfsg1-1) unstable; urgency=medium
 
   * Upload to unstable

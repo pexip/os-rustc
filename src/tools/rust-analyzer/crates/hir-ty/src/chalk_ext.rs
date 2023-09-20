@@ -1,25 +1,28 @@
 //! Various extensions traits for Chalk types.
 
-use chalk_ir::{FloatTy, IntTy, Mutability, Scalar, UintTy};
+use chalk_ir::{FloatTy, IntTy, Mutability, Scalar, TyVariableKind, UintTy};
 use hir_def::{
     builtin_type::{BuiltinFloat, BuiltinInt, BuiltinType, BuiltinUint},
     generics::TypeOrConstParamData,
+    lang_item::LangItem,
     type_ref::Rawness,
     FunctionId, GenericDefId, HasModule, ItemContainerId, Lookup, TraitId,
 };
-use syntax::SmolStr;
 
 use crate::{
     db::HirDatabase, from_assoc_type_id, from_chalk_trait_id, from_foreign_def_id,
-    from_placeholder_idx, to_chalk_trait_id, AdtId, AliasEq, AliasTy, Binders, CallableDefId,
-    CallableSig, FnPointer, ImplTraitId, Interner, Lifetime, ProjectionTy, QuantifiedWhereClause,
-    Substitution, TraitRef, Ty, TyBuilder, TyKind, WhereClause,
+    from_placeholder_idx, to_chalk_trait_id, utils::generics, AdtId, AliasEq, AliasTy, Binders,
+    CallableDefId, CallableSig, DynTy, FnPointer, ImplTraitId, Interner, Lifetime, ProjectionTy,
+    QuantifiedWhereClause, Substitution, TraitRef, Ty, TyBuilder, TyKind, TypeFlags, WhereClause,
 };
 
 pub trait TyExt {
     fn is_unit(&self) -> bool;
+    fn is_integral(&self) -> bool;
+    fn is_floating_point(&self) -> bool;
     fn is_never(&self) -> bool;
     fn is_unknown(&self) -> bool;
+    fn contains_unknown(&self) -> bool;
     fn is_ty_var(&self) -> bool;
 
     fn as_adt(&self) -> Option<(hir_def::AdtId, &Substitution)>;
@@ -51,12 +54,31 @@ impl TyExt for Ty {
         matches!(self.kind(Interner), TyKind::Tuple(0, _))
     }
 
+    fn is_integral(&self) -> bool {
+        matches!(
+            self.kind(Interner),
+            TyKind::Scalar(Scalar::Int(_) | Scalar::Uint(_))
+                | TyKind::InferenceVar(_, TyVariableKind::Integer)
+        )
+    }
+
+    fn is_floating_point(&self) -> bool {
+        matches!(
+            self.kind(Interner),
+            TyKind::Scalar(Scalar::Float(_)) | TyKind::InferenceVar(_, TyVariableKind::Float)
+        )
+    }
+
     fn is_never(&self) -> bool {
         matches!(self.kind(Interner), TyKind::Never)
     }
 
     fn is_unknown(&self) -> bool {
         matches!(self.kind(Interner), TyKind::Error)
+    }
+
+    fn contains_unknown(&self) -> bool {
+        self.data(Interner).flags.contains(TypeFlags::HAS_ERROR)
     }
 
     fn is_ty_var(&self) -> bool {
@@ -197,9 +219,8 @@ impl TyExt for Ty {
                 match db.lookup_intern_impl_trait_id((*opaque_ty_id).into()) {
                     ImplTraitId::AsyncBlockTypeImplTrait(def, _expr) => {
                         let krate = def.module(db.upcast()).krate();
-                        if let Some(future_trait) = db
-                            .lang_item(krate, SmolStr::new_inline("future_trait"))
-                            .and_then(|item| item.as_trait())
+                        if let Some(future_trait) =
+                            db.lang_item(krate, LangItem::Future).and_then(|item| item.as_trait())
                         {
                             // This is only used by type walking.
                             // Parameters will be walked outside, and projection predicate is not used.
@@ -218,9 +239,8 @@ impl TyExt for Ty {
                     }
                     ImplTraitId::ReturnTypeImplTrait(func, idx) => {
                         db.return_type_impl_traits(func).map(|it| {
-                            let data = (*it)
-                                .as_ref()
-                                .map(|rpit| rpit.impl_traits[idx as usize].bounds.clone());
+                            let data =
+                                (*it).as_ref().map(|rpit| rpit.impl_traits[idx].bounds.clone());
                             data.substitute(Interner, &subst).into_value_and_skipped_binders().0
                         })
                     }
@@ -231,9 +251,8 @@ impl TyExt for Ty {
                 {
                     ImplTraitId::ReturnTypeImplTrait(func, idx) => {
                         db.return_type_impl_traits(func).map(|it| {
-                            let data = (*it)
-                                .as_ref()
-                                .map(|rpit| rpit.impl_traits[idx as usize].bounds.clone());
+                            let data =
+                                (*it).as_ref().map(|rpit| rpit.impl_traits[idx].bounds.clone());
                             data.substitute(Interner, &opaque_ty.substitution)
                         })
                     }
@@ -338,10 +357,13 @@ pub trait ProjectionTyExt {
 
 impl ProjectionTyExt for ProjectionTy {
     fn trait_ref(&self, db: &dyn HirDatabase) -> TraitRef {
-        TraitRef {
-            trait_id: to_chalk_trait_id(self.trait_(db)),
-            substitution: self.substitution.clone(),
-        }
+        // FIXME: something like `Split` trait from chalk-solve might be nice.
+        let generics = generics(db.upcast(), from_assoc_type_id(self.associated_ty_id).into());
+        let substitution = Substitution::from_iter(
+            Interner,
+            self.substitution.iter(Interner).skip(generics.len_self()),
+        );
+        TraitRef { trait_id: to_chalk_trait_id(self.trait_(db)), substitution }
     }
 
     fn trait_(&self, db: &dyn HirDatabase) -> TraitId {
@@ -353,6 +375,19 @@ impl ProjectionTyExt for ProjectionTy {
 
     fn self_type_parameter(&self, db: &dyn HirDatabase) -> Ty {
         self.trait_ref(db).self_type_parameter(Interner)
+    }
+}
+
+pub trait DynTyExt {
+    fn principal(&self) -> Option<&TraitRef>;
+}
+
+impl DynTyExt for DynTy {
+    fn principal(&self) -> Option<&TraitRef> {
+        self.bounds.skip_binders().interned().get(0).and_then(|b| match b.skip_binders() {
+            crate::WhereClause::Implemented(trait_ref) => Some(trait_ref),
+            _ => None,
+        })
     }
 }
 

@@ -155,7 +155,7 @@ pub mod arch {
     /// which support SIMD, or it will not have SIMD at all. For compatibility
     /// the standard library itself does not use any SIMD internally.
     /// Determining how best to ship your WebAssembly binary with SIMD is
-    /// largely left up to you as it can can be pretty nuanced depending on
+    /// largely left up to you as it can be pretty nuanced depending on
     /// your situation.
     ///
     /// [condsections]: https://github.com/webassembly/conditional-sections
@@ -255,8 +255,8 @@ pub mod arch {
     /// Platform-specific intrinsics for the `NVPTX` platform.
     ///
     /// See the [module documentation](../index.html) for more details.
-    #[cfg(any(target_arch = "nvptx", target_arch = "nvptx64", doc))]
-    #[doc(cfg(any(target_arch = "nvptx", target_arch = "nvptx64")))]
+    #[cfg(any(target_arch = "nvptx64", doc))]
+    #[doc(cfg(target_arch = "nvptx64"))]
     #[unstable(feature = "stdsimd", issue = "27731")]
     pub mod nvptx {
         pub use crate::core_arch::nvptx::*;
@@ -299,6 +299,6 @@ mod powerpc;
 #[doc(cfg(target_arch = "powerpc64"))]
 mod powerpc64;
 
-#[cfg(any(target_arch = "nvptx", target_arch = "nvptx64", doc))]
-#[doc(cfg(any(target_arch = "nvptx", target_arch = "nvptx64")))]
+#[cfg(any(target_arch = "nvptx64", doc))]
+#[doc(cfg(target_arch = "nvptx64"))]
 mod nvptx;

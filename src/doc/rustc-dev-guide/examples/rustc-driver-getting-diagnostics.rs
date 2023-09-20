@@ -1,10 +1,6 @@
 #![feature(rustc_private)]
 
-// NOTE: For the example to compile, you will need to first run the following:
-//   rustup component add rustc-dev llvm-tools-preview
-
-// version: 1.62.0-nightly (7c4b47696 2022-04-30)
-
+extern crate rustc_driver;
 extern crate rustc_error_codes;
 extern crate rustc_errors;
 extern crate rustc_hash;
@@ -65,16 +61,12 @@ fn main() {
 "
             .into(),
         },
-        // Redirect the diagnostic output of the compiler to a buffer.
-        diagnostic_output: rustc_session::DiagnosticOutput::Raw(Box::from(DiagnosticSink(
-            buffer.clone(),
-        ))),
         crate_cfg: rustc_hash::FxHashSet::default(),
         crate_check_cfg: CheckCfg::default(),
-        input_path: None,
         output_dir: None,
         output_file: None,
         file_loader: None,
+        locale_resources: rustc_driver::DEFAULT_LOCALE_RESOURCES,
         lint_caps: rustc_hash::FxHashMap::default(),
         parse_sess_created: None,
         register_lints: None,
@@ -84,7 +76,7 @@ fn main() {
     };
     rustc_interface::run_compiler(config, |compiler| {
         compiler.enter(|queries| {
-            queries.global_ctxt().unwrap().take().enter(|tcx| {
+            queries.global_ctxt().unwrap().enter(|tcx| {
                 // Run the analysis phase on the local crate to trigger the type error.
                 let _ = tcx.analysis(());
             });

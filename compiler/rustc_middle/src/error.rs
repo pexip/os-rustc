@@ -50,8 +50,33 @@ pub struct LimitInvalid<'a> {
 }
 
 #[derive(Diagnostic)]
+#[diag(middle_recursion_limit_reached)]
+#[help]
+pub struct RecursionLimitReached<'tcx> {
+    pub ty: Ty<'tcx>,
+    pub suggested_limit: rustc_session::Limit,
+}
+
+#[derive(Diagnostic)]
 #[diag(middle_const_eval_non_int)]
 pub struct ConstEvalNonIntError {
+    #[primary_span]
+    pub span: Span,
+}
+
+#[derive(Diagnostic)]
+#[diag(middle_strict_coherence_needs_negative_coherence)]
+pub(crate) struct StrictCoherenceNeedsNegativeCoherence {
+    #[primary_span]
+    pub span: Span,
+    #[label]
+    pub attr_span: Option<Span>,
+}
+
+#[derive(Diagnostic)]
+#[diag(middle_const_not_used_in_type_alias)]
+pub(super) struct ConstNotUsedTraitAlias {
+    pub ct: String,
     #[primary_span]
     pub span: Span,
 }

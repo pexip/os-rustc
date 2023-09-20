@@ -1,3 +1,5 @@
+#![deny(rustc::untranslatable_diagnostic)]
+#![deny(rustc::diagnostic_outside_of_impl)]
 use rustc_infer::infer::InferCtxt;
 use rustc_middle::mir::visit::TyContext;
 use rustc_middle::mir::visit::Visitor;
@@ -7,11 +9,11 @@ use rustc_middle::mir::{
 };
 use rustc_middle::ty::subst::SubstsRef;
 use rustc_middle::ty::visit::TypeVisitable;
-use rustc_middle::ty::{self, RegionVid, Ty};
+use rustc_middle::ty::{self, RegionVid, Ty, TyCtxt};
 
 use crate::{
-    borrow_set::BorrowSet, facts::AllFacts, location::LocationTable, nll::ToRegionVid,
-    places_conflict, region_infer::values::LivenessValues,
+    borrow_set::BorrowSet, facts::AllFacts, location::LocationTable, places_conflict,
+    region_infer::values::LivenessValues,
 };
 
 pub(super) fn generate_constraints<'tcx>(
@@ -163,12 +165,12 @@ impl<'cx, 'tcx> ConstraintGeneration<'cx, 'tcx> {
     /// `location`.
     fn add_regular_live_constraint<T>(&mut self, live_ty: T, location: Location)
     where
-        T: TypeVisitable<'tcx>,
+        T: TypeVisitable<TyCtxt<'tcx>>,
     {
         debug!("add_regular_live_constraint(live_ty={:?}, location={:?})", live_ty, location);
 
         self.infcx.tcx.for_each_free_region(&live_ty, |live_region| {
-            let vid = live_region.to_region_vid();
+            let vid = live_region.as_var();
             self.liveness_constraints.add_element(vid, location);
         });
     }

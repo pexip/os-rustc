@@ -15,9 +15,9 @@ use crate::weak_lang_items;
 
 use rustc_hir as hir;
 use rustc_hir::def::DefKind;
-use rustc_hir::def_id::DefId;
-use rustc_hir::lang_items::{extract, GenericRequirement, ITEM_REFS};
-use rustc_hir::{HirId, LangItem, LanguageItems, Target};
+use rustc_hir::def_id::{DefId, LocalDefId};
+use rustc_hir::lang_items::{extract, GenericRequirement};
+use rustc_hir::{LangItem, LanguageItems, Target};
 use rustc_middle::ty::TyCtxt;
 use rustc_session::cstore::ExternCrate;
 use rustc_span::{symbol::kw::Empty, Span};
@@ -40,20 +40,20 @@ impl<'tcx> LanguageItemCollector<'tcx> {
         LanguageItemCollector { tcx, items: LanguageItems::new() }
     }
 
-    fn check_for_lang(&mut self, actual_target: Target, hir_id: HirId) {
-        let attrs = self.tcx.hir().attrs(hir_id);
+    fn check_for_lang(&mut self, actual_target: Target, def_id: LocalDefId) {
+        let attrs = self.tcx.hir().attrs(self.tcx.hir().local_def_id_to_hir_id(def_id));
         if let Some((name, span)) = extract(&attrs) {
-            match ITEM_REFS.get(&name).cloned() {
+            match LangItem::from_name(name) {
                 // Known lang item with attribute on correct target.
-                Some((item_index, expected_target)) if actual_target == expected_target => {
-                    self.collect_item_extended(item_index, hir_id, span);
+                Some(lang_item) if actual_target == lang_item.target() => {
+                    self.collect_item_extended(lang_item, def_id, span);
                 }
                 // Known lang item with attribute on incorrect target.
-                Some((_, expected_target)) => {
+                Some(lang_item) => {
                     self.tcx.sess.emit_err(LangItemOnIncorrectTarget {
                         span,
                         name,
-                        expected_target,
+                        expected_target: lang_item.target(),
                         actual_target,
                     });
                 }
@@ -65,12 +65,12 @@ impl<'tcx> LanguageItemCollector<'tcx> {
         }
     }
 
-    fn collect_item(&mut self, item_index: usize, item_def_id: DefId) {
+    fn collect_item(&mut self, lang_item: LangItem, item_def_id: DefId) {
         // Check for duplicates.
-        if let Some(original_def_id) = self.items.items[item_index] {
+        if let Some(original_def_id) = self.items.get(lang_item) {
             if original_def_id != item_def_id {
                 let local_span = self.tcx.hir().span_if_local(item_def_id);
-                let lang_item_name = LangItem::from_u32(item_index as u32).unwrap().name();
+                let lang_item_name = lang_item.name();
                 let crate_name = self.tcx.crate_name(item_def_id.krate);
                 let mut dependency_of = Empty;
                 let is_local = item_def_id.is_local();
@@ -83,7 +83,6 @@ impl<'tcx> LanguageItemCollector<'tcx> {
                         .map(|p| p.display().to_string())
                         .collect::<Vec<_>>()
                         .join(", ")
-                        .into()
                 };
                 let first_defined_span = self.tcx.hir().span_if_local(original_def_id);
                 let mut orig_crate_name = Empty;
@@ -98,7 +97,6 @@ impl<'tcx> LanguageItemCollector<'tcx> {
                         .map(|p| p.display().to_string())
                         .collect::<Vec<_>>()
                         .join(", ")
-                        .into()
                 };
                 if first_defined_span.is_none() {
                     orig_crate_name = self.tcx.crate_name(original_def_id.krate);
@@ -139,17 +137,12 @@ impl<'tcx> LanguageItemCollector<'tcx> {
         }
 
         // Matched.
-        self.items.items[item_index] = Some(item_def_id);
-        if let Some(group) = LangItem::from_u32(item_index as u32).unwrap().group() {
-            self.items.groups[group as usize].push(item_def_id);
-        }
+        self.items.set(lang_item, item_def_id);
     }
 
     // Like collect_item() above, but also checks whether the lang item is declared
     // with the right number of generic arguments.
-    fn collect_item_extended(&mut self, item_index: usize, hir_id: HirId, span: Span) {
-        let item_def_id = self.tcx.hir().local_def_id(hir_id).to_def_id();
-        let lang_item = LangItem::from_u32(item_index as u32).unwrap();
+    fn collect_item_extended(&mut self, lang_item: LangItem, item_def_id: LocalDefId, span: Span) {
         let name = lang_item.name();
 
         // Now check whether the lang_item has the expected number of generic
@@ -160,7 +153,8 @@ impl<'tcx> LanguageItemCollector<'tcx> {
         // Some other types like Box and various functions like drop_in_place
         // have minimum requirements.
 
-        if let hir::Node::Item(hir::Item { kind, span: item_span, .. }) = self.tcx.hir().get(hir_id)
+        if let hir::Node::Item(hir::Item { kind, span: item_span, .. }) =
+            self.tcx.hir().get_by_def_id(item_def_id)
         {
             let (actual_num, generics_span) = match kind.generics() {
                 Some(generics) => (generics.params.len(), generics.span),
@@ -197,7 +191,7 @@ impl<'tcx> LanguageItemCollector<'tcx> {
             }
         }
 
-        self.collect_item(item_index, item_def_id);
+        self.collect_item(lang_item, item_def_id.to_def_id());
     }
 }
 
@@ -208,8 +202,8 @@ fn get_lang_items(tcx: TyCtxt<'_>, (): ()) -> LanguageItems {
 
     // Collect lang items in other crates.
     for &cnum in tcx.crates(()).iter() {
-        for &(def_id, item_index) in tcx.defined_lang_items(cnum).iter() {
-            collector.collect_item(item_index, def_id);
+        for &(def_id, lang_item) in tcx.defined_lang_items(cnum).iter() {
+            collector.collect_item(lang_item, def_id);
         }
     }
 
@@ -217,13 +211,14 @@ fn get_lang_items(tcx: TyCtxt<'_>, (): ()) -> LanguageItems {
     let crate_items = tcx.hir_crate_items(());
 
     for id in crate_items.items() {
-        collector.check_for_lang(Target::from_def_kind(tcx.def_kind(id.owner_id)), id.hir_id());
+        collector
+            .check_for_lang(Target::from_def_kind(tcx.def_kind(id.owner_id)), id.owner_id.def_id);
 
         if matches!(tcx.def_kind(id.owner_id), DefKind::Enum) {
             let item = tcx.hir().item(id);
             if let hir::ItemKind::Enum(def, ..) = &item.kind {
                 for variant in def.variants {
-                    collector.check_for_lang(Target::Variant, variant.id);
+                    collector.check_for_lang(Target::Variant, variant.def_id);
                 }
             }
         }
@@ -232,13 +227,13 @@ fn get_lang_items(tcx: TyCtxt<'_>, (): ()) -> LanguageItems {
     // FIXME: avoid calling trait_item() when possible
     for id in crate_items.trait_items() {
         let item = tcx.hir().trait_item(id);
-        collector.check_for_lang(Target::from_trait_item(item), item.hir_id())
+        collector.check_for_lang(Target::from_trait_item(item), item.owner_id.def_id)
     }
 
     // FIXME: avoid calling impl_item() when possible
     for id in crate_items.impl_items() {
         let item = tcx.hir().impl_item(id);
-        collector.check_for_lang(target_from_impl_item(tcx, item), item.hir_id())
+        collector.check_for_lang(target_from_impl_item(tcx, item), item.owner_id.def_id)
     }
 
     // Extract out the found lang items.

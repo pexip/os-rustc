@@ -2694,7 +2694,11 @@ pub const ABMON_11: ::nl_item = 43;
 pub const ABMON_12: ::nl_item = 44;
 
 pub const CLOCK_REALTIME: ::clockid_t = 0;
+pub const CLOCK_MONOTONIC_RAW: ::clockid_t = 4;
+pub const CLOCK_MONOTONIC_RAW_APPROX: ::clockid_t = 5;
 pub const CLOCK_MONOTONIC: ::clockid_t = 6;
+pub const CLOCK_UPTIME_RAW: ::clockid_t = 8;
+pub const CLOCK_UPTIME_RAW_APPROX: ::clockid_t = 9;
 pub const CLOCK_PROCESS_CPUTIME_ID: ::clockid_t = 12;
 pub const CLOCK_THREAD_CPUTIME_ID: ::clockid_t = 16;
 
@@ -3308,6 +3312,8 @@ pub const MINCORE_REFERENCED: ::c_int = 0x2;
 pub const MINCORE_MODIFIED: ::c_int = 0x4;
 pub const MINCORE_REFERENCED_OTHER: ::c_int = 0x8;
 pub const MINCORE_MODIFIED_OTHER: ::c_int = 0x10;
+
+pub const CTLIOCGINFO: c_ulong = 0xc0644e03;
 
 //
 // sys/netinet/in.h
@@ -5184,6 +5190,10 @@ extern "C" {
         f: extern "C" fn(*mut ::c_void) -> *mut ::c_void,
         value: *mut ::c_void,
     ) -> ::c_int;
+    pub fn pthread_stack_frame_decode_np(
+        frame_addr: ::uintptr_t,
+        return_addr: *mut ::uintptr_t,
+    ) -> ::uintptr_t;
     pub fn pthread_get_stackaddr_np(thread: ::pthread_t) -> *mut ::c_void;
     pub fn pthread_get_stacksize_np(thread: ::pthread_t) -> ::size_t;
     pub fn pthread_condattr_setpshared(attr: *mut pthread_condattr_t, pshared: ::c_int) -> ::c_int;
@@ -5191,6 +5201,7 @@ extern "C" {
         attr: *const pthread_condattr_t,
         pshared: *mut ::c_int,
     ) -> ::c_int;
+    pub fn pthread_main_np() -> ::c_int;
     pub fn pthread_mutexattr_setpshared(
         attr: *mut pthread_mutexattr_t,
         pshared: ::c_int,
@@ -5552,6 +5563,14 @@ extern "C" {
         subpref: *mut ::cpu_subtype_t,
         ocount: *mut ::size_t,
     ) -> ::c_int;
+    pub fn posix_spawnattr_set_qos_class_np(
+        attr: *mut posix_spawnattr_t,
+        qos_class: ::qos_class_t,
+    ) -> ::c_int;
+    pub fn posix_spawnattr_get_qos_class_np(
+        attr: *const posix_spawnattr_t,
+        qos_class: *mut ::qos_class_t,
+    ) -> ::c_int;
 
     pub fn posix_spawn_file_actions_init(actions: *mut posix_spawn_file_actions_t) -> ::c_int;
     pub fn posix_spawn_file_actions_destroy(actions: *mut posix_spawn_file_actions_t) -> ::c_int;
@@ -5866,6 +5885,9 @@ extern "C" {
 
     pub fn malloc_size(ptr: *const ::c_void) -> ::size_t;
     pub fn malloc_good_size(size: ::size_t) -> ::size_t;
+
+    pub fn dirname(path: *mut ::c_char) -> *mut ::c_char;
+    pub fn basename(path: *mut ::c_char) -> *mut ::c_char;
 }
 
 pub unsafe fn mach_task_self() -> ::mach_port_t {
@@ -5922,5 +5944,12 @@ cfg_if! {
         pub use self::b64::*;
     } else {
         // Unknown target_arch
+    }
+}
+
+cfg_if! {
+    if #[cfg(libc_long_array)] {
+        mod long_array;
+        pub use self::long_array::*;
     }
 }

@@ -1,5 +1,6 @@
 use crate::clippy_project_root;
 use indoc::{formatdoc, writedoc};
+use std::fmt;
 use std::fmt::Write as _;
 use std::fs::{self, OpenOptions};
 use std::io::prelude::*;
@@ -120,7 +121,7 @@ fn add_lint(lint: &LintData<'_>, enable_msrv: bool) -> io::Result<()> {
 
     let new_lint = if enable_msrv {
         format!(
-            "store.register_{lint_pass}_pass(move |{ctor_arg}| Box::new({module_name}::{camel_name}::new(msrv)));\n    ",
+            "store.register_{lint_pass}_pass(move |{ctor_arg}| Box::new({module_name}::{camel_name}::new(msrv())));\n    ",
             lint_pass = lint.pass,
             ctor_arg = if lint.pass == "late" { "_" } else { "" },
             module_name = lint.name,
@@ -238,10 +239,9 @@ fn get_lint_file_contents(lint: &LintData<'_>, enable_msrv: bool) -> String {
     result.push_str(&if enable_msrv {
         formatdoc!(
             r#"
-            use clippy_utils::msrvs;
+            use clippy_utils::msrvs::{{self, Msrv}};
             {pass_import}
             use rustc_lint::{{{context_import}, {pass_type}, LintContext}};
-            use rustc_semver::RustcVersion;
             use rustc_session::{{declare_tool_lint, impl_lint_pass}};
 
         "#
@@ -257,18 +257,18 @@ fn get_lint_file_contents(lint: &LintData<'_>, enable_msrv: bool) -> String {
         )
     });
 
-    let _ = write!(result, "{}", get_lint_declaration(&name_upper, category));
+    let _: fmt::Result = write!(result, "{}", get_lint_declaration(&name_upper, category));
 
     result.push_str(&if enable_msrv {
         formatdoc!(
             r#"
             pub struct {name_camel} {{
-                msrv: Option<RustcVersion>,
+                msrv: Msrv,
             }}
 
             impl {name_camel} {{
                 #[must_use]
-                pub fn new(msrv: Option<RustcVersion>) -> Self {{
+                pub fn new(msrv: Msrv) -> Self {{
                     Self {{ msrv }}
                 }}
             }}
@@ -354,28 +354,25 @@ fn create_lint_for_ty(lint: &LintData<'_>, enable_msrv: bool, ty: &str) -> io::R
     let mut lint_file_contents = String::new();
 
     if enable_msrv {
-        let _ = writedoc!(
+        let _: fmt::Result = writedoc!(
             lint_file_contents,
             r#"
-                use clippy_utils::{{meets_msrv, msrvs}};
+                use clippy_utils::msrvs::{{self, Msrv}};
                 use rustc_lint::{{{context_import}, LintContext}};
-                use rustc_semver::RustcVersion;
 
                 use super::{name_upper};
 
                 // TODO: Adjust the parameters as necessary
-                pub(super) fn check(cx: &{context_import}, msrv: Option<RustcVersion>) {{
-                    if !meets_msrv(msrv, todo!("Add a new entry in `clippy_utils/src/msrvs`")) {{
+                pub(super) fn check(cx: &{context_import}, msrv: &Msrv) {{
+                    if !msrv.meets(todo!("Add a new entry in `clippy_utils/src/msrvs`")) {{
                         return;
                     }}
                     todo!();
                 }}
-           "#,
-            context_import = context_import,
-            name_upper = name_upper,
+           "#
         );
     } else {
-        let _ = writedoc!(
+        let _: fmt::Result = writedoc!(
             lint_file_contents,
             r#"
                 use rustc_lint::{{{context_import}, LintContext}};
@@ -386,9 +383,7 @@ fn create_lint_for_ty(lint: &LintData<'_>, enable_msrv: bool, ty: &str) -> io::R
                 pub(super) fn check(cx: &{context_import}) {{
                     todo!();
                 }}
-           "#,
-            context_import = context_import,
-            name_upper = name_upper,
+           "#
         );
     }
 
@@ -523,7 +518,7 @@ fn setup_mod_file(path: &Path, lint: &LintData<'_>) -> io::Result<&'static str> 
         .chain(std::iter::once(&*lint_name_upper))
         .filter(|s| !s.is_empty())
     {
-        let _ = write!(new_arr_content, "\n    {ident},");
+        let _: fmt::Result = write!(new_arr_content, "\n    {ident},");
     }
     new_arr_content.push('\n');
 

@@ -15,13 +15,16 @@ extern crate std_detect;
 #[test]
 fn all() {
     for (f, e) in std_detect::detect::features() {
-        println!("{}: {}", f, e);
+        println!("{f}: {e}");
     }
 }
 
 #[test]
-#[cfg(all(target_arch = "arm", any(target_os = "linux", target_os = "android")))]
-fn arm_linux() {
+#[cfg(all(
+    target_arch = "arm",
+    any(target_os = "linux", target_os = "android", target_os = "freebsd"),
+))]
+fn arm_linux_or_freebsd() {
     println!("neon: {}", is_arm_feature_detected!("neon"));
     println!("pmull: {}", is_arm_feature_detected!("pmull"));
     println!("crc: {}", is_arm_feature_detected!("crc"));
@@ -84,6 +87,45 @@ fn aarch64_linux() {
 }
 
 #[test]
+#[cfg(all(target_arch = "aarch64", target_os = "windows"))]
+fn aarch64_windows() {
+    println!("asimd: {:?}", is_aarch64_feature_detected!("asimd"));
+    println!("fp: {:?}", is_aarch64_feature_detected!("fp"));
+    println!("crc: {:?}", is_aarch64_feature_detected!("crc"));
+    println!("lse: {:?}", is_aarch64_feature_detected!("lse"));
+    println!("dotprod: {:?}", is_aarch64_feature_detected!("dotprod"));
+    println!("jsconv: {:?}", is_aarch64_feature_detected!("jsconv"));
+    println!("rcpc: {:?}", is_aarch64_feature_detected!("rcpc"));
+    println!("aes: {:?}", is_aarch64_feature_detected!("aes"));
+    println!("pmull: {:?}", is_aarch64_feature_detected!("pmull"));
+    println!("sha2: {:?}", is_aarch64_feature_detected!("sha2"));
+}
+
+#[test]
+#[cfg(all(
+    target_arch = "aarch64",
+    any(target_os = "freebsd", target_os = "openbsd")
+))]
+fn aarch64_bsd() {
+    println!("asimd: {:?}", is_aarch64_feature_detected!("asimd"));
+    println!("pmull: {:?}", is_aarch64_feature_detected!("pmull"));
+    println!("fp: {:?}", is_aarch64_feature_detected!("fp"));
+    println!("fp16: {:?}", is_aarch64_feature_detected!("fp16"));
+    println!("sve: {:?}", is_aarch64_feature_detected!("sve"));
+    println!("crc: {:?}", is_aarch64_feature_detected!("crc"));
+    println!("lse: {:?}", is_aarch64_feature_detected!("lse"));
+    println!("lse2: {:?}", is_aarch64_feature_detected!("lse2"));
+    println!("rdm: {:?}", is_aarch64_feature_detected!("rdm"));
+    println!("rcpc: {:?}", is_aarch64_feature_detected!("rcpc"));
+    println!("dotprod: {:?}", is_aarch64_feature_detected!("dotprod"));
+    println!("tme: {:?}", is_aarch64_feature_detected!("tme"));
+    println!("paca: {:?}", is_aarch64_feature_detected!("paca"));
+    println!("pacg: {:?}", is_aarch64_feature_detected!("pacg"));
+    println!("aes: {:?}", is_aarch64_feature_detected!("aes"));
+    println!("sha2: {:?}", is_aarch64_feature_detected!("sha2"));
+}
+
+#[test]
 #[cfg(all(target_arch = "powerpc", target_os = "linux"))]
 fn powerpc_linux() {
     println!("altivec: {}", is_powerpc_feature_detected!("altivec"));
@@ -132,12 +174,9 @@ fn x86_all() {
         is_x86_feature_detected!("avx512vpopcntdq")
     );
     println!("avx512vbmi2 {:?}", is_x86_feature_detected!("avx512vbmi2"));
-    println!("avx512gfni {:?}", is_x86_feature_detected!("avx512gfni"));
-    println!("avx512vaes {:?}", is_x86_feature_detected!("avx512vaes"));
-    println!(
-        "avx512vpclmulqdq {:?}",
-        is_x86_feature_detected!("avx512vpclmulqdq")
-    );
+    println!("gfni {:?}", is_x86_feature_detected!("gfni"));
+    println!("vaes {:?}", is_x86_feature_detected!("vaes"));
+    println!("vpclmulqdq {:?}", is_x86_feature_detected!("vpclmulqdq"));
     println!("avx512vnni {:?}", is_x86_feature_detected!("avx512vnni"));
     println!(
         "avx512bitalg {:?}",
@@ -155,10 +194,23 @@ fn x86_all() {
     println!("abm: {:?}", is_x86_feature_detected!("abm"));
     println!("lzcnt: {:?}", is_x86_feature_detected!("lzcnt"));
     println!("tbm: {:?}", is_x86_feature_detected!("tbm"));
+    println!("movbe: {:?}", is_x86_feature_detected!("movbe"));
     println!("popcnt: {:?}", is_x86_feature_detected!("popcnt"));
     println!("fxsr: {:?}", is_x86_feature_detected!("fxsr"));
     println!("xsave: {:?}", is_x86_feature_detected!("xsave"));
     println!("xsaveopt: {:?}", is_x86_feature_detected!("xsaveopt"));
     println!("xsaves: {:?}", is_x86_feature_detected!("xsaves"));
     println!("xsavec: {:?}", is_x86_feature_detected!("xsavec"));
+}
+
+#[test]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[allow(deprecated)]
+fn x86_deprecated() {
+    println!("avx512gfni {:?}", is_x86_feature_detected!("avx512gfni"));
+    println!("avx512vaes {:?}", is_x86_feature_detected!("avx512vaes"));
+    println!(
+        "avx512vpclmulqdq {:?}",
+        is_x86_feature_detected!("avx512vpclmulqdq")
+    );
 }

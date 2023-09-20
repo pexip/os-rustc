@@ -7,31 +7,10 @@
 
 #[cfg(feature = "param")]
 mod auxv;
-#[cfg(any(
-    target_vendor = "mustang",
-    not(any(target_env = "gnu", target_env = "musl")),
-))]
+#[cfg(target_vendor = "mustang")]
 mod init;
 
 #[cfg(feature = "param")]
-#[cfg(not(target_os = "wasi"))]
-pub use auxv::clock_ticks_per_second;
-#[cfg(feature = "param")]
-pub use auxv::page_size;
-#[cfg(feature = "param")]
-#[cfg(any(
-    linux_raw,
-    all(
-        libc,
-        any(
-            all(target_os = "android", target_pointer_width = "64"),
-            target_os = "linux",
-        )
-    )
-))]
-pub use auxv::{linux_execfn, linux_hwcap};
-#[cfg(any(
-    target_vendor = "mustang",
-    not(any(target_env = "gnu", target_env = "musl")),
-))]
+pub use auxv::*;
+#[cfg(target_vendor = "mustang")]
 pub use init::init;

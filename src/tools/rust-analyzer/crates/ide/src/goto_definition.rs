@@ -187,7 +187,7 @@ mod tests {
         let (analysis, position) = fixture::position(ra_fixture);
         let navs = analysis.goto_definition(position).unwrap().expect("no definition found").info;
 
-        assert!(navs.is_empty(), "didn't expect this to resolve anywhere: {:?}", navs)
+        assert!(navs.is_empty(), "didn't expect this to resolve anywhere: {navs:?}")
     }
 
     #[test]
@@ -289,10 +289,10 @@ mod b;
 enum E { X(Foo$0) }
 
 //- /a.rs
-struct Foo;
-     //^^^
+pub struct Foo;
+         //^^^
 //- /b.rs
-struct Foo;
+pub struct Foo;
 "#,
         );
     }
@@ -766,6 +766,13 @@ trait Foo$0 { }
 
         check(
             r#"
+trait Foo$0 = ;
+    //^^^
+"#,
+        );
+
+        check(
+            r#"
 mod bar$0 { }
   //^^^
 "#,
@@ -1063,6 +1070,23 @@ trait Sub: Super {}
 fn f() -> impl Sub<Item$0 = u8> {}
 "#,
         );
+    }
+
+    #[test]
+    fn goto_def_for_module_declaration_in_path_if_types_and_values_same_name() {
+        check(
+            r#"
+mod bar {
+    pub struct Foo {}
+             //^^^
+    pub fn Foo() {}
+}
+
+fn baz() {
+    let _foo_enum: bar::Foo$0 = bar::Foo {};
+}
+        "#,
+        )
     }
 
     #[test]
@@ -1406,7 +1430,6 @@ include!("included.rs$0");
         );
     }
 
-    #[cfg(test)]
     mod goto_impl_of_trait_fn {
         use super::check;
         #[test]
@@ -1830,6 +1853,152 @@ impl core::ops::Add for Struct {
 
 fn f() {
     Struct +$0 Struct;
+}
+"#,
+        );
+    }
+
+    #[test]
+    fn goto_bin_op_multiple_impl() {
+        check(
+            r#"
+//- minicore: add
+struct S;
+impl core::ops::Add for S {
+    fn add(
+     //^^^
+    ) {}
+}
+impl core::ops::Add<usize> for S {
+    fn add(
+    ) {}
+}
+
+fn f() {
+    S +$0 S
+}
+"#,
+        );
+
+        check(
+            r#"
+//- minicore: add
+struct S;
+impl core::ops::Add for S {
+    fn add(
+    ) {}
+}
+impl core::ops::Add<usize> for S {
+    fn add(
+     //^^^
+    ) {}
+}
+
+fn f() {
+    S +$0 0usize
+}
+"#,
+        );
+    }
+
+    #[test]
+    fn path_call_multiple_trait_impl() {
+        check(
+            r#"
+trait Trait<T> {
+    fn f(_: T);
+}
+impl Trait<i32> for usize {
+    fn f(_: i32) {}
+     //^
+}
+impl Trait<i64> for usize {
+    fn f(_: i64) {}
+}
+fn main() {
+    usize::f$0(0i32);
+}
+"#,
+        );
+
+        check(
+            r#"
+trait Trait<T> {
+    fn f(_: T);
+}
+impl Trait<i32> for usize {
+    fn f(_: i32) {}
+}
+impl Trait<i64> for usize {
+    fn f(_: i64) {}
+     //^
+}
+fn main() {
+    usize::f$0(0i64);
+}
+"#,
+        )
+    }
+
+    #[test]
+    fn query_impls_in_nearest_block() {
+        check(
+            r#"
+struct S1;
+impl S1 {
+    fn e() -> () {}
+}
+fn f1() {
+    struct S1;
+    impl S1 {
+        fn e() -> () {}
+         //^
+    }
+    fn f2() {
+        fn f3() {
+            S1::e$0();
+        }
+    }
+}
+"#,
+        );
+
+        check(
+            r#"
+struct S1;
+impl S1 {
+    fn e() -> () {}
+}
+fn f1() {
+    struct S1;
+    impl S1 {
+        fn e() -> () {}
+         //^
+    }
+    fn f2() {
+        struct S2;
+        S1::e$0();
+    }
+}
+fn f12() {
+    struct S1;
+    impl S1 {
+        fn e() -> () {}
+    }
+}
+"#,
+        );
+
+        check(
+            r#"
+struct S1;
+impl S1 {
+    fn e() -> () {}
+     //^
+}
+fn f2() {
+    struct S2;
+    S1::e$0();
 }
 "#,
         );

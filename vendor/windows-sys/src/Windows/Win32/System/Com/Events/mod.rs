@@ -1,36 +1,3 @@
-pub const CEventClass: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3451832768, data2: 31336, data3: 4561, data4: [136, 249, 0, 128, 199, 215, 113, 191] };
-pub const CEventPublisher: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2878621216, data2: 31174, data3: 4561, data4: [136, 249, 0, 128, 199, 215, 113, 191] };
-pub const CEventSubscription: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1967319392, data2: 31175, data3: 4561, data4: [136, 249, 0, 128, 199, 215, 113, 191] };
-pub const CEventSystem: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1309997986, data2: 11810, data3: 4561, data4: [153, 100, 0, 192, 79, 187, 179, 69] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Com_Events\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct COMEVENTSYSCHANGEINFO {
-    pub cbSize: u32,
-    pub changeType: EOC_ChangeType,
-    pub objectId: super::super::super::Foundation::BSTR,
-    pub partitionId: super::super::super::Foundation::BSTR,
-    pub applicationId: super::super::super::Foundation::BSTR,
-    pub reserved: [::windows_sys::core::GUID; 10],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for COMEVENTSYSCHANGEINFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for COMEVENTSYSCHANGEINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Com_Events\"`*"]
-pub type EOC_ChangeType = i32;
-#[doc = "*Required features: `\"Win32_System_Com_Events\"`*"]
-pub const EOC_NewObject: EOC_ChangeType = 0i32;
-#[doc = "*Required features: `\"Win32_System_Com_Events\"`*"]
-pub const EOC_ModifiedObject: EOC_ChangeType = 1i32;
-#[doc = "*Required features: `\"Win32_System_Com_Events\"`*"]
-pub const EOC_DeletedObject: EOC_ChangeType = 2i32;
-pub const EventObjectChange: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3495317504, data2: 40436, data3: 4561, data4: [162, 129, 0, 192, 79, 202, 10, 167] };
-pub const EventObjectChange2: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3137845965, data2: 52566, data3: 20067, data4: [168, 255, 203, 240, 53, 95, 185, 244] };
 pub type IDontSupportEventSubscription = *mut ::core::ffi::c_void;
 pub type IEnumEventObject = *mut ::core::ffi::c_void;
 pub type IEventClass = *mut ::core::ffi::c_void;
@@ -47,3 +14,39 @@ pub type IFiringControl = *mut ::core::ffi::c_void;
 pub type IMultiInterfaceEventControl = *mut ::core::ffi::c_void;
 pub type IMultiInterfacePublisherFilter = *mut ::core::ffi::c_void;
 pub type IPublisherFilter = *mut ::core::ffi::c_void;
+#[doc = "*Required features: `\"Win32_System_Com_Events\"`*"]
+pub const CEventClass: ::windows_sys::core::GUID = ::windows_sys::core::GUID::from_u128(0xcdbec9c0_7a68_11d1_88f9_0080c7d771bf);
+#[doc = "*Required features: `\"Win32_System_Com_Events\"`*"]
+pub const CEventPublisher: ::windows_sys::core::GUID = ::windows_sys::core::GUID::from_u128(0xab944620_79c6_11d1_88f9_0080c7d771bf);
+#[doc = "*Required features: `\"Win32_System_Com_Events\"`*"]
+pub const CEventSubscription: ::windows_sys::core::GUID = ::windows_sys::core::GUID::from_u128(0x7542e960_79c7_11d1_88f9_0080c7d771bf);
+#[doc = "*Required features: `\"Win32_System_Com_Events\"`*"]
+pub const CEventSystem: ::windows_sys::core::GUID = ::windows_sys::core::GUID::from_u128(0x4e14fba2_2e22_11d1_9964_00c04fbbb345);
+#[doc = "*Required features: `\"Win32_System_Com_Events\"`*"]
+pub const EventObjectChange: ::windows_sys::core::GUID = ::windows_sys::core::GUID::from_u128(0xd0565000_9df4_11d1_a281_00c04fca0aa7);
+#[doc = "*Required features: `\"Win32_System_Com_Events\"`*"]
+pub const EventObjectChange2: ::windows_sys::core::GUID = ::windows_sys::core::GUID::from_u128(0xbb07bacd_cd56_4e63_a8ff_cbf0355fb9f4);
+#[doc = "*Required features: `\"Win32_System_Com_Events\"`*"]
+pub type EOC_ChangeType = i32;
+#[doc = "*Required features: `\"Win32_System_Com_Events\"`*"]
+pub const EOC_NewObject: EOC_ChangeType = 0i32;
+#[doc = "*Required features: `\"Win32_System_Com_Events\"`*"]
+pub const EOC_ModifiedObject: EOC_ChangeType = 1i32;
+#[doc = "*Required features: `\"Win32_System_Com_Events\"`*"]
+pub const EOC_DeletedObject: EOC_ChangeType = 2i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Com_Events\"`*"]
+pub struct COMEVENTSYSCHANGEINFO {
+    pub cbSize: u32,
+    pub changeType: EOC_ChangeType,
+    pub objectId: ::windows_sys::core::BSTR,
+    pub partitionId: ::windows_sys::core::BSTR,
+    pub applicationId: ::windows_sys::core::BSTR,
+    pub reserved: [::windows_sys::core::GUID; 10],
+}
+impl ::core::marker::Copy for COMEVENTSYSCHANGEINFO {}
+impl ::core::clone::Clone for COMEVENTSYSCHANGEINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}

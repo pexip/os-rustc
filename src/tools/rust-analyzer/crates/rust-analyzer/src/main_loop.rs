@@ -14,7 +14,7 @@ use ide_db::base_db::{SourceDatabaseExt, VfsPath};
 use itertools::Itertools;
 use lsp_server::{Connection, Notification, Request};
 use lsp_types::notification::Notification as _;
-use vfs::{ChangeKind, FileId};
+use vfs::{AbsPathBuf, ChangeKind, FileId};
 
 use crate::{
     config::Config,
@@ -111,12 +111,7 @@ impl fmt::Debug for Event {
 
 impl GlobalState {
     fn run(mut self, inbox: Receiver<lsp_server::Message>) -> Result<()> {
-        if self.config.linked_projects().is_empty()
-            && self.config.detached_files().is_empty()
-            && self.config.notifications().cargo_toml_not_found
-        {
-            self.show_and_log_error("rust-analyzer failed to discover workspace".to_string(), None);
-        };
+        self.update_status_or_notify();
 
         if self.config.did_save_text_document_dynamic_registration() {
             let save_registration_options = lsp_types::TextDocumentSaveRegistrationOptions {
@@ -229,8 +224,8 @@ impl GlobalState {
 
                             message = match &report.crates_currently_indexing[..] {
                                 [crate_name] => Some(format!(
-                                    "{}/{} ({})",
-                                    report.crates_done, report.crates_total, crate_name
+                                    "{}/{} ({crate_name})",
+                                    report.crates_done, report.crates_total
                                 )),
                                 [crate_name, rest @ ..] => Some(format!(
                                     "{}/{} ({} + {} more)",
@@ -287,8 +282,10 @@ impl GlobalState {
                 || self.fetch_build_data_queue.op_requested());
 
             if became_quiescent {
-                // Project has loaded properly, kick off initial flycheck
-                self.flycheck.iter().for_each(FlycheckHandle::restart);
+                if self.config.check_on_save() {
+                    // Project has loaded properly, kick off initial flycheck
+                    self.flycheck.iter().for_each(FlycheckHandle::restart);
+                }
                 if self.config.prefill_caches() {
                     self.prime_caches_queue.request_op("became quiescent".to_string());
                 }
@@ -305,28 +302,22 @@ impl GlobalState {
                 if self.config.code_lens_refresh() {
                     self.send_request::<lsp_types::request::CodeLensRefresh>((), |_, _| ());
                 }
+
+                // Refresh inlay hints if the client supports it.
+                if self.config.inlay_hints_refresh() {
+                    self.send_request::<lsp_types::request::InlayHintRefreshRequest>((), |_, _| ());
+                }
             }
 
-            if !was_quiescent || state_changed || memdocs_added_or_removed {
-                if self.config.publish_diagnostics() {
-                    self.update_diagnostics()
-                }
+            if (!was_quiescent || state_changed || memdocs_added_or_removed)
+                && self.config.publish_diagnostics()
+            {
+                self.update_diagnostics()
             }
         }
 
         if let Some(diagnostic_changes) = self.diagnostics.take_changes() {
             for file_id in diagnostic_changes {
-                let db = self.analysis_host.raw_database();
-                let source_root = db.file_source_root(file_id);
-                if db.source_root(source_root).is_library {
-                    // Only publish diagnostics for files in the workspace, not from crates.io deps
-                    // or the sysroot.
-                    // While theoretically these should never have errors, we have quite a few false
-                    // positives particularly in the stdlib, and those diagnostics would stay around
-                    // forever if we emitted them here.
-                    continue;
-                }
-
                 let uri = file_id_to_url(&self.vfs.read().0, file_id);
                 let mut diagnostics =
                     self.diagnostics.diagnostics_for(file_id).cloned().collect::<Vec<_>>();
@@ -398,28 +389,38 @@ impl GlobalState {
             });
         }
 
-        let status = self.current_status();
-        if self.last_reported_status.as_ref() != Some(&status) {
-            self.last_reported_status = Some(status.clone());
-
-            if let (lsp_ext::Health::Error, Some(message)) = (status.health, &status.message) {
-                self.show_message(lsp_types::MessageType::ERROR, message.clone());
-            }
-
-            if self.config.server_status_notification() {
-                self.send_notification::<lsp_ext::ServerStatusNotification>(status);
-            }
-        }
+        self.update_status_or_notify();
 
         let loop_duration = loop_start.elapsed();
         if loop_duration > Duration::from_millis(100) && was_quiescent {
             tracing::warn!("overly long loop turn: {:?}", loop_duration);
-            self.poke_rust_analyzer_developer(format!(
-                "overly long loop turn: {:?}",
-                loop_duration
-            ));
+            self.poke_rust_analyzer_developer(format!("overly long loop turn: {loop_duration:?}"));
         }
         Ok(())
+    }
+
+    fn update_status_or_notify(&mut self) {
+        let status = self.current_status();
+        if self.last_reported_status.as_ref() != Some(&status) {
+            self.last_reported_status = Some(status.clone());
+
+            if self.config.server_status_notification() {
+                self.send_notification::<lsp_ext::ServerStatusNotification>(status);
+            } else if let (health, Some(message)) = (status.health, &status.message) {
+                let open_log_button = tracing::enabled!(tracing::Level::ERROR)
+                    && (self.fetch_build_data_error().is_err()
+                        || self.fetch_workspace_error().is_err());
+                self.show_message(
+                    match health {
+                        lsp_ext::Health::Ok => lsp_types::MessageType::INFO,
+                        lsp_ext::Health::Warning => lsp_types::MessageType::WARNING,
+                        lsp_ext::Health::Error => lsp_types::MessageType::ERROR,
+                    },
+                    message.clone(),
+                    open_log_button,
+                );
+            }
+        }
     }
 
     fn handle_task(&mut self, prime_caches_progress: &mut Vec<PrimeCachesProgress>, task: Task) {
@@ -451,7 +452,10 @@ impl GlobalState {
                     ProjectWorkspaceProgress::Begin => (Progress::Begin, None),
                     ProjectWorkspaceProgress::Report(msg) => (Progress::Report, Some(msg)),
                     ProjectWorkspaceProgress::End(workspaces) => {
-                        self.fetch_workspaces_queue.op_completed(workspaces);
+                        self.fetch_workspaces_queue.op_completed(Some(workspaces));
+                        if let Err(e) = self.fetch_workspace_error() {
+                            tracing::error!("FetchWorkspaceError:\n{e}");
+                        }
 
                         let old = Arc::clone(&self.workspaces);
                         self.switch_workspaces("fetched workspace".to_string());
@@ -473,6 +477,9 @@ impl GlobalState {
                     BuildDataProgress::Report(msg) => (Some(Progress::Report), Some(msg)),
                     BuildDataProgress::End(build_data_result) => {
                         self.fetch_build_data_queue.op_completed(build_data_result);
+                        if let Err(e) = self.fetch_build_data_error() {
+                            tracing::error!("FetchBuildDataError:\n{e}");
+                        }
 
                         self.switch_workspaces("fetched build data".to_string());
 
@@ -505,6 +512,7 @@ impl GlobalState {
                 self.vfs_progress_n_total = n_total;
                 self.vfs_progress_n_done = n_done;
 
+                // if n_total != 0 {
                 let state = if n_done == 0 {
                     Progress::Begin
                 } else if n_done < n_total {
@@ -516,10 +524,11 @@ impl GlobalState {
                 self.report_progress(
                     "Roots Scanned",
                     state,
-                    Some(format!("{}/{}", n_done, n_total)),
+                    Some(format!("{n_done}/{n_total}")),
                     Some(Progress::fraction(n_done, n_total)),
                     None,
-                )
+                );
+                // }
             }
         }
     }
@@ -562,8 +571,8 @@ impl GlobalState {
                     flycheck::Progress::DidCancel => (Progress::End, None),
                     flycheck::Progress::DidFailToRestart(err) => {
                         self.show_and_log_error(
-                            "cargo check failed".to_string(),
-                            Some(err.to_string()),
+                            "cargo check failed to start".to_string(),
+                            Some(err),
                         );
                         return;
                     }
@@ -581,10 +590,7 @@ impl GlobalState {
                 // When we're running multiple flychecks, we have to include a disambiguator in
                 // the title, or the editor complains. Note that this is a user-facing string.
                 let title = if self.flycheck.len() == 1 {
-                    match self.config.flycheck() {
-                        Some(config) => format!("{}", config),
-                        None => "cargo check".to_string(),
-                    }
+                    format!("{}", self.config.flycheck())
                 } else {
                     format!("cargo check (#{})", id + 1)
                 };
@@ -593,7 +599,7 @@ impl GlobalState {
                     state,
                     message,
                     None,
-                    Some(format!("rust-analyzer/checkOnSave/{}", id)),
+                    Some(format!("rust-analyzer/flycheck/{id}")),
                 );
             }
         }
@@ -607,34 +613,28 @@ impl GlobalState {
 
     /// Handles a request.
     fn on_request(&mut self, req: Request) {
-        if self.shutdown_requested {
-            self.respond(lsp_server::Response::new_err(
-                req.id,
-                lsp_server::ErrorCode::InvalidRequest as i32,
-                "Shutdown already requested.".to_owned(),
-            ));
-            return;
+        let mut dispatcher = RequestDispatcher { req: Some(req), global_state: self };
+        dispatcher.on_sync_mut::<lsp_types::request::Shutdown>(|s, ()| {
+            s.shutdown_requested = true;
+            Ok(())
+        });
+
+        match &mut dispatcher {
+            RequestDispatcher { req: Some(req), global_state: this } if this.shutdown_requested => {
+                this.respond(lsp_server::Response::new_err(
+                    req.id.clone(),
+                    lsp_server::ErrorCode::InvalidRequest as i32,
+                    "Shutdown already requested.".to_owned(),
+                ));
+                return;
+            }
+            _ => (),
         }
 
-        // Avoid flashing a bunch of unresolved references during initial load.
-        if self.workspaces.is_empty() && !self.is_quiescent() {
-            self.respond(lsp_server::Response::new_err(
-                req.id,
-                lsp_server::ErrorCode::ContentModified as i32,
-                "waiting for cargo metadata or cargo check".to_owned(),
-            ));
-            return;
-        }
-
-        RequestDispatcher { req: Some(req), global_state: self }
-            .on_sync_mut::<lsp_types::request::Shutdown>(|s, ()| {
-                s.shutdown_requested = true;
-                Ok(())
-            })
+        dispatcher
             .on_sync_mut::<lsp_ext::ReloadWorkspace>(handlers::handle_workspace_reload)
             .on_sync_mut::<lsp_ext::MemoryUsage>(handlers::handle_memory_usage)
             .on_sync_mut::<lsp_ext::ShuffleCrateGraph>(handlers::handle_shuffle_crate_graph)
-            .on_sync_mut::<lsp_ext::CancelFlycheck>(handlers::handle_cancel_flycheck)
             .on_sync::<lsp_ext::JoinLines>(handlers::handle_join_lines)
             .on_sync::<lsp_ext::OnEnter>(handlers::handle_on_enter)
             .on_sync::<lsp_types::request::SelectionRangeRequest>(handlers::handle_selection_range)
@@ -642,6 +642,7 @@ impl GlobalState {
             .on::<lsp_ext::AnalyzerStatus>(handlers::handle_analyzer_status)
             .on::<lsp_ext::SyntaxTree>(handlers::handle_syntax_tree)
             .on::<lsp_ext::ViewHir>(handlers::handle_view_hir)
+            .on::<lsp_ext::ViewMir>(handlers::handle_view_mir)
             .on::<lsp_ext::ViewFileText>(handlers::handle_view_file_text)
             .on::<lsp_ext::ViewCrateGraph>(handlers::handle_view_crate_graph)
             .on::<lsp_ext::ViewItemTree>(handlers::handle_view_item_tree)
@@ -662,7 +663,7 @@ impl GlobalState {
             .on::<lsp_types::request::GotoDeclaration>(handlers::handle_goto_declaration)
             .on::<lsp_types::request::GotoImplementation>(handlers::handle_goto_implementation)
             .on::<lsp_types::request::GotoTypeDefinition>(handlers::handle_goto_type_definition)
-            .on::<lsp_types::request::InlayHintRequest>(handlers::handle_inlay_hints)
+            .on_no_retry::<lsp_types::request::InlayHintRequest>(handlers::handle_inlay_hints)
             .on::<lsp_types::request::InlayHintResolveRequest>(handlers::handle_inlay_hints_resolve)
             .on::<lsp_types::request::Completion>(handlers::handle_completion)
             .on::<lsp_types::request::ResolveCompletionItem>(handlers::handle_completion_resolve)
@@ -699,6 +700,88 @@ impl GlobalState {
 
     /// Handles an incoming notification.
     fn on_notification(&mut self, not: Notification) -> Result<()> {
+        // FIXME: Move these implementations out into a module similar to on_request
+        fn run_flycheck(this: &mut GlobalState, vfs_path: VfsPath) -> bool {
+            let file_id = this.vfs.read().0.file_id(&vfs_path);
+            if let Some(file_id) = file_id {
+                let world = this.snapshot();
+                let mut updated = false;
+                let task = move || -> std::result::Result<(), ide::Cancelled> {
+                    // Trigger flychecks for all workspaces that depend on the saved file
+                    // Crates containing or depending on the saved file
+                    let crate_ids: Vec<_> = world
+                        .analysis
+                        .crates_for(file_id)?
+                        .into_iter()
+                        .flat_map(|id| world.analysis.transitive_rev_deps(id))
+                        .flatten()
+                        .sorted()
+                        .unique()
+                        .collect();
+
+                    let crate_root_paths: Vec<_> = crate_ids
+                        .iter()
+                        .filter_map(|&crate_id| {
+                            world
+                                .analysis
+                                .crate_root(crate_id)
+                                .map(|file_id| {
+                                    world
+                                        .file_id_to_file_path(file_id)
+                                        .as_path()
+                                        .map(ToOwned::to_owned)
+                                })
+                                .transpose()
+                        })
+                        .collect::<ide::Cancellable<_>>()?;
+                    let crate_root_paths: Vec<_> =
+                        crate_root_paths.iter().map(Deref::deref).collect();
+
+                    // Find all workspaces that have at least one target containing the saved file
+                    let workspace_ids =
+                        world.workspaces.iter().enumerate().filter(|(_, ws)| match ws {
+                            project_model::ProjectWorkspace::Cargo { cargo, .. } => {
+                                cargo.packages().any(|pkg| {
+                                    cargo[pkg].targets.iter().any(|&it| {
+                                        crate_root_paths.contains(&cargo[it].root.as_path())
+                                    })
+                                })
+                            }
+                            project_model::ProjectWorkspace::Json { project, .. } => project
+                                .crates()
+                                .any(|(c, _)| crate_ids.iter().any(|&crate_id| crate_id == c)),
+                            project_model::ProjectWorkspace::DetachedFiles { .. } => false,
+                        });
+
+                    // Find and trigger corresponding flychecks
+                    for flycheck in world.flycheck.iter() {
+                        for (id, _) in workspace_ids.clone() {
+                            if id == flycheck.id() {
+                                updated = true;
+                                flycheck.restart();
+                                continue;
+                            }
+                        }
+                    }
+                    // No specific flycheck was triggered, so let's trigger all of them.
+                    if !updated {
+                        for flycheck in world.flycheck.iter() {
+                            flycheck.restart();
+                        }
+                    }
+                    Ok(())
+                };
+                this.task_pool.handle.spawn_with_sender(move |_| {
+                    if let Err(e) = std::panic::catch_unwind(task) {
+                        tracing::error!("flycheck task panicked: {e:?}")
+                    }
+                });
+                true
+            } else {
+                false
+            }
+        }
+
         NotificationDispatcher { not: Some(not), global_state: self }
             .on::<lsp_types::notification::Cancel>(|this, params| {
                 let id: lsp_server::RequestId = match params.id {
@@ -710,7 +793,7 @@ impl GlobalState {
             })?
             .on::<lsp_types::notification::WorkDoneProgressCancel>(|this, params| {
                 if let lsp_types::NumberOrString::String(s) = &params.token {
-                    if let Some(id) = s.strip_prefix("rust-analyzer/checkOnSave/") {
+                    if let Some(id) = s.strip_prefix("rust-analyzer/flycheck/") {
                         if let Ok(id) = u32::from_str_radix(id, 10) {
                             if let Some(flycheck) = this.flycheck.get(id as usize) {
                                 flycheck.cancel();
@@ -739,6 +822,7 @@ impl GlobalState {
                 }
                 Ok(())
             })?
+            .on::<lsp_ext::CancelFlycheck>(handlers::handle_cancel_flycheck)?
             .on::<lsp_types::notification::DidChangeTextDocument>(|this, params| {
                 if let Ok(path) = from_proto::vfs_path(&params.text_document.uri) {
                     match this.mem_docs.get_mut(&path) {
@@ -755,8 +839,11 @@ impl GlobalState {
 
                     let vfs = &mut this.vfs.write().0;
                     let file_id = vfs.file_id(&path).unwrap();
-                    let mut text = String::from_utf8(vfs.file_contents(file_id).to_vec()).unwrap();
-                    apply_document_changes(&mut text, params.content_changes);
+                    let text = apply_document_changes(
+                        this.config.position_encoding(),
+                        || std::str::from_utf8(vfs.file_contents(file_id)).unwrap().into(),
+                        params.content_changes,
+                    );
 
                     vfs.set_file_contents(path, Some(text.into_bytes()));
                 }
@@ -776,99 +863,42 @@ impl GlobalState {
                 }
                 Ok(())
             })?
+            .on::<lsp_ext::ClearFlycheck>(|this, ()| {
+                this.diagnostics.clear_check_all();
+                Ok(())
+            })?
+            .on::<lsp_ext::RunFlycheck>(|this, params| {
+                if let Some(text_document) = params.text_document {
+                    if let Ok(vfs_path) = from_proto::vfs_path(&text_document.uri) {
+                        if run_flycheck(this, vfs_path) {
+                            return Ok(());
+                        }
+                    }
+                }
+                // No specific flycheck was triggered, so let's trigger all of them.
+                for flycheck in this.flycheck.iter() {
+                    flycheck.restart();
+                }
+                Ok(())
+            })?
             .on::<lsp_types::notification::DidSaveTextDocument>(|this, params| {
                 if let Ok(vfs_path) = from_proto::vfs_path(&params.text_document.uri) {
                     // Re-fetch workspaces if a workspace related file has changed
                     if let Some(abs_path) = vfs_path.as_path() {
-                        if reload::should_refresh_for_change(&abs_path, ChangeKind::Modify) {
+                        if reload::should_refresh_for_change(abs_path, ChangeKind::Modify) {
                             this.fetch_workspaces_queue
                                 .request_op(format!("DidSaveTextDocument {}", abs_path.display()));
                         }
                     }
 
-                    let file_id = this.vfs.read().0.file_id(&vfs_path);
-                    if let Some(file_id) = file_id {
-                        let world = this.snapshot();
-                        let mut updated = false;
-                        let task = move || -> std::result::Result<(), ide::Cancelled> {
-                            // Trigger flychecks for all workspaces that depend on the saved file
-                            // Crates containing or depending on the saved file
-                            let crate_ids: Vec<_> = world
-                                .analysis
-                                .crates_for(file_id)?
-                                .into_iter()
-                                .flat_map(|id| world.analysis.transitive_rev_deps(id))
-                                .flatten()
-                                .sorted()
-                                .unique()
-                                .collect();
-
-                            let crate_root_paths: Vec<_> = crate_ids
-                                .iter()
-                                .filter_map(|&crate_id| {
-                                    world
-                                        .analysis
-                                        .crate_root(crate_id)
-                                        .map(|file_id| {
-                                            world
-                                                .file_id_to_file_path(file_id)
-                                                .as_path()
-                                                .map(ToOwned::to_owned)
-                                        })
-                                        .transpose()
-                                })
-                                .collect::<ide::Cancellable<_>>()?;
-                            let crate_root_paths: Vec<_> =
-                                crate_root_paths.iter().map(Deref::deref).collect();
-
-                            // Find all workspaces that have at least one target containing the saved file
-                            let workspace_ids =
-                                world.workspaces.iter().enumerate().filter(|(_, ws)| match ws {
-                                    project_model::ProjectWorkspace::Cargo { cargo, .. } => {
-                                        cargo.packages().any(|pkg| {
-                                            cargo[pkg].targets.iter().any(|&it| {
-                                                crate_root_paths.contains(&cargo[it].root.as_path())
-                                            })
-                                        })
-                                    }
-                                    project_model::ProjectWorkspace::Json { project, .. } => {
-                                        project.crates().any(|(c, _)| {
-                                            crate_ids.iter().any(|&crate_id| crate_id == c)
-                                        })
-                                    }
-                                    project_model::ProjectWorkspace::DetachedFiles { .. } => false,
-                                });
-
-                            // Find and trigger corresponding flychecks
-                            for flycheck in world.flycheck.iter() {
-                                for (id, _) in workspace_ids.clone() {
-                                    if id == flycheck.id() {
-                                        updated = true;
-                                        flycheck.restart();
-                                        continue;
-                                    }
-                                }
-                            }
-                            // No specific flycheck was triggered, so let's trigger all of them.
-                            if !updated {
-                                for flycheck in world.flycheck.iter() {
-                                    flycheck.restart();
-                                }
-                            }
-                            Ok(())
-                        };
-                        this.task_pool.handle.spawn_with_sender(move |_| {
-                            if let Err(e) = std::panic::catch_unwind(task) {
-                                tracing::error!("DidSaveTextDocument flycheck task panicked: {e:?}")
-                            }
-                        });
+                    if !this.config.check_on_save() || run_flycheck(this, vfs_path) {
                         return Ok(());
                     }
-                }
-
-                // No specific flycheck was triggered, so let's trigger all of them.
-                for flycheck in this.flycheck.iter() {
-                    flycheck.restart();
+                } else if this.config.check_on_save() {
+                    // No specific flycheck was triggered, so let's trigger all of them.
+                    for flycheck in this.flycheck.iter() {
+                        flycheck.restart();
+                    }
                 }
                 Ok(())
             })?
@@ -899,6 +929,7 @@ impl GlobalState {
                                         this.show_message(
                                             lsp_types::MessageType::WARNING,
                                             error.to_string(),
+                                            false,
                                         );
                                     }
                                     this.update_configuration(config);
@@ -910,6 +941,30 @@ impl GlobalState {
                         }
                     },
                 );
+
+                Ok(())
+            })?
+            .on::<lsp_types::notification::DidChangeWorkspaceFolders>(|this, params| {
+                let config = Arc::make_mut(&mut this.config);
+
+                for workspace in params.event.removed {
+                    let Ok(path) = workspace.uri.to_file_path() else { continue };
+                    let Ok(path) = AbsPathBuf::try_from(path) else { continue };
+                    let Some(position) = config.workspace_roots.iter().position(|it| it == &path) else { continue };
+                    config.workspace_roots.remove(position);
+                }
+
+                let added = params
+                    .event
+                    .added
+                    .into_iter()
+                    .filter_map(|it| it.uri.to_file_path().ok())
+                    .filter_map(|it| AbsPathBuf::try_from(it).ok());
+                config.workspace_roots.extend(added);
+                    if !config.has_linked_projects() && config.detached_files().is_empty() {
+                        config.rediscover_workspaces();
+                        this.fetch_workspaces_queue.request_op("client workspaces changed".to_string())
+                    }
 
                 Ok(())
             })?
@@ -926,10 +981,20 @@ impl GlobalState {
     }
 
     fn update_diagnostics(&mut self) {
+        let db = self.analysis_host.raw_database();
         let subscriptions = self
             .mem_docs
             .iter()
             .map(|path| self.vfs.read().0.file_id(path).unwrap())
+            .filter(|&file_id| {
+                let source_root = db.file_source_root(file_id);
+                // Only publish diagnostics for files in the workspace, not from crates.io deps
+                // or the sysroot.
+                // While theoretically these should never have errors, we have quite a few false
+                // positives particularly in the stdlib, and those diagnostics would stay around
+                // forever if we emitted them here.
+                !db.source_root(source_root).is_library
+            })
             .collect::<Vec<_>>();
 
         tracing::trace!("updating notifications for {:?}", subscriptions);

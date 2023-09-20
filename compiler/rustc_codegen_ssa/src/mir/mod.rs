@@ -1,8 +1,9 @@
+use crate::base;
 use crate::traits::*;
 use rustc_middle::mir;
 use rustc_middle::mir::interpret::ErrorHandled;
 use rustc_middle::ty::layout::{FnAbiOf, HasTyCtxt, TyAndLayout};
-use rustc_middle::ty::{self, Instance, Ty, TypeFoldable, TypeVisitable};
+use rustc_middle::ty::{self, Instance, Ty, TyCtxt, TypeFoldable, TypeVisitableExt};
 use rustc_target::abi::call::{FnAbi, PassMode};
 
 use std::iter;
@@ -15,6 +16,18 @@ use self::place::PlaceRef;
 use rustc_middle::mir::traversal;
 
 use self::operand::{OperandRef, OperandValue};
+
+// Used for tracking the state of generated basic blocks.
+enum CachedLlbb<T> {
+    /// Nothing created yet.
+    None,
+
+    /// Has been created.
+    Some(T),
+
+    /// Nothing created yet, and nothing should be.
+    Skip,
+}
 
 /// Master context for codegenning from MIR.
 pub struct FunctionCx<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> {
@@ -43,10 +56,10 @@ pub struct FunctionCx<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> {
     /// as-needed (e.g. RPO reaching it or another block branching to it).
     // FIXME(eddyb) rename `llbbs` and other `ll`-prefixed things to use a
     // more backend-agnostic prefix such as `cg` (i.e. this would be `cgbbs`).
-    cached_llbbs: IndexVec<mir::BasicBlock, Option<Bx::BasicBlock>>,
+    cached_llbbs: IndexVec<mir::BasicBlock, CachedLlbb<Bx::BasicBlock>>,
 
     /// The funclet status of each basic block
-    cleanup_kinds: IndexVec<mir::BasicBlock, analyze::CleanupKind>,
+    cleanup_kinds: Option<IndexVec<mir::BasicBlock, analyze::CleanupKind>>,
 
     /// When targeting MSVC, this stores the cleanup info for each funclet BB.
     /// This is initialized at the same time as the `landing_pads` entry for the
@@ -60,8 +73,8 @@ pub struct FunctionCx<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> {
     /// Cached unreachable block
     unreachable_block: Option<Bx::BasicBlock>,
 
-    /// Cached double unwind guarding block
-    double_unwind_guard: Option<Bx::BasicBlock>,
+    /// Cached terminate upon unwinding block
+    terminate_block: Option<Bx::BasicBlock>,
 
     /// The location where each MIR arg/var/tmp/ret is stored. This is
     /// usually an `PlaceRef` representing an alloca, but not always:
@@ -92,7 +105,7 @@ pub struct FunctionCx<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> {
 impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
     pub fn monomorphize<T>(&self, value: T) -> T
     where
-        T: Copy + TypeFoldable<'tcx>,
+        T: Copy + TypeFoldable<TyCtxt<'tcx>>,
     {
         debug!("monomorphize: self.instance={:?}", self.instance);
         self.instance.subst_mir_and_normalize_erasing_regions(
@@ -110,7 +123,10 @@ enum LocalRef<'tcx, V> {
     /// Every time it is initialized, we have to reallocate the place
     /// and update the fat pointer. That's the reason why it is indirect.
     UnsizedPlace(PlaceRef<'tcx, V>),
-    Operand(Option<OperandRef<'tcx, V>>),
+    /// The backend [`OperandValue`] has already been generated.
+    Operand(OperandRef<'tcx, V>),
+    /// Will be a `Self::Operand` once we get to its definition.
+    PendingOperand,
 }
 
 impl<'a, 'tcx, V: CodegenObject> LocalRef<'tcx, V> {
@@ -122,9 +138,9 @@ impl<'a, 'tcx, V: CodegenObject> LocalRef<'tcx, V> {
             // Zero-size temporaries aren't always initialized, which
             // doesn't matter because they don't contain data, but
             // we need something in the operand.
-            LocalRef::Operand(Some(OperandRef::new_zst(bx, layout)))
+            LocalRef::Operand(OperandRef::new_zst(bx, layout))
         } else {
-            LocalRef::Operand(None)
+            LocalRef::PendingOperand
         }
     }
 }
@@ -150,16 +166,21 @@ pub fn codegen_mir<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>>(
     let start_llbb = Bx::append_block(cx, llfn, "start");
     let mut start_bx = Bx::build(cx, start_llbb);
 
-    if mir.basic_blocks.iter().any(|bb| bb.is_cleanup) {
+    if mir.basic_blocks.iter().any(|bb| {
+        bb.is_cleanup || matches!(bb.terminator().unwind(), Some(mir::UnwindAction::Terminate))
+    }) {
         start_bx.set_personality_fn(cx.eh_personality());
     }
 
-    let cleanup_kinds = analyze::cleanup_kinds(&mir);
-    let cached_llbbs: IndexVec<mir::BasicBlock, Option<Bx::BasicBlock>> = mir
-        .basic_blocks
-        .indices()
-        .map(|bb| if bb == mir::START_BLOCK { Some(start_llbb) } else { None })
-        .collect();
+    let cleanup_kinds = base::wants_msvc_seh(cx.tcx().sess).then(|| analyze::cleanup_kinds(&mir));
+
+    let cached_llbbs: IndexVec<mir::BasicBlock, CachedLlbb<Bx::BasicBlock>> =
+        mir.basic_blocks
+            .indices()
+            .map(|bb| {
+                if bb == mir::START_BLOCK { CachedLlbb::Some(start_llbb) } else { CachedLlbb::None }
+            })
+            .collect();
 
     let mut fx = FunctionCx {
         instance,
@@ -170,7 +191,7 @@ pub fn codegen_mir<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>>(
         personality_slot: None,
         cached_llbbs,
         unreachable_block: None,
-        double_unwind_guard: None,
+        terminate_block: None,
         cleanup_kinds,
         landing_pads: IndexVec::from_elem(None, &mir.basic_blocks),
         funclets: IndexVec::from_fn_n(|_| None, mir.basic_blocks.len()),
@@ -189,7 +210,7 @@ pub fn codegen_mir<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>>(
             all_consts_ok = false;
             match err {
                 // errored or at least linted
-                ErrorHandled::Reported(_) | ErrorHandled::Linted => {}
+                ErrorHandled::Reported(_) => {}
                 ErrorHandled::TooGeneric => {
                     span_bug!(const_.span, "codegen encountered polymorphic constant: {:?}", err)
                 }
@@ -241,6 +262,10 @@ pub fn codegen_mir<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>>(
 
     // Apply debuginfo to the newly allocated locals.
     fx.debug_introduce_locals(&mut start_bx);
+
+    // The builders will be created separately for each basic block at `codegen_block`.
+    // So drop the builder of `start_llbb` to avoid having two at the same time.
+    drop(start_bx);
 
     // Codegen the body of each block using reverse postorder
     for (bb, _) in traversal::reverse_postorder(&mir) {
@@ -317,7 +342,7 @@ fn arg_local_refs<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>>(
                 // We don't have to cast or keep the argument in the alloca.
                 // FIXME(eddyb): We should figure out how to use llvm.dbg.value instead
                 // of putting everything in allocas just so we can use llvm.dbg.declare.
-                let local = |op| LocalRef::Operand(Some(op));
+                let local = |op| LocalRef::Operand(op);
                 match arg.mode {
                     PassMode::Ignore => {
                         return local(OperandRef::new_zst(bx, arg.layout));

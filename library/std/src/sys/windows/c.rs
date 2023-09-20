@@ -6,12 +6,14 @@
 
 use crate::ffi::CStr;
 use crate::mem;
-use crate::os::raw::{c_char, c_int, c_long, c_longlong, c_uint, c_ulong, c_ushort};
+use crate::os::raw::{c_char, c_long, c_longlong, c_uint, c_ulong, c_ushort};
 use crate::os::windows::io::{BorrowedHandle, HandleOrInvalid, HandleOrNull};
 use crate::ptr;
 use core::ffi::NonZero_c_ulong;
 
 use libc::{c_void, size_t, wchar_t};
+
+pub use crate::os::raw::c_int;
 
 #[path = "c/errors.rs"] // c.rs is included from two places so we need to specify this
 mod errors;
@@ -47,14 +49,18 @@ pub type ACCESS_MASK = DWORD;
 
 pub type LPBOOL = *mut BOOL;
 pub type LPBYTE = *mut BYTE;
+pub type LPCCH = *const CHAR;
 pub type LPCSTR = *const CHAR;
+pub type LPCWCH = *const WCHAR;
 pub type LPCWSTR = *const WCHAR;
+pub type LPCVOID = *const c_void;
 pub type LPDWORD = *mut DWORD;
 pub type LPHANDLE = *mut HANDLE;
 pub type LPOVERLAPPED = *mut OVERLAPPED;
 pub type LPPROCESS_INFORMATION = *mut PROCESS_INFORMATION;
 pub type LPSECURITY_ATTRIBUTES = *mut SECURITY_ATTRIBUTES;
 pub type LPSTARTUPINFO = *mut STARTUPINFO;
+pub type LPSTR = *mut CHAR;
 pub type LPVOID = *mut c_void;
 pub type LPWCH = *mut WCHAR;
 pub type LPWIN32_FIND_DATAW = *mut WIN32_FIND_DATAW;
@@ -130,6 +136,10 @@ pub const FIONBIO: c_ulong = 0x8004667e;
 pub const MAX_PATH: usize = 260;
 
 pub const FILE_TYPE_PIPE: u32 = 3;
+
+pub const CP_UTF8: DWORD = 65001;
+pub const MB_ERR_INVALID_CHARS: DWORD = 0x08;
+pub const WC_ERR_INVALID_CHARS: DWORD = 0x80;
 
 #[repr(C)]
 #[derive(Copy)]
@@ -286,7 +296,6 @@ pub const STATUS_INVALID_PARAMETER: NTSTATUS = 0xc000000d_u32 as _;
 
 pub const STATUS_PENDING: NTSTATUS = 0x103 as _;
 pub const STATUS_END_OF_FILE: NTSTATUS = 0xC0000011_u32 as _;
-pub const STATUS_NOT_IMPLEMENTED: NTSTATUS = 0xC0000002_u32 as _;
 
 // Equivalent to the `NT_SUCCESS` C preprocessor macro.
 // See: https://docs.microsoft.com/en-us/windows-hardware/drivers/kernel/using-ntstatus-values
@@ -294,8 +303,6 @@ pub fn nt_success(status: NTSTATUS) -> bool {
     status >= 0
 }
 
-// "RNG\0"
-pub const BCRYPT_RNG_ALGORITHM: &[u16] = &[b'R' as u16, b'N' as u16, b'G' as u16, 0];
 pub const BCRYPT_USE_SYSTEM_PREFERRED_RNG: DWORD = 0x00000002;
 
 #[repr(C)]
@@ -362,7 +369,7 @@ impl IO_STATUS_BLOCK {
 
 pub type LPOVERLAPPED_COMPLETION_ROUTINE = unsafe extern "system" fn(
     dwErrorCode: DWORD,
-    dwNumberOfBytesTransfered: DWORD,
+    dwNumberOfBytesTransferred: DWORD,
     lpOverlapped: *mut OVERLAPPED,
 );
 
@@ -538,14 +545,6 @@ pub struct SYMBOLIC_LINK_REPARSE_BUFFER {
     pub PrintNameLength: c_ushort,
     pub Flags: c_ulong,
     pub PathBuffer: WCHAR,
-}
-
-/// NB: Use carefully! In general using this as a reference is likely to get the
-/// provenance wrong for the `PathBuffer` field!
-#[repr(C)]
-pub struct FILE_NAME_INFO {
-    pub FileNameLength: DWORD,
-    pub FileName: [WCHAR; 1],
 }
 
 #[repr(C)]
@@ -773,6 +772,16 @@ pub struct timeval {
     pub tv_usec: c_long,
 }
 
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct CONSOLE_READCONSOLE_CONTROL {
+    pub nLength: ULONG,
+    pub nInitialChars: ULONG,
+    pub dwCtrlWakeupMask: ULONG,
+    pub dwControlKeyState: ULONG,
+}
+pub type PCONSOLE_READCONSOLE_CONTROL = *mut CONSOLE_READCONSOLE_CONTROL;
+
 // Desktop specific functions & types
 cfg_if::cfg_if! {
 if #[cfg(not(target_vendor = "uwp"))] {
@@ -802,17 +811,6 @@ if #[cfg(not(target_vendor = "uwp"))] {
         extern "system" fn(ExceptionInfo: *mut EXCEPTION_POINTERS) -> LONG;
 
     #[repr(C)]
-    #[derive(Copy, Clone)]
-    pub struct CONSOLE_READCONSOLE_CONTROL {
-        pub nLength: ULONG,
-        pub nInitialChars: ULONG,
-        pub dwCtrlWakeupMask: ULONG,
-        pub dwControlKeyState: ULONG,
-    }
-
-    pub type PCONSOLE_READCONSOLE_CONTROL = *mut CONSOLE_READCONSOLE_CONTROL;
-
-    #[repr(C)]
     pub struct BY_HANDLE_FILE_INFORMATION {
         pub dwFileAttributes: DWORD,
         pub ftCreationTime: FILETIME,
@@ -827,7 +825,6 @@ if #[cfg(not(target_vendor = "uwp"))] {
     }
 
     pub type LPBY_HANDLE_FILE_INFORMATION = *mut BY_HANDLE_FILE_INFORMATION;
-    pub type LPCVOID = *const c_void;
 
     pub const HANDLE_FLAG_INHERIT: DWORD = 0x00000001;
 
@@ -835,6 +832,10 @@ if #[cfg(not(target_vendor = "uwp"))] {
 
     #[link(name = "advapi32")]
     extern "system" {
+        // Forbidden when targeting UWP
+        #[link_name = "SystemFunction036"]
+        pub fn RtlGenRandom(RandomBuffer: *mut u8, RandomBufferLength: ULONG) -> BOOLEAN;
+
         // Allowed but unused by UWP
         pub fn OpenProcessToken(
             ProcessHandle: HANDLE,
@@ -855,24 +856,6 @@ if #[cfg(not(target_vendor = "uwp"))] {
 
     #[link(name = "kernel32")]
     extern "system" {
-        // Functions forbidden when targeting UWP
-        pub fn ReadConsoleW(
-            hConsoleInput: HANDLE,
-            lpBuffer: LPVOID,
-            nNumberOfCharsToRead: DWORD,
-            lpNumberOfCharsRead: LPDWORD,
-            pInputControl: PCONSOLE_READCONSOLE_CONTROL,
-        ) -> BOOL;
-
-        pub fn WriteConsoleW(
-            hConsoleOutput: HANDLE,
-            lpBuffer: LPCVOID,
-            nNumberOfCharsToWrite: DWORD,
-            lpNumberOfCharsWritten: LPDWORD,
-            lpReserved: LPVOID,
-        ) -> BOOL;
-
-        pub fn GetConsoleMode(hConsoleHandle: HANDLE, lpMode: LPDWORD) -> BOOL;
         // Allowed but unused by UWP
         pub fn GetFileInformationByHandle(
             hFile: HANDLE,
@@ -913,6 +896,22 @@ if #[cfg(target_vendor = "uwp")] {
 #[link(name = "kernel32")]
 extern "system" {
     pub fn GetCurrentProcessId() -> DWORD;
+
+    pub fn ReadConsoleW(
+        hConsoleInput: HANDLE,
+        lpBuffer: LPVOID,
+        nNumberOfCharsToRead: DWORD,
+        lpNumberOfCharsRead: LPDWORD,
+        pInputControl: PCONSOLE_READCONSOLE_CONTROL,
+    ) -> BOOL;
+    pub fn WriteConsoleW(
+        hConsoleOutput: HANDLE,
+        lpBuffer: LPCVOID,
+        nNumberOfCharsToWrite: DWORD,
+        lpNumberOfCharsWritten: LPDWORD,
+        lpReserved: LPVOID,
+    ) -> BOOL;
+    pub fn GetConsoleMode(hConsoleHandle: HANDLE, lpMode: LPDWORD) -> BOOL;
 
     pub fn GetSystemDirectoryW(lpBuffer: LPWSTR, uSize: UINT) -> UINT;
     pub fn RemoveDirectoryW(lpPathName: LPCWSTR) -> BOOL;
@@ -1156,6 +1155,25 @@ extern "system" {
         lpFilePart: *mut LPWSTR,
     ) -> DWORD;
     pub fn GetFileAttributesW(lpFileName: LPCWSTR) -> DWORD;
+
+    pub fn MultiByteToWideChar(
+        CodePage: UINT,
+        dwFlags: DWORD,
+        lpMultiByteStr: LPCCH,
+        cbMultiByte: c_int,
+        lpWideCharStr: LPWSTR,
+        cchWideChar: c_int,
+    ) -> c_int;
+    pub fn WideCharToMultiByte(
+        CodePage: UINT,
+        dwFlags: DWORD,
+        lpWideCharStr: LPCWCH,
+        cchWideChar: c_int,
+        lpMultiByteStr: LPSTR,
+        cbMultiByte: c_int,
+        lpDefaultChar: LPCCH,
+        lpUsedDefaultChar: LPBOOL,
+    ) -> c_int;
 }
 
 #[link(name = "ws2_32")]
@@ -1261,13 +1279,46 @@ extern "system" {
         cbBuffer: ULONG,
         dwFlags: ULONG,
     ) -> NTSTATUS;
-    pub fn BCryptOpenAlgorithmProvider(
-        phalgorithm: *mut BCRYPT_ALG_HANDLE,
-        pszAlgId: LPCWSTR,
-        pszimplementation: LPCWSTR,
-        dwflags: ULONG,
+}
+
+#[link(name = "ntdll")]
+extern "system" {
+    pub fn NtCreateFile(
+        FileHandle: *mut HANDLE,
+        DesiredAccess: ACCESS_MASK,
+        ObjectAttributes: *const OBJECT_ATTRIBUTES,
+        IoStatusBlock: *mut IO_STATUS_BLOCK,
+        AllocationSize: *mut i64,
+        FileAttributes: ULONG,
+        ShareAccess: ULONG,
+        CreateDisposition: ULONG,
+        CreateOptions: ULONG,
+        EaBuffer: *mut c_void,
+        EaLength: ULONG,
     ) -> NTSTATUS;
-    pub fn BCryptCloseAlgorithmProvider(hAlgorithm: BCRYPT_ALG_HANDLE, dwFlags: ULONG) -> NTSTATUS;
+    pub fn NtReadFile(
+        FileHandle: BorrowedHandle<'_>,
+        Event: HANDLE,
+        ApcRoutine: Option<IO_APC_ROUTINE>,
+        ApcContext: *mut c_void,
+        IoStatusBlock: &mut IO_STATUS_BLOCK,
+        Buffer: *mut crate::mem::MaybeUninit<u8>,
+        Length: ULONG,
+        ByteOffset: Option<&LARGE_INTEGER>,
+        Key: Option<&ULONG>,
+    ) -> NTSTATUS;
+    pub fn NtWriteFile(
+        FileHandle: BorrowedHandle<'_>,
+        Event: HANDLE,
+        ApcRoutine: Option<IO_APC_ROUTINE>,
+        ApcContext: *mut c_void,
+        IoStatusBlock: &mut IO_STATUS_BLOCK,
+        Buffer: *const u8,
+        Length: ULONG,
+        ByteOffset: Option<&LARGE_INTEGER>,
+        Key: Option<&ULONG>,
+    ) -> NTSTATUS;
+    pub fn RtlNtStatusToDosError(Status: NTSTATUS) -> ULONG;
 }
 
 // Functions that aren't available on every version of Windows that we support,
@@ -1310,52 +1361,6 @@ compat_fn_optional! {
 compat_fn_with_fallback! {
     pub static NTDLL: &CStr = ansi_str!("ntdll");
 
-    pub fn NtCreateFile(
-        FileHandle: *mut HANDLE,
-        DesiredAccess: ACCESS_MASK,
-        ObjectAttributes: *const OBJECT_ATTRIBUTES,
-        IoStatusBlock: *mut IO_STATUS_BLOCK,
-        AllocationSize: *mut i64,
-        FileAttributes: ULONG,
-        ShareAccess: ULONG,
-        CreateDisposition: ULONG,
-        CreateOptions: ULONG,
-        EaBuffer: *mut c_void,
-        EaLength: ULONG
-    ) -> NTSTATUS {
-        STATUS_NOT_IMPLEMENTED
-    }
-    pub fn NtReadFile(
-        FileHandle: BorrowedHandle<'_>,
-        Event: HANDLE,
-        ApcRoutine: Option<IO_APC_ROUTINE>,
-        ApcContext: *mut c_void,
-        IoStatusBlock: &mut IO_STATUS_BLOCK,
-        Buffer: *mut crate::mem::MaybeUninit<u8>,
-        Length: ULONG,
-        ByteOffset: Option<&LARGE_INTEGER>,
-        Key: Option<&ULONG>
-    ) -> NTSTATUS {
-        STATUS_NOT_IMPLEMENTED
-    }
-    pub fn NtWriteFile(
-        FileHandle: BorrowedHandle<'_>,
-        Event: HANDLE,
-        ApcRoutine: Option<IO_APC_ROUTINE>,
-        ApcContext: *mut c_void,
-        IoStatusBlock: &mut IO_STATUS_BLOCK,
-        Buffer: *const u8,
-        Length: ULONG,
-        ByteOffset: Option<&LARGE_INTEGER>,
-        Key: Option<&ULONG>
-    ) -> NTSTATUS {
-        STATUS_NOT_IMPLEMENTED
-    }
-    pub fn RtlNtStatusToDosError(
-        Status: NTSTATUS
-    ) -> ULONG {
-        Status as ULONG
-    }
     pub fn NtCreateKeyedEvent(
         KeyedEventHandle: LPHANDLE,
         DesiredAccess: ACCESS_MASK,

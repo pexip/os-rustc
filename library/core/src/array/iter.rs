@@ -1,5 +1,6 @@
 //! Defines the `IntoIter` owned iterator for arrays.
 
+use crate::num::NonZeroUsize;
 use crate::{
     fmt,
     iter::{self, ExactSizeIterator, FusedIterator, TrustedLen},
@@ -109,8 +110,8 @@ impl<T, const N: usize> IntoIter<T, N> {
     /// use std::array::IntoIter;
     /// use std::mem::MaybeUninit;
     ///
-    /// # // Hi!  Thanks for reading the code.  This is restricted to `Copy` because
-    /// # // otherwise it could leak.  A fully-general version this would need a drop
+    /// # // Hi!  Thanks for reading the code. This is restricted to `Copy` because
+    /// # // otherwise it could leak. A fully-general version this would need a drop
     /// # // guard to handle panics from the iterator, but this works for an example.
     /// fn next_chunk<T: Copy, const N: usize>(
     ///     it: &mut impl Iterator<Item = T>,
@@ -211,7 +212,7 @@ impl<T, const N: usize> IntoIter<T, N> {
         let initialized = 0..0;
 
         // SAFETY: We're telling it that none of the elements are initialized,
-        // which is trivially true.  And ∀N: usize, 0 <= N.
+        // which is trivially true. And ∀N: usize, 0 <= N.
         unsafe { Self::new_unchecked(buffer, initialized) }
     }
 
@@ -284,12 +285,11 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
         self.next_back()
     }
 
-    fn advance_by(&mut self, n: usize) -> Result<(), usize> {
-        let original_len = self.len();
-
+    fn advance_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
         // This also moves the start, which marks them as conceptually "dropped",
         // so if anything goes bad then our drop impl won't double-free them.
         let range_to_drop = self.alive.take_prefix(n);
+        let remaining = n - range_to_drop.len();
 
         // SAFETY: These elements are currently initialized, so it's fine to drop them.
         unsafe {
@@ -297,7 +297,7 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
             ptr::drop_in_place(MaybeUninit::slice_assume_init_mut(slice));
         }
 
-        if n > original_len { Err(original_len) } else { Ok(()) }
+        NonZeroUsize::new(remaining).map_or(Ok(()), Err)
     }
 }
 
@@ -334,12 +334,11 @@ impl<T, const N: usize> DoubleEndedIterator for IntoIter<T, N> {
         })
     }
 
-    fn advance_back_by(&mut self, n: usize) -> Result<(), usize> {
-        let original_len = self.len();
-
+    fn advance_back_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
         // This also moves the end, which marks them as conceptually "dropped",
         // so if anything goes bad then our drop impl won't double-free them.
         let range_to_drop = self.alive.take_suffix(n);
+        let remaining = n - range_to_drop.len();
 
         // SAFETY: These elements are currently initialized, so it's fine to drop them.
         unsafe {
@@ -347,7 +346,7 @@ impl<T, const N: usize> DoubleEndedIterator for IntoIter<T, N> {
             ptr::drop_in_place(MaybeUninit::slice_assume_init_mut(slice));
         }
 
-        if n > original_len { Err(original_len) } else { Ok(()) }
+        NonZeroUsize::new(remaining).map_or(Ok(()), Err)
     }
 }
 

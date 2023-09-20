@@ -12,16 +12,16 @@ pub(crate) mod usefulness;
 
 use chalk_ir::Mutability;
 use hir_def::{
-    adt::VariantData, body::Body, expr::PatId, AdtId, EnumVariantId, HasModule, LocalFieldId,
-    VariantId,
+    adt::VariantData, body::Body, expr::PatId, AdtId, EnumVariantId, LocalFieldId, VariantId,
 };
-use hir_expand::name::{name, Name};
+use hir_expand::name::Name;
 use stdx::{always, never};
 
 use crate::{
     db::HirDatabase,
     display::{HirDisplay, HirDisplayError, HirFormatter},
     infer::BindingMode,
+    lang_items::is_box,
     InferenceResult, Interner, Substitution, Ty, TyExt, TyKind,
 };
 
@@ -146,8 +146,9 @@ impl<'a> PatCtxt<'a> {
                 PatKind::Leaf { subpatterns }
             }
 
-            hir_def::expr::Pat::Bind { ref name, subpat, .. } => {
+            hir_def::expr::Pat::Bind { id, subpat, .. } => {
                 let bm = self.infer.pat_binding_modes[&pat];
+                let name = &self.body.bindings[id].name;
                 match (bm, ty.kind(Interner)) {
                     (BindingMode::Ref(_), TyKind::Ref(.., rty)) => ty = rty,
                     (BindingMode::Ref(_), _) => {
@@ -386,7 +387,7 @@ impl HirDisplay for Pat {
                 }
                 subpattern.hir_fmt(f)
             }
-            PatKind::LiteralBool { value } => write!(f, "{}", value),
+            PatKind::LiteralBool { value } => write!(f, "{value}"),
             PatKind::Or { pats } => f.write_joined(pats.iter(), " | "),
         }
     }
@@ -403,13 +404,6 @@ where
     fn hir_fmt(&self, f: &mut HirFormatter<'_>) -> Result<(), HirDisplayError> {
         (self.0)(f)
     }
-}
-
-fn is_box(adt: AdtId, db: &dyn HirDatabase) -> bool {
-    let owned_box = name![owned_box].to_smol_str();
-    let krate = adt.module(db.upcast()).krate();
-    let box_adt = db.lang_item(krate, owned_box).and_then(|it| it.as_struct()).map(AdtId::from);
-    Some(adt) == box_adt
 }
 
 pub(crate) trait PatternFoldable: Sized {

@@ -69,7 +69,9 @@ fn lit_search_pat(lit: &LitKind) -> (Pat, Pat) {
         LitKind::Str(_, StrStyle::Cooked) => (Pat::Str("\""), Pat::Str("\"")),
         LitKind::Str(_, StrStyle::Raw(0)) => (Pat::Str("r"), Pat::Str("\"")),
         LitKind::Str(_, StrStyle::Raw(_)) => (Pat::Str("r#"), Pat::Str("#")),
-        LitKind::ByteStr(_) => (Pat::Str("b\""), Pat::Str("\"")),
+        LitKind::ByteStr(_, StrStyle::Cooked) => (Pat::Str("b\""), Pat::Str("\"")),
+        LitKind::ByteStr(_, StrStyle::Raw(0)) => (Pat::Str("br\""), Pat::Str("\"")),
+        LitKind::ByteStr(_, StrStyle::Raw(_)) => (Pat::Str("br#\""), Pat::Str("#")),
         LitKind::Byte(_) => (Pat::Str("b'"), Pat::Str("'")),
         LitKind::Char(_) => (Pat::Str("'"), Pat::Str("'")),
         LitKind::Int(_, LitIntType::Signed(IntTy::Isize)) => (Pat::Num, Pat::Str("isize")),
@@ -110,7 +112,6 @@ fn qpath_search_pat(path: &QPath<'_>) -> (Pat, Pat) {
 /// Get the search patterns to use for the given expression
 fn expr_search_pat(tcx: TyCtxt<'_>, e: &Expr<'_>) -> (Pat, Pat) {
     match e.kind {
-        ExprKind::Box(e) => (Pat::Str("box"), expr_search_pat(tcx, e).1),
         ExprKind::ConstBlock(_) => (Pat::Str("const"), Pat::Str("}")),
         ExprKind::Tup([]) => (Pat::Str(")"), Pat::Str("(")),
         ExprKind::Unary(UnOp::Deref, e) => (Pat::Str("*"), expr_search_pat(tcx, e).1),

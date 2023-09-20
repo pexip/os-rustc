@@ -37,7 +37,8 @@
 //! and the last personality routine transfers control to the catch block.
 
 use super::dwarf::eh::{self, EHAction, EHContext};
-use libc::{c_int, uintptr_t};
+use crate::ffi::c_int;
+use libc::uintptr_t;
 use unwind as uw;
 
 // Register ids were lifted from LLVM's TargetLowering::getExceptionPointerRegister()
@@ -75,6 +76,9 @@ const UNWIND_DATA_REG: (i32, i32) = (0, 1); // R0, R1
 
 #[cfg(any(target_arch = "riscv64", target_arch = "riscv32"))]
 const UNWIND_DATA_REG: (i32, i32) = (10, 11); // x10, x11
+
+#[cfg(target_arch = "loongarch64")]
+const UNWIND_DATA_REG: (i32, i32) = (4, 5); // a0, a1
 
 // The following code is based on GCC's C and C++ personality routines.  For reference, see:
 // https://github.com/gcc-mirror/gcc/blob/master/libstdc++-v3/libsupc++/eh_personality.cc
@@ -219,7 +223,7 @@ cfg_if::cfg_if! {
         }
 
         cfg_if::cfg_if! {
-            if #[cfg(all(windows, target_arch = "x86_64", target_env = "gnu"))] {
+            if #[cfg(all(windows, any(target_arch = "aarch64", target_arch = "x86_64"), target_env = "gnu"))] {
                 // On x86_64 MinGW targets, the unwinding mechanism is SEH however the unwind
                 // handler data (aka LSDA) uses GCC-compatible encoding.
                 #[lang = "eh_personality"]

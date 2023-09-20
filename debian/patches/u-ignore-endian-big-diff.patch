@@ -14,45 +14,45 @@ Bug: https://github.com/rust-lang/rust/issues/89577
  src/test/ui/consts/const-eval/ub-wide-ptr.rs  | 1 +
  6 files changed, 6 insertions(+)
 
---- a/src/test/ui/consts/const-eval/ub-enum.rs
-+++ b/src/test/ui/consts/const-eval/ub-enum.rs
+--- a/tests/ui/consts/const-eval/ub-enum.rs
++++ b/tests/ui/consts/const-eval/ub-enum.rs
 @@ -1,3 +1,4 @@
 +// ignore-test
  // stderr-per-bitwidth
- #![feature(never_type)]
- #![allow(invalid_value)]
---- a/src/test/ui/consts/const-eval/ub-int-array.rs
-+++ b/src/test/ui/consts/const-eval/ub-int-array.rs
+ // Strip out raw byte dumps to make comparison platform-independent:
+ // normalize-stderr-test "(the raw bytes of the constant) \(size: [0-9]*, align: [0-9]*\)" -> "$1 (size: $$SIZE, align: $$ALIGN)"
+--- a/tests/ui/consts/const-eval/ub-int-array.rs
++++ b/tests/ui/consts/const-eval/ub-int-array.rs
 @@ -1,3 +1,4 @@
 +// ignore-test
  // stderr-per-bitwidth
  //! Test the "array of int" fast path in validity checking, and in particular whether it
  //! points at the right array element.
---- a/src/test/ui/consts/const-eval/ub-nonnull.rs
-+++ b/src/test/ui/consts/const-eval/ub-nonnull.rs
+--- a/tests/ui/consts/const-eval/ub-nonnull.rs
++++ b/tests/ui/consts/const-eval/ub-nonnull.rs
 @@ -1,3 +1,4 @@
 +// ignore-test
- // stderr-per-bitwidth
- #![feature(rustc_attrs)]
- #![allow(invalid_value)] // make sure we cannot allow away the errors tested here
---- a/src/test/ui/consts/const-eval/ub-ref-ptr.rs
-+++ b/src/test/ui/consts/const-eval/ub-ref-ptr.rs
+ // Strip out raw byte dumps to make comparison platform-independent:
+ // normalize-stderr-test "(the raw bytes of the constant) \(size: [0-9]*, align: [0-9]*\)" -> "$1 (size: $$SIZE, align: $$ALIGN)"
+ // normalize-stderr-test "([0-9a-f][0-9a-f] |╾─*a(lloc)?[0-9]+(\+[a-z0-9]+)?─*╼ )+ *│.*" -> "HEX_DUMP"
+--- a/tests/ui/consts/const-eval/ub-ref-ptr.rs
++++ b/tests/ui/consts/const-eval/ub-ref-ptr.rs
 @@ -1,3 +1,4 @@
 +// ignore-test
  // ignore-tidy-linelength
- // stderr-per-bitwidth
- #![allow(invalid_value)]
---- a/src/test/ui/consts/const-eval/ub-uninhabit.rs
-+++ b/src/test/ui/consts/const-eval/ub-uninhabit.rs
+ // Strip out raw byte dumps to make comparison platform-independent:
+ // normalize-stderr-test "(the raw bytes of the constant) \(size: [0-9]*, align: [0-9]*\)" -> "$1 (size: $$SIZE, align: $$ALIGN)"
+--- a/tests/ui/consts/const-eval/ub-uninhabit.rs
++++ b/tests/ui/consts/const-eval/ub-uninhabit.rs
 @@ -1,3 +1,4 @@
 +// ignore-test
- // stderr-per-bitwidth
- 
- use std::mem;
---- a/src/test/ui/consts/const-eval/ub-wide-ptr.rs
-+++ b/src/test/ui/consts/const-eval/ub-wide-ptr.rs
+ // Strip out raw byte dumps to make comparison platform-independent:
+ // normalize-stderr-test "(the raw bytes of the constant) \(size: [0-9]*, align: [0-9]*\)" -> "$1 (size: $$SIZE, align: $$ALIGN)"
+ // normalize-stderr-test "([0-9a-f][0-9a-f] |╾─*a(lloc)?[0-9]+(\+[a-z0-9]+)?─*╼ )+ *│.*" -> "HEX_DUMP"
+--- a/tests/ui/consts/const-eval/ub-wide-ptr.rs
++++ b/tests/ui/consts/const-eval/ub-wide-ptr.rs
 @@ -1,3 +1,4 @@
 +// ignore-test
- // stderr-per-bitwidth
  // ignore-tidy-linelength
  #![allow(unused)]
+ 

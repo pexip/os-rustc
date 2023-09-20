@@ -1,5 +1,3 @@
-#[cfg(feature = "Win32_AI")]
-pub mod AI;
 #[cfg(feature = "Win32_Data")]
 pub mod Data;
 #[cfg(feature = "Win32_Devices")]
@@ -28,5 +26,3 @@ pub mod Storage;
 pub mod System;
 #[cfg(feature = "Win32_UI")]
 pub mod UI;
-#[cfg(feature = "Win32_Web")]
-pub mod Web;

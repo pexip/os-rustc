@@ -18,9 +18,12 @@ use rustc_middle::mir::display_allocation;
 use rustc_middle::ty::{self, Instance, ParamEnv, Ty, TyCtxt};
 use rustc_target::abi::{Align, HasDataLayout, Size};
 
+use crate::const_eval::CheckAlignment;
+
 use super::{
-    alloc_range, AllocId, AllocMap, AllocRange, Allocation, CheckInAllocMsg, GlobalAlloc, InterpCx,
-    InterpResult, Machine, MayLeak, Pointer, PointerArithmetic, Provenance, Scalar,
+    alloc_range, AllocBytes, AllocId, AllocMap, AllocRange, Allocation, CheckInAllocMsg,
+    GlobalAlloc, InterpCx, InterpResult, Machine, MayLeak, Pointer, PointerArithmetic, Provenance,
+    Scalar,
 };
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -112,16 +115,16 @@ pub struct Memory<'mir, 'tcx, M: Machine<'mir, 'tcx>> {
 /// A reference to some allocation that was already bounds-checked for the given region
 /// and had the on-access machine hooks run.
 #[derive(Copy, Clone)]
-pub struct AllocRef<'a, 'tcx, Prov, Extra> {
-    alloc: &'a Allocation<Prov, Extra>,
+pub struct AllocRef<'a, 'tcx, Prov: Provenance, Extra, Bytes: AllocBytes = Box<[u8]>> {
+    alloc: &'a Allocation<Prov, Extra, Bytes>,
     range: AllocRange,
     tcx: TyCtxt<'tcx>,
     alloc_id: AllocId,
 }
 /// A reference to some allocation that was already bounds-checked for the given region
 /// and had the on-access machine hooks run.
-pub struct AllocRefMut<'a, 'tcx, Prov, Extra> {
-    alloc: &'a mut Allocation<Prov, Extra>,
+pub struct AllocRefMut<'a, 'tcx, Prov: Provenance, Extra, Bytes: AllocBytes = Box<[u8]>> {
+    alloc: &'a mut Allocation<Prov, Extra, Bytes>,
     range: AllocRange,
     tcx: TyCtxt<'tcx>,
     alloc_id: AllocId,
@@ -144,7 +147,7 @@ impl<'mir, 'tcx, M: Machine<'mir, 'tcx>> Memory<'mir, 'tcx, M> {
 
 impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     /// Call this to turn untagged "global" pointers (obtained via `tcx`) into
-    /// the machine pointer to the allocation.  Must never be used
+    /// the machine pointer to the allocation. Must never be used
     /// for any other pointers, nor for TLS statics.
     ///
     /// Using the resulting pointer represents a *direct* access to that memory
@@ -169,7 +172,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             _ => {}
         }
         // And we need to get the provenance.
-        Ok(M::adjust_alloc_base_pointer(self, ptr))
+        M::adjust_alloc_base_pointer(self, ptr)
     }
 
     pub fn create_fn_alloc_ptr(
@@ -198,8 +201,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         kind: MemoryKind<M::MemoryKind>,
     ) -> InterpResult<'tcx, Pointer<M::Provenance>> {
         let alloc = Allocation::uninit(size, align, M::PANIC_ON_ALLOC_FAIL)?;
-        // We can `unwrap` since `alloc` contains no pointers.
-        Ok(self.allocate_raw_ptr(alloc, kind).unwrap())
+        self.allocate_raw_ptr(alloc, kind)
     }
 
     pub fn allocate_bytes_ptr(
@@ -208,10 +210,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         align: Align,
         kind: MemoryKind<M::MemoryKind>,
         mutability: Mutability,
-    ) -> Pointer<M::Provenance> {
+    ) -> InterpResult<'tcx, Pointer<M::Provenance>> {
         let alloc = Allocation::from_bytes(bytes, align, mutability);
-        // We can `unwrap` since `alloc` contains no pointers.
-        self.allocate_raw_ptr(alloc, kind).unwrap()
+        self.allocate_raw_ptr(alloc, kind)
     }
 
     /// This can fail only of `alloc` contains provenance.
@@ -228,7 +229,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         );
         let alloc = M::adjust_allocation(self, id, Cow::Owned(alloc), Some(kind))?;
         self.memory.alloc_map.insert(id, (kind, alloc.into_owned()));
-        Ok(M::adjust_alloc_base_pointer(self, Pointer::from(id)))
+        M::adjust_alloc_base_pointer(self, Pointer::from(id))
     }
 
     pub fn reallocate_ptr(
@@ -302,9 +303,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             .into());
         };
 
-        debug!(?alloc);
-
-        if alloc.mutability == Mutability::Not {
+        if alloc.mutability.is_not() {
             throw_ub_format!("deallocating immutable allocation {alloc_id:?}");
         }
         if alloc_kind != kind {
@@ -351,11 +350,11 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         size: Size,
         align: Align,
     ) -> InterpResult<'tcx, Option<(AllocId, Size, M::ProvenanceExtra)>> {
-        let align = M::enforce_alignment(&self).then_some(align);
         self.check_and_deref_ptr(
             ptr,
             size,
             align,
+            M::enforce_alignment(self),
             CheckInAllocMsg::MemoryAccessTest,
             |alloc_id, offset, prov| {
                 let (size, align) = self.get_live_alloc_size_and_align(alloc_id)?;
@@ -375,10 +374,17 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         align: Align,
         msg: CheckInAllocMsg,
     ) -> InterpResult<'tcx> {
-        self.check_and_deref_ptr(ptr, size, Some(align), msg, |alloc_id, _, _| {
-            let (size, align) = self.get_live_alloc_size_and_align(alloc_id)?;
-            Ok((size, align, ()))
-        })?;
+        self.check_and_deref_ptr(
+            ptr,
+            size,
+            align,
+            CheckAlignment::Error,
+            msg,
+            |alloc_id, _, _| {
+                let (size, align) = self.get_live_alloc_size_and_align(alloc_id)?;
+                Ok((size, align, ()))
+            },
+        )?;
         Ok(())
     }
 
@@ -390,7 +396,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         &self,
         ptr: Pointer<Option<M::Provenance>>,
         size: Size,
-        align: Option<Align>,
+        align: Align,
+        check: CheckAlignment,
         msg: CheckInAllocMsg,
         alloc_size: impl FnOnce(
             AllocId,
@@ -398,19 +405,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             M::ProvenanceExtra,
         ) -> InterpResult<'tcx, (Size, Align, T)>,
     ) -> InterpResult<'tcx, Option<T>> {
-        fn check_offset_align<'tcx>(offset: u64, align: Align) -> InterpResult<'tcx> {
-            if offset % align.bytes() == 0 {
-                Ok(())
-            } else {
-                // The biggest power of two through which `offset` is divisible.
-                let offset_pow2 = 1 << offset.trailing_zeros();
-                throw_ub!(AlignmentCheckFailed {
-                    has: Align::from_bytes(offset_pow2).unwrap(),
-                    required: align,
-                })
-            }
-        }
-
         Ok(match self.ptr_try_get_alloc_id(ptr) {
             Err(addr) => {
                 // We couldn't get a proper allocation. This is only okay if the access size is 0,
@@ -419,8 +413,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     throw_ub!(DanglingIntPointer(addr, msg));
                 }
                 // Must be aligned.
-                if let Some(align) = align {
-                    check_offset_align(addr, align)?;
+                if check.should_check() {
+                    self.check_offset_align(addr, align, check)?;
                 }
                 None
             }
@@ -432,7 +426,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     throw_ub!(PointerOutOfBounds {
                         alloc_id,
                         alloc_size,
-                        ptr_offset: self.machine_usize_to_isize(offset.bytes()),
+                        ptr_offset: self.target_usize_to_isize(offset.bytes()),
                         ptr_size: size,
                         msg,
                     })
@@ -443,16 +437,16 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 }
                 // Test align. Check this last; if both bounds and alignment are violated
                 // we want the error to be about the bounds.
-                if let Some(align) = align {
+                if check.should_check() {
                     if M::use_addr_for_alignment_check(self) {
                         // `use_addr_for_alignment_check` can only be true if `OFFSET_IS_ADDR` is true.
-                        check_offset_align(ptr.addr().bytes(), align)?;
+                        self.check_offset_align(ptr.addr().bytes(), align, check)?;
                     } else {
                         // Check allocation alignment and offset alignment.
                         if alloc_align.bytes() < align.bytes() {
-                            throw_ub!(AlignmentCheckFailed { has: alloc_align, required: align });
+                            M::alignment_check_failed(self, alloc_align, align, check)?;
                         }
-                        check_offset_align(offset.bytes(), align)?;
+                        self.check_offset_align(offset.bytes(), align, check)?;
                     }
                 }
 
@@ -461,6 +455,21 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 if size.bytes() == 0 { None } else { Some(ret_val) }
             }
         })
+    }
+
+    fn check_offset_align(
+        &self,
+        offset: u64,
+        align: Align,
+        check: CheckAlignment,
+    ) -> InterpResult<'tcx> {
+        if offset % align.bytes() == 0 {
+            Ok(())
+        } else {
+            // The biggest power of two through which `offset` is divisible.
+            let offset_pow2 = 1 << offset.trailing_zeros();
+            M::alignment_check_failed(self, Align::from_bytes(offset_pow2).unwrap(), align, check)
+        }
     }
 }
 
@@ -475,7 +484,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         &self,
         id: AllocId,
         is_write: bool,
-    ) -> InterpResult<'tcx, Cow<'tcx, Allocation<M::Provenance, M::AllocExtra>>> {
+    ) -> InterpResult<'tcx, Cow<'tcx, Allocation<M::Provenance, M::AllocExtra, M::Bytes>>> {
         let (alloc, def_id) = match self.tcx.try_get_global_alloc(id) {
             Some(GlobalAlloc::Memory(mem)) => {
                 // Memory of a constant or promoted or anonymous memory referenced by a static.
@@ -503,8 +512,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     throw_unsup!(ReadExternStatic(def_id));
                 }
 
-                // Use a precise span for better cycle errors.
-                (self.tcx.at(self.cur_span()).eval_static_initializer(def_id)?, Some(def_id))
+                // We don't give a span -- statics don't need that, they cannot be generic or associated.
+                let val = self.ctfe_query(None, |tcx| tcx.eval_static_initializer(def_id))?;
+                (val, Some(def_id))
             }
         };
         M::before_access_global(*self.tcx, &self.machine, id, alloc, def_id, is_write)?;
@@ -517,6 +527,17 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         )
     }
 
+    /// Get the base address for the bytes in an `Allocation` specified by the
+    /// `AllocID` passed in; error if no such allocation exists.
+    ///
+    /// It is up to the caller to take sufficient care when using this address:
+    /// there could be provenance or uninit memory in there, and other memory
+    /// accesses could invalidate the exposed pointer.
+    pub fn alloc_base_addr(&self, id: AllocId) -> InterpResult<'tcx, *const u8> {
+        let alloc = self.get_alloc_raw(id)?;
+        Ok(alloc.base_addr())
+    }
+
     /// Gives raw access to the `Allocation`, without bounds or alignment checks.
     /// The caller is responsible for calling the access hooks!
     ///
@@ -524,8 +545,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     fn get_alloc_raw(
         &self,
         id: AllocId,
-    ) -> InterpResult<'tcx, &Allocation<M::Provenance, M::AllocExtra>> {
-        // The error type of the inner closure here is somewhat funny.  We have two
+    ) -> InterpResult<'tcx, &Allocation<M::Provenance, M::AllocExtra, M::Bytes>> {
+        // The error type of the inner closure here is somewhat funny. We have two
         // ways of "erroring": An actual error, or because we got a reference from
         // `get_global_alloc` that we can actually use directly without inserting anything anywhere.
         // So the error type is `InterpResult<'tcx, &Allocation<M::Provenance>>`.
@@ -560,12 +581,13 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         ptr: Pointer<Option<M::Provenance>>,
         size: Size,
         align: Align,
-    ) -> InterpResult<'tcx, Option<AllocRef<'a, 'tcx, M::Provenance, M::AllocExtra>>> {
-        let align = M::enforce_alignment(self).then_some(align);
+    ) -> InterpResult<'tcx, Option<AllocRef<'a, 'tcx, M::Provenance, M::AllocExtra, M::Bytes>>>
+    {
         let ptr_and_alloc = self.check_and_deref_ptr(
             ptr,
             size,
             align,
+            M::enforce_alignment(self),
             CheckInAllocMsg::MemoryAccessTest,
             |alloc_id, offset, prov| {
                 let alloc = self.get_alloc_raw(alloc_id)?;
@@ -603,7 +625,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     fn get_alloc_raw_mut(
         &mut self,
         id: AllocId,
-    ) -> InterpResult<'tcx, (&mut Allocation<M::Provenance, M::AllocExtra>, &mut M)> {
+    ) -> InterpResult<'tcx, (&mut Allocation<M::Provenance, M::AllocExtra, M::Bytes>, &mut M)> {
         // We have "NLL problem case #3" here, which cannot be worked around without loss of
         // efficiency even for the common case where the key is in the map.
         // <https://rust-lang.github.io/rfcs/2094-nll.html#problem-case-3-conditional-control-flow-across-functions>
@@ -620,7 +642,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         }
 
         let (_kind, alloc) = self.memory.alloc_map.get_mut(id).unwrap();
-        if alloc.mutability == Mutability::Not {
+        if alloc.mutability.is_not() {
             throw_ub!(WriteToReadOnly(id))
         }
         Ok((alloc, &mut self.machine))
@@ -632,7 +654,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         ptr: Pointer<Option<M::Provenance>>,
         size: Size,
         align: Align,
-    ) -> InterpResult<'tcx, Option<AllocRefMut<'a, 'tcx, M::Provenance, M::AllocExtra>>> {
+    ) -> InterpResult<'tcx, Option<AllocRefMut<'a, 'tcx, M::Provenance, M::AllocExtra, M::Bytes>>>
+    {
         let parts = self.get_ptr_access(ptr, size, align)?;
         if let Some((alloc_id, offset, prov)) = parts {
             let tcx = *self.tcx;
@@ -681,9 +704,13 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 assert!(self.tcx.is_static(def_id));
                 assert!(!self.tcx.is_thread_local_static(def_id));
                 // Use size and align of the type.
-                let ty = self.tcx.type_of(def_id);
+                let ty = self
+                    .tcx
+                    .type_of(def_id)
+                    .no_bound_vars()
+                    .expect("statics should not have generic parameters");
                 let layout = self.tcx.layout_of(ParamEnv::empty().and(ty)).unwrap();
-                assert!(!layout.is_unsized());
+                assert!(layout.is_sized());
                 (layout.size, layout.align.abi, AllocKind::LiveData)
             }
             Some(GlobalAlloc::Memory(alloc)) => {
@@ -797,7 +824,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     // This is a new allocation, add the allocation it points to `todo`.
                     if let Some((_, alloc)) = self.memory.alloc_map.get(id) {
                         todo.extend(
-                            alloc.provenance().values().filter_map(|prov| prov.get_alloc_id()),
+                            alloc.provenance().provenances().filter_map(|prov| prov.get_alloc_id()),
                         );
                     }
                 }
@@ -827,13 +854,14 @@ pub struct DumpAllocs<'a, 'mir, 'tcx, M: Machine<'mir, 'tcx>> {
 impl<'a, 'mir, 'tcx, M: Machine<'mir, 'tcx>> std::fmt::Debug for DumpAllocs<'a, 'mir, 'tcx, M> {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Cannot be a closure because it is generic in `Prov`, `Extra`.
-        fn write_allocation_track_relocs<'tcx, Prov: Provenance, Extra>(
+        fn write_allocation_track_relocs<'tcx, Prov: Provenance, Extra, Bytes: AllocBytes>(
             fmt: &mut std::fmt::Formatter<'_>,
             tcx: TyCtxt<'tcx>,
             allocs_to_print: &mut VecDeque<AllocId>,
-            alloc: &Allocation<Prov, Extra>,
+            alloc: &Allocation<Prov, Extra, Bytes>,
         ) -> std::fmt::Result {
-            for alloc_id in alloc.provenance().values().filter_map(|prov| prov.get_alloc_id()) {
+            for alloc_id in alloc.provenance().provenances().filter_map(|prov| prov.get_alloc_id())
+            {
                 allocs_to_print.push_back(alloc_id);
             }
             write!(fmt, "{}", display_allocation(tcx, alloc))
@@ -851,7 +879,7 @@ impl<'a, 'mir, 'tcx, M: Machine<'mir, 'tcx>> std::fmt::Debug for DumpAllocs<'a, 
 
             write!(fmt, "{id:?}")?;
             match self.ecx.memory.alloc_map.get(id) {
-                Some(&(kind, ref alloc)) => {
+                Some((kind, alloc)) => {
                     // normal alloc
                     write!(fmt, " ({}, ", kind)?;
                     write_allocation_track_relocs(
@@ -898,7 +926,9 @@ impl<'a, 'mir, 'tcx, M: Machine<'mir, 'tcx>> std::fmt::Debug for DumpAllocs<'a, 
 }
 
 /// Reading and writing.
-impl<'tcx, 'a, Prov: Provenance, Extra> AllocRefMut<'a, 'tcx, Prov, Extra> {
+impl<'tcx, 'a, Prov: Provenance, Extra, Bytes: AllocBytes>
+    AllocRefMut<'a, 'tcx, Prov, Extra, Bytes>
+{
     /// `range` is relative to this allocation reference, not the base of the allocation.
     pub fn write_scalar(&mut self, range: AllocRange, val: Scalar<Prov>) -> InterpResult<'tcx> {
         let range = self.range.subrange(range);
@@ -923,7 +953,7 @@ impl<'tcx, 'a, Prov: Provenance, Extra> AllocRefMut<'a, 'tcx, Prov, Extra> {
     }
 }
 
-impl<'tcx, 'a, Prov: Provenance, Extra> AllocRef<'a, 'tcx, Prov, Extra> {
+impl<'tcx, 'a, Prov: Provenance, Extra, Bytes: AllocBytes> AllocRef<'a, 'tcx, Prov, Extra, Bytes> {
     /// `range` is relative to this allocation reference, not the base of the allocation.
     pub fn read_scalar(
         &self,
@@ -962,7 +992,7 @@ impl<'tcx, 'a, Prov: Provenance, Extra> AllocRef<'a, 'tcx, Prov, Extra> {
 
     /// Returns whether the allocation has provenance anywhere in the range of the `AllocRef`.
     pub(crate) fn has_provenance(&self) -> bool {
-        self.alloc.range_has_provenance(&self.tcx, self.range)
+        !self.alloc.provenance().range_empty(self.range, &self.tcx)
     }
 }
 
@@ -1060,7 +1090,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
         // Source alloc preparations and access hooks.
         let Some((src_alloc_id, src_offset, src_prov)) = src_parts else {
-            // Zero-sized *source*, that means dst is also zero-sized and we have nothing to do.
+            // Zero-sized *source*, that means dest is also zero-sized and we have nothing to do.
             return Ok(());
         };
         let src_alloc = self.get_alloc_raw(src_alloc_id)?;
@@ -1079,22 +1109,18 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             return Ok(());
         };
 
-        // Checks provenance edges on the src, which needs to happen before
-        // `prepare_provenance_copy`.
-        if src_alloc.range_has_provenance(&tcx, alloc_range(src_range.start, Size::ZERO)) {
-            throw_unsup!(PartialPointerCopy(Pointer::new(src_alloc_id, src_range.start)));
-        }
-        if src_alloc.range_has_provenance(&tcx, alloc_range(src_range.end(), Size::ZERO)) {
-            throw_unsup!(PartialPointerCopy(Pointer::new(src_alloc_id, src_range.end())));
-        }
+        // Prepare getting source provenance.
         let src_bytes = src_alloc.get_bytes_unchecked(src_range).as_ptr(); // raw ptr, so we can also get a ptr to the destination allocation
         // first copy the provenance to a temporary buffer, because
         // `get_bytes_mut` will clear the provenance, which is correct,
         // since we don't want to keep any provenance at the target.
-        let provenance =
-            src_alloc.prepare_provenance_copy(self, src_range, dest_offset, num_copies);
+        // This will also error if copying partial provenance is not supported.
+        let provenance = src_alloc
+            .provenance()
+            .prepare_copy(src_range, dest_offset, num_copies, self)
+            .map_err(|e| e.to_interp_error(dest_alloc_id))?;
         // Prepare a copy of the initialization mask.
-        let compressed = src_alloc.compress_uninit_range(src_range);
+        let init = src_alloc.init_mask().prepare_copy(src_range);
 
         // Destination alloc preparations and access hooks.
         let (dest_alloc, extra) = self.get_alloc_raw_mut(dest_alloc_id)?;
@@ -1111,7 +1137,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             .map_err(|e| e.to_interp_error(dest_alloc_id))?
             .as_mut_ptr();
 
-        if compressed.no_bytes_init() {
+        if init.no_bytes_init() {
             // Fast path: If all bytes are `uninit` then there is nothing to copy. The target range
             // is marked as uninitialized but we otherwise omit changing the byte representation which may
             // be arbitrary for uninitialized bytes.
@@ -1160,13 +1186,13 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         }
 
         // now fill in all the "init" data
-        dest_alloc.mark_compressed_init_range(
-            &compressed,
+        dest_alloc.init_mask_apply_copy(
+            init,
             alloc_range(dest_offset, size), // just a single copy (i.e., not full `dest_range`)
             num_copies,
         );
         // copy the provenance to the destination
-        dest_alloc.mark_provenance_range(provenance);
+        dest_alloc.provenance_apply_copy(provenance);
 
         Ok(())
     }

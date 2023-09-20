@@ -1,4 +1,4 @@
-use rustc_ast::ast::{Lit, LitFloatType, LitIntType, LitKind};
+use rustc_ast::ast::{LitFloatType, LitIntType, LitKind};
 use std::iter;
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -46,10 +46,6 @@ pub struct NumericLiteral<'a> {
 }
 
 impl<'a> NumericLiteral<'a> {
-    pub fn from_lit(src: &'a str, lit: &Lit) -> Option<NumericLiteral<'a>> {
-        NumericLiteral::from_lit_kind(src, &lit.kind)
-    }
-
     pub fn from_lit_kind(src: &'a str, lit_kind: &LitKind) -> Option<NumericLiteral<'a>> {
         let unsigned_src = src.strip_prefix('-').map_or(src, |s| s);
         if lit_kind.is_numeric()
@@ -190,7 +186,7 @@ impl<'a> NumericLiteral<'a> {
         // The exponent may have a sign, output it early, otherwise it will be
         // treated as a digit
         if digits.clone().next() == Some('-') {
-            let _ = digits.next();
+            let _: Option<char> = digits.next();
             output.push('-');
         }
 

@@ -10,7 +10,7 @@ Subject: d-bootstrap-custom-debuginfo-path
 
 --- a/src/bootstrap/lib.rs
 +++ b/src/bootstrap/lib.rs
-@@ -1040,10 +1040,9 @@
+@@ -1053,10 +1053,9 @@
  
          match which {
              GitRepo::Rustc => {
@@ -23,10 +23,10 @@ Subject: d-bootstrap-custom-debuginfo-path
          }
      }
  
-diff --git a/src/test/codegen/remap_path_prefix/issue-73167-remap-std.rs b/src/test/codegen/remap_path_prefix/issue-73167-remap-std.rs
+diff --git a/tests/codegen/remap_path_prefix/issue-73167-remap-std.rs b/tests/codegen/remap_path_prefix/issue-73167-remap-std.rs
 index b66abc6..f6efe1e 100644
---- a/src/test/codegen/remap_path_prefix/issue-73167-remap-std.rs
-+++ b/src/test/codegen/remap_path_prefix/issue-73167-remap-std.rs
+--- a/tests/codegen/remap_path_prefix/issue-73167-remap-std.rs
++++ b/tests/codegen/remap_path_prefix/issue-73167-remap-std.rs
 @@ -7,7 +7,7 @@
  // true automatically. If paths to std library hasn't been remapped, we use the
  // above simulate-remapped-rust-src-base option to do it temporarily

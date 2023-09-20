@@ -6,23 +6,18 @@ use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use build_helper::ci::CiEnv;
 use tracing::*;
 
-use crate::common::{CompareMode, Config, Debugger, FailMode, Mode, PassMode};
+use crate::common::{Config, Debugger, FailMode, Mode, PassMode};
+use crate::header::cfg::parse_cfg_name_directive;
+use crate::header::cfg::MatchOutcome;
 use crate::util;
 use crate::{extract_cdb_version, extract_gdb_version};
 
+mod cfg;
 #[cfg(test)]
 mod tests;
-
-/// The result of parse_cfg_name_directive.
-#[derive(Clone, Copy, PartialEq, Debug)]
-enum ParsedNameDirective {
-    /// No match.
-    NoMatch,
-    /// Match.
-    Match,
-}
 
 /// Properties which must be known very early, before actually running
 /// the test.
@@ -84,6 +79,9 @@ pub struct TestProps {
     pub unset_rustc_env: Vec<String>,
     // Environment settings to use during execution
     pub exec_env: Vec<(String, String)>,
+    // Environment variables to unset prior to execution.
+    // Variables are unset before applying 'exec_env'
+    pub unset_exec_env: Vec<String>,
     // Build documentation for all specified aux-builds as well
     pub build_aux_docs: bool,
     // Flag to force a crate to be built with the host architecture
@@ -150,6 +148,8 @@ pub struct TestProps {
     pub normalize_stdout: Vec<(String, String)>,
     pub normalize_stderr: Vec<(String, String)>,
     pub failure_status: i32,
+    // For UI tests, allows compiler to exit with arbitrary failure status
+    pub dont_check_failure_status: bool,
     // Whether or not `rustfix` should apply the `CodeSuggestion`s of this test and compile the
     // resulting Rust code.
     pub run_rustfix: bool,
@@ -162,6 +162,9 @@ pub struct TestProps {
     pub stderr_per_bitwidth: bool,
     // The MIR opt to unit test, if any
     pub mir_unit_test: Option<String>,
+    // Whether to tell `rustc` to remap the "src base" directory to a fake
+    // directory.
+    pub remap_src_base: bool,
 }
 
 mod directives {
@@ -184,11 +187,13 @@ mod directives {
     pub const AUX_CRATE: &'static str = "aux-crate";
     pub const EXEC_ENV: &'static str = "exec-env";
     pub const RUSTC_ENV: &'static str = "rustc-env";
+    pub const UNSET_EXEC_ENV: &'static str = "unset-exec-env";
     pub const UNSET_RUSTC_ENV: &'static str = "unset-rustc-env";
     pub const FORBID_OUTPUT: &'static str = "forbid-output";
     pub const CHECK_TEST_LINE_NUMBERS_MATCH: &'static str = "check-test-line-numbers-match";
     pub const IGNORE_PASS: &'static str = "ignore-pass";
     pub const FAILURE_STATUS: &'static str = "failure-status";
+    pub const DONT_CHECK_FAILURE_STATUS: &'static str = "dont-check-failure-status";
     pub const RUN_RUSTFIX: &'static str = "run-rustfix";
     pub const RUSTFIX_ONLY_MACHINE_APPLICABLE: &'static str = "rustfix-only-machine-applicable";
     pub const ASSEMBLY_OUTPUT: &'static str = "assembly-output";
@@ -196,6 +201,7 @@ mod directives {
     pub const INCREMENTAL: &'static str = "incremental";
     pub const KNOWN_BUG: &'static str = "known-bug";
     pub const MIR_UNIT_TEST: &'static str = "unit-test";
+    pub const REMAP_SRC_BASE: &'static str = "remap-src-base";
     // This isn't a real directive, just one that is probably mistyped often
     pub const INCORRECT_COMPILER_FLAGS: &'static str = "compiler-flags";
 }
@@ -214,6 +220,7 @@ impl TestProps {
             rustc_env: vec![],
             unset_rustc_env: vec![],
             exec_env: vec![],
+            unset_exec_env: vec![],
             build_aux_docs: false,
             force_host: false,
             check_stdout: false,
@@ -235,12 +242,14 @@ impl TestProps {
             normalize_stdout: vec![],
             normalize_stderr: vec![],
             failure_status: -1,
+            dont_check_failure_status: false,
             run_rustfix: false,
             rustfix_only_machine_applicable: false,
             assembly_output: None,
             should_ice: false,
             stderr_per_bitwidth: false,
             mir_unit_test: None,
+            remap_src_base: false,
         }
     }
 
@@ -260,9 +269,9 @@ impl TestProps {
         props.load_from(testfile, cfg, config);
 
         match (props.pass_mode, props.fail_mode) {
-            (None, None) => props.fail_mode = Some(FailMode::Check),
-            (Some(_), None) | (None, Some(_)) => {}
+            (None, None) if config.mode == Mode::Ui => props.fail_mode = Some(FailMode::Check),
             (Some(_), Some(_)) => panic!("cannot use a *-fail and *-pass mode together"),
+            _ => {}
         }
 
         props
@@ -273,6 +282,13 @@ impl TestProps {
     /// `//[foo]`), then the property is ignored unless `cfg` is
     /// `Some("foo")`.
     fn load_from(&mut self, testfile: &Path, cfg: Option<&str>, config: &Config) {
+        // In CI, we've sometimes encountered non-determinism related to truncating very long paths.
+        // Set a consistent (short) prefix to avoid issues, but only in CI to avoid regressing the
+        // contributor experience.
+        if CiEnv::is_ci() {
+            self.remap_src_base = config.mode == Mode::Ui && !config.suite.contains("rustdoc");
+        }
+
         let mut has_edition = false;
         if !testfile.is_dir() {
             let file = File::open(testfile).unwrap();
@@ -357,6 +373,12 @@ impl TestProps {
                 );
                 config.push_name_value_directive(
                     ln,
+                    UNSET_EXEC_ENV,
+                    &mut self.unset_exec_env,
+                    |r| r,
+                );
+                config.push_name_value_directive(
+                    ln,
                     RUSTC_ENV,
                     &mut self.rustc_env,
                     Config::parse_env,
@@ -393,6 +415,12 @@ impl TestProps {
                     self.failure_status = code;
                 }
 
+                config.set_name_directive(
+                    ln,
+                    DONT_CHECK_FAILURE_STATUS,
+                    &mut self.dont_check_failure_status,
+                );
+
                 config.set_name_directive(ln, RUN_RUSTFIX, &mut self.run_rustfix);
                 config.set_name_directive(
                     ln,
@@ -426,13 +454,19 @@ impl TestProps {
                         self.known_bug = true;
                     } else {
                         panic!(
-                            "Invalid known-bug value: {known_bug}\nIt requires comma-separated issue references (`#000` or `chalk#000`) or `unknown`."
+                            "Invalid known-bug value: {known_bug}\nIt requires comma-separated issue references (`#000` or `chalk#000`) or `known-bug: unknown`."
                         );
                     }
+                } else if config.parse_name_directive(ln, KNOWN_BUG) {
+                    panic!(
+                        "Invalid known-bug attribute, requires comma-separated issue references (`#000` or `chalk#000`) or `known-bug: unknown`."
+                    );
                 }
+
                 config.set_name_value_directive(ln, MIR_UNIT_TEST, &mut self.mir_unit_test, |s| {
                     s.trim().to_string()
                 });
+                config.set_name_directive(ln, REMAP_SRC_BASE, &mut self.remap_src_base);
             });
         }
 
@@ -522,8 +556,8 @@ impl TestProps {
     }
 
     pub fn pass_mode(&self, config: &Config) -> Option<PassMode> {
-        if !self.ignore_pass && self.fail_mode.is_none() && config.mode == Mode::Ui {
-            if let (mode @ Some(_), Some(_)) = (config.force_pass_mode, self.pass_mode) {
+        if !self.ignore_pass && self.fail_mode.is_none() {
+            if let mode @ Some(_) = config.force_pass_mode {
                 return mode;
             }
         }
@@ -633,7 +667,7 @@ impl Config {
     }
 
     fn parse_custom_normalization(&self, mut line: &str, prefix: &str) -> Option<(String, String)> {
-        if self.parse_cfg_name_directive(line, prefix) == ParsedNameDirective::Match {
+        if parse_cfg_name_directive(self, line, prefix).outcome == MatchOutcome::Match {
             let from = parse_normalization_string(&mut line)?;
             let to = parse_normalization_string(&mut line)?;
             Some((from, to))
@@ -650,67 +684,6 @@ impl Config {
         self.parse_name_directive(line, "needs-profiler-support")
     }
 
-    /// Parses a name-value directive which contains config-specific information, e.g., `ignore-x86`
-    /// or `normalize-stderr-32bit`.
-    fn parse_cfg_name_directive(&self, line: &str, prefix: &str) -> ParsedNameDirective {
-        if !line.as_bytes().starts_with(prefix.as_bytes()) {
-            return ParsedNameDirective::NoMatch;
-        }
-        if line.as_bytes().get(prefix.len()) != Some(&b'-') {
-            return ParsedNameDirective::NoMatch;
-        }
-
-        let name = line[prefix.len() + 1..].split(&[':', ' '][..]).next().unwrap();
-
-        let matches_pointer_width = || {
-            name.strip_suffix("bit")
-                .and_then(|width| width.parse::<u32>().ok())
-                .map(|width| self.get_pointer_width() == width)
-                .unwrap_or(false)
-        };
-
-        // If something is ignored for emscripten, it likely also needs to be
-        // ignored for wasm32-unknown-unknown.
-        // `wasm32-bare` is an alias to refer to just wasm32-unknown-unknown
-        // (in contrast to `wasm32` which also matches non-bare targets like
-        // asmjs-unknown-emscripten).
-        let matches_wasm32_alias = || {
-            self.target == "wasm32-unknown-unknown" && matches!(name, "emscripten" | "wasm32-bare")
-        };
-
-        let is_match = name == "test" ||
-            self.target == name ||                              // triple
-            self.matches_os(name) ||
-            self.matches_env(name) ||
-            self.matches_abi(name) ||
-            self.matches_family(name) ||
-            self.target.ends_with(name) ||                      // target and env
-            self.matches_arch(name) ||
-            matches_wasm32_alias() ||
-            matches_pointer_width() ||
-            name == self.stage_id.split('-').next().unwrap() || // stage
-            name == self.channel ||                             // channel
-            (self.target != self.host && name == "cross-compile") ||
-            (name == "endian-big" && self.is_big_endian()) ||
-            (self.remote_test_client.is_some() && name == "remote") ||
-            match self.compare_mode {
-                Some(CompareMode::Polonius) => name == "compare-mode-polonius",
-                Some(CompareMode::Chalk) => name == "compare-mode-chalk",
-                Some(CompareMode::SplitDwarf) => name == "compare-mode-split-dwarf",
-                Some(CompareMode::SplitDwarfSingle) => name == "compare-mode-split-dwarf-single",
-                None => false,
-            } ||
-            (cfg!(debug_assertions) && name == "debug") ||
-            match self.debugger {
-                Some(Debugger::Cdb) => name == "cdb",
-                Some(Debugger::Gdb) => name == "gdb",
-                Some(Debugger::Lldb) => name == "lldb",
-                None => false,
-            };
-
-        if is_match { ParsedNameDirective::Match } else { ParsedNameDirective::NoMatch }
-    }
-
     fn has_cfg_prefix(&self, line: &str, prefix: &str) -> bool {
         // returns whether this line contains this prefix or not. For prefix
         // "ignore", returns true if line says "ignore-x86_64", "ignore-arch",
@@ -723,6 +696,10 @@ impl Config {
         // the line says "ignore-x86_64".
         line.starts_with(directive)
             && matches!(line.as_bytes().get(directive.len()), None | Some(&b' ') | Some(&b':'))
+    }
+
+    fn parse_negative_name_directive(&self, line: &str, directive: &str) -> bool {
+        line.starts_with("no-") && self.parse_name_directive(&line[3..], directive)
     }
 
     pub fn parse_name_value_directive(&self, line: &str, directive: &str) -> Option<String> {
@@ -754,8 +731,17 @@ impl Config {
     }
 
     fn set_name_directive(&self, line: &str, directive: &str, value: &mut bool) {
-        if !*value {
-            *value = self.parse_name_directive(line, directive)
+        match value {
+            true => {
+                if self.parse_negative_name_directive(line, directive) {
+                    *value = false;
+                }
+            }
+            false => {
+                if self.parse_name_directive(line, directive) {
+                    *value = true;
+                }
+            }
         }
     }
 
@@ -898,7 +884,7 @@ pub fn make_test_description<R: Read>(
     cfg: Option<&str>,
 ) -> test::TestDesc {
     let mut ignore = false;
-    let ignore_message = None;
+    let mut ignore_message = None;
     let mut should_fail = false;
 
     let rustc_has_profiler_support = env::var_os("RUSTC_PROFILER_SUPPORT").is_some();
@@ -906,12 +892,15 @@ pub fn make_test_description<R: Read>(
     let has_asm_support = config.has_asm_support();
     let has_asan = util::ASAN_SUPPORTED_TARGETS.contains(&&*config.target);
     let has_cfi = util::CFI_SUPPORTED_TARGETS.contains(&&*config.target);
+    let has_kcfi = util::KCFI_SUPPORTED_TARGETS.contains(&&*config.target);
+    let has_kasan = util::KASAN_SUPPORTED_TARGETS.contains(&&*config.target);
     let has_lsan = util::LSAN_SUPPORTED_TARGETS.contains(&&*config.target);
     let has_msan = util::MSAN_SUPPORTED_TARGETS.contains(&&*config.target);
     let has_tsan = util::TSAN_SUPPORTED_TARGETS.contains(&&*config.target);
     let has_hwasan = util::HWASAN_SUPPORTED_TARGETS.contains(&&*config.target);
     let has_memtag = util::MEMTAG_SUPPORTED_TARGETS.contains(&&*config.target);
     let has_shadow_call_stack = util::SHADOWCALLSTACK_SUPPORTED_TARGETS.contains(&&*config.target);
+    let has_xray = util::XRAY_SUPPORTED_TARGETS.contains(&&*config.target);
 
     // For tests using the `needs-rust-lld` directive (e.g. for `-Zgcc-ld=lld`), we need to find
     // whether `rust-lld` is present in the compiler under test.
@@ -933,44 +922,111 @@ pub fn make_test_description<R: Read>(
         .join(if config.host.contains("windows") { "rust-lld.exe" } else { "rust-lld" })
         .exists();
 
+    fn is_on_path(file: &'static str) -> impl Fn() -> bool {
+        move || env::split_paths(&env::var_os("PATH").unwrap()).any(|dir| dir.join(file).is_file())
+    }
+
+    // On Windows, dlltool.exe is used for all architectures.
+    #[cfg(windows)]
+    let (has_i686_dlltool, has_x86_64_dlltool) =
+        (is_on_path("dlltool.exe"), is_on_path("dlltool.exe"));
+    // For non-Windows, there are architecture specific dlltool binaries.
+    #[cfg(not(windows))]
+    let (has_i686_dlltool, has_x86_64_dlltool) =
+        (is_on_path("i686-w64-mingw32-dlltool"), is_on_path("x86_64-w64-mingw32-dlltool"));
+
     iter_header(path, src, &mut |revision, ln| {
         if revision.is_some() && revision != cfg {
             return;
         }
-        ignore = match config.parse_cfg_name_directive(ln, "ignore") {
-            ParsedNameDirective::Match => true,
-            ParsedNameDirective::NoMatch => ignore,
-        };
-        if config.has_cfg_prefix(ln, "only") {
-            ignore = match config.parse_cfg_name_directive(ln, "only") {
-                ParsedNameDirective::Match => ignore,
-                ParsedNameDirective::NoMatch => true,
+        macro_rules! reason {
+            ($e:expr) => {
+                ignore |= match $e {
+                    true => {
+                        ignore_message = Some(stringify!($e));
+                        true
+                    }
+                    false => ignore,
+                }
             };
         }
-        ignore |= ignore_llvm(config, ln);
-        ignore |=
-            config.run_clang_based_tests_with.is_none() && config.parse_needs_matching_clang(ln);
-        ignore |= !has_asm_support && config.parse_name_directive(ln, "needs-asm-support");
-        ignore |= !rustc_has_profiler_support && config.parse_needs_profiler_support(ln);
-        ignore |= !config.run_enabled() && config.parse_name_directive(ln, "needs-run-enabled");
-        ignore |= !rustc_has_sanitizer_support
-            && config.parse_name_directive(ln, "needs-sanitizer-support");
-        ignore |= !has_asan && config.parse_name_directive(ln, "needs-sanitizer-address");
-        ignore |= !has_cfi && config.parse_name_directive(ln, "needs-sanitizer-cfi");
-        ignore |= !has_lsan && config.parse_name_directive(ln, "needs-sanitizer-leak");
-        ignore |= !has_msan && config.parse_name_directive(ln, "needs-sanitizer-memory");
-        ignore |= !has_tsan && config.parse_name_directive(ln, "needs-sanitizer-thread");
-        ignore |= !has_hwasan && config.parse_name_directive(ln, "needs-sanitizer-hwaddress");
-        ignore |= !has_memtag && config.parse_name_directive(ln, "needs-sanitizer-memtag");
-        ignore |= !has_shadow_call_stack
-            && config.parse_name_directive(ln, "needs-sanitizer-shadow-call-stack");
-        ignore |= !config.can_unwind() && config.parse_name_directive(ln, "needs-unwind");
-        ignore |= config.target == "wasm32-unknown-unknown"
-            && config.parse_name_directive(ln, directives::CHECK_RUN_RESULTS);
-        ignore |= config.debugger == Some(Debugger::Cdb) && ignore_cdb(config, ln);
-        ignore |= config.debugger == Some(Debugger::Gdb) && ignore_gdb(config, ln);
-        ignore |= config.debugger == Some(Debugger::Lldb) && ignore_lldb(config, ln);
-        ignore |= !has_rust_lld && config.parse_name_directive(ln, "needs-rust-lld");
+
+        {
+            let parsed = parse_cfg_name_directive(config, ln, "ignore");
+            ignore = match parsed.outcome {
+                MatchOutcome::Match => {
+                    let reason = parsed.pretty_reason.unwrap();
+                    // The ignore reason must be a &'static str, so we have to leak memory to
+                    // create it. This is fine, as the header is parsed only at the start of
+                    // compiletest so it won't grow indefinitely.
+                    ignore_message = Some(Box::leak(Box::<str>::from(match parsed.comment {
+                        Some(comment) => format!("ignored {reason} ({comment})"),
+                        None => format!("ignored {reason}"),
+                    })) as &str);
+                    true
+                }
+                MatchOutcome::NoMatch => ignore,
+                MatchOutcome::External => ignore,
+                MatchOutcome::Invalid => panic!("invalid line in {}: {ln}", path.display()),
+            };
+        }
+
+        if config.has_cfg_prefix(ln, "only") {
+            let parsed = parse_cfg_name_directive(config, ln, "only");
+            ignore = match parsed.outcome {
+                MatchOutcome::Match => ignore,
+                MatchOutcome::NoMatch => {
+                    let reason = parsed.pretty_reason.unwrap();
+                    // The ignore reason must be a &'static str, so we have to leak memory to
+                    // create it. This is fine, as the header is parsed only at the start of
+                    // compiletest so it won't grow indefinitely.
+                    ignore_message = Some(Box::leak(Box::<str>::from(match parsed.comment {
+                        Some(comment) => format!("only executed {reason} ({comment})"),
+                        None => format!("only executed {reason}"),
+                    })) as &str);
+                    true
+                }
+                MatchOutcome::External => ignore,
+                MatchOutcome::Invalid => panic!("invalid line in {}: {ln}", path.display()),
+            };
+        }
+
+        reason!(ignore_llvm(config, ln));
+        reason!(
+            config.run_clang_based_tests_with.is_none() && config.parse_needs_matching_clang(ln)
+        );
+        reason!(!has_asm_support && config.parse_name_directive(ln, "needs-asm-support"));
+        reason!(!rustc_has_profiler_support && config.parse_needs_profiler_support(ln));
+        reason!(!config.run_enabled() && config.parse_name_directive(ln, "needs-run-enabled"));
+        reason!(
+            !rustc_has_sanitizer_support
+                && config.parse_name_directive(ln, "needs-sanitizer-support")
+        );
+        reason!(!has_asan && config.parse_name_directive(ln, "needs-sanitizer-address"));
+        reason!(!has_cfi && config.parse_name_directive(ln, "needs-sanitizer-cfi"));
+        reason!(!has_kcfi && config.parse_name_directive(ln, "needs-sanitizer-kcfi"));
+        reason!(!has_kasan && config.parse_name_directive(ln, "needs-sanitizer-kasan"));
+        reason!(!has_lsan && config.parse_name_directive(ln, "needs-sanitizer-leak"));
+        reason!(!has_msan && config.parse_name_directive(ln, "needs-sanitizer-memory"));
+        reason!(!has_tsan && config.parse_name_directive(ln, "needs-sanitizer-thread"));
+        reason!(!has_hwasan && config.parse_name_directive(ln, "needs-sanitizer-hwaddress"));
+        reason!(!has_memtag && config.parse_name_directive(ln, "needs-sanitizer-memtag"));
+        reason!(
+            !has_shadow_call_stack
+                && config.parse_name_directive(ln, "needs-sanitizer-shadow-call-stack")
+        );
+        reason!(!config.can_unwind() && config.parse_name_directive(ln, "needs-unwind"));
+        reason!(!has_xray && config.parse_name_directive(ln, "needs-xray"));
+        reason!(
+            config.target == "wasm32-unknown-unknown"
+                && config.parse_name_directive(ln, directives::CHECK_RUN_RESULTS)
+        );
+        reason!(config.debugger == Some(Debugger::Cdb) && ignore_cdb(config, ln));
+        reason!(config.debugger == Some(Debugger::Gdb) && ignore_gdb(config, ln));
+        reason!(config.debugger == Some(Debugger::Lldb) && ignore_lldb(config, ln));
+        reason!(!has_rust_lld && config.parse_name_directive(ln, "needs-rust-lld"));
+        reason!(config.parse_name_directive(ln, "needs-i686-dlltool") && !has_i686_dlltool());
+        reason!(config.parse_name_directive(ln, "needs-x86_64-dlltool") && !has_x86_64_dlltool());
         should_fail |= config.parse_name_directive(ln, "should-fail");
     });
 
@@ -987,6 +1043,16 @@ pub fn make_test_description<R: Read>(
         name,
         ignore,
         ignore_message,
+        #[cfg(not(bootstrap))]
+        source_file: "",
+        #[cfg(not(bootstrap))]
+        start_line: 0,
+        #[cfg(not(bootstrap))]
+        start_col: 0,
+        #[cfg(not(bootstrap))]
+        end_line: 0,
+        #[cfg(not(bootstrap))]
+        end_col: 0,
         should_panic,
         compile_fail: false,
         no_run: false,
