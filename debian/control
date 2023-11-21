@@ -21,7 +21,7 @@ Build-Depends:
  llvm-15-tools:native,
  gcc-mingw-w64-x86-64-posix:native [amd64] <!nowindows>,
  gcc-mingw-w64-i686-posix:native [i386] <!nowindows>,
- libllvm16 (>= 1:16.0.0),
+ libllvm15 (>= 1:15.0.0),
  cmake (>= 3.0) | cmake3,
 # needed by some vendor crates
  pkg-config,
@@ -40,8 +40,8 @@ Build-Depends:
  curl <pkg.rustc.dlstage0>,
  ca-certificates <pkg.rustc.dlstage0>,
 Build-Depends-Indep:
- wasi-libc (>= 0.0~git20230113.4362b18-2~) <!nowasm>,
- wasi-libc (<= 0.0~git20230113.4362b18++) <!nowasm>,
+ wasi-libc (>= 0.0~git20220510.9886d3d-2~) <!nowasm>,
+ wasi-libc (<= 0.0~git20220510.9886d3d++) <!nowasm>,
  clang-15:native,
 Build-Conflicts: gdb-minimal <!nocheck>
 Standards-Version: 4.6.2
