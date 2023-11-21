@@ -4,19 +4,17 @@ use hir::CRATE_HIR_ID;
 use rustc_data_structures::fx::FxHashSet;
 use rustc_expand::base::resolve_path;
 use rustc_hir as hir;
-use rustc_hir::def_id::CrateNum;
 use rustc_hir::HirId;
-use rustc_middle::ty::query::Providers;
 use rustc_middle::ty::TyCtxt;
-use rustc_span::def_id::LOCAL_CRATE;
+use rustc_middle::{query::LocalCrate, ty::query::Providers};
 use rustc_span::{sym, DebuggerVisualizerFile, DebuggerVisualizerType};
 
 use std::sync::Arc;
 
 use crate::errors::DebugVisualizerUnreadable;
 
-fn check_for_debugger_visualizer<'tcx>(
-    tcx: TyCtxt<'tcx>,
+fn check_for_debugger_visualizer(
+    tcx: TyCtxt<'_>,
     hir_id: HirId,
     debugger_visualizers: &mut FxHashSet<DebuggerVisualizerFile>,
 ) {
@@ -69,9 +67,7 @@ fn check_for_debugger_visualizer<'tcx>(
 }
 
 /// Traverses and collects the debugger visualizers for a specific crate.
-fn debugger_visualizers<'tcx>(tcx: TyCtxt<'tcx>, cnum: CrateNum) -> Vec<DebuggerVisualizerFile> {
-    assert_eq!(cnum, LOCAL_CRATE);
-
+fn debugger_visualizers(tcx: TyCtxt<'_>, _: LocalCrate) -> Vec<DebuggerVisualizerFile> {
     // Initialize the collector.
     let mut debugger_visualizers = FxHashSet::default();
 

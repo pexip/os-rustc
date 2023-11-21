@@ -28,12 +28,12 @@ pub mod dyn_map;
 pub mod keys;
 
 pub mod item_tree;
-pub mod intern;
 
 pub mod adt;
 pub mod data;
 pub mod generics;
 pub mod lang_item;
+pub mod layout;
 
 pub mod expr;
 pub mod body;
@@ -60,10 +60,10 @@ use std::{
     sync::Arc,
 };
 
-use attr::Attr;
 use base_db::{impl_intern_key, salsa, CrateId, ProcMacroKind};
 use hir_expand::{
     ast_id_map::FileAstId,
+    attrs::{Attr, AttrId, AttrInput},
     builtin_attr_macro::BuiltinAttrExpander,
     builtin_derive_macro::BuiltinDeriveExpander,
     builtin_fn_macro::{BuiltinFnLikeExpander, EagerExpander},
@@ -79,13 +79,14 @@ use nameres::DefMap;
 use stdx::impl_from;
 use syntax::ast;
 
+use ::tt::token_id as tt;
+
 use crate::{
     adt::VariantData,
-    attr::AttrId,
     builtin_type::BuiltinType,
     item_tree::{
         Const, Enum, Function, Impl, ItemTreeId, ItemTreeNode, MacroDef, MacroRules, ModItem,
-        Static, Struct, Trait, TypeAlias, Union,
+        Static, Struct, Trait, TraitAlias, TypeAlias, Union,
     },
 };
 
@@ -127,7 +128,7 @@ impl ModuleId {
     }
 }
 
-/// An ID of a module, **local** to a specific crate
+/// An ID of a module, **local** to a `DefMap`.
 pub type LocalModuleId = Idx<nameres::ModuleData>;
 
 #[derive(Debug)]
@@ -261,6 +262,11 @@ pub type TraitLoc = ItemLoc<Trait>;
 impl_intern!(TraitId, TraitLoc, intern_trait, lookup_intern_trait);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TraitAliasId(salsa::InternId);
+pub type TraitAliasLoc = ItemLoc<TraitAlias>;
+impl_intern!(TraitAliasId, TraitAliasLoc, intern_trait_alias, lookup_intern_trait_alias);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TypeAliasId(salsa::InternId);
 type TypeAliasLoc = AssocItemLoc<TypeAlias>;
 impl_intern!(TypeAliasId, TypeAliasLoc, intern_type_alias, lookup_intern_type_alias);
@@ -291,6 +297,7 @@ pub struct Macro2Loc {
     pub container: ModuleId,
     pub id: ItemTreeId<MacroDef>,
     pub expander: MacroExpander,
+    pub allow_internal_unsafe: bool,
 }
 impl_intern!(Macro2Id, Macro2Loc, intern_macro2, lookup_intern_macro2);
 
@@ -300,8 +307,9 @@ pub struct MacroRulesId(salsa::InternId);
 pub struct MacroRulesLoc {
     pub container: ModuleId,
     pub id: ItemTreeId<MacroRules>,
-    pub local_inner: bool,
     pub expander: MacroExpander,
+    pub allow_internal_unsafe: bool,
+    pub local_inner: bool,
 }
 impl_intern!(MacroRulesId, MacroRulesLoc, intern_macro_rules, lookup_intern_macro_rules);
 
@@ -450,6 +458,7 @@ pub enum ModuleDefId {
     ConstId(ConstId),
     StaticId(StaticId),
     TraitId(TraitId),
+    TraitAliasId(TraitAliasId),
     TypeAliasId(TypeAliasId),
     BuiltinType(BuiltinType),
     MacroId(MacroId),
@@ -463,6 +472,7 @@ impl_from!(
     ConstId,
     StaticId,
     TraitId,
+    TraitAliasId,
     TypeAliasId,
     BuiltinType
     for ModuleDefId
@@ -513,6 +523,7 @@ pub enum GenericDefId {
     FunctionId(FunctionId),
     AdtId(AdtId),
     TraitId(TraitId),
+    TraitAliasId(TraitAliasId),
     TypeAliasId(TypeAliasId),
     ImplId(ImplId),
     // enum variants cannot have generics themselves, but their parent enums
@@ -525,6 +536,7 @@ impl_from!(
     FunctionId,
     AdtId(StructId, EnumId, UnionId),
     TraitId,
+    TraitAliasId,
     TypeAliasId,
     ImplId,
     EnumVariantId,
@@ -552,6 +564,7 @@ pub enum AttrDefId {
     StaticId(StaticId),
     ConstId(ConstId),
     TraitId(TraitId),
+    TraitAliasId(TraitAliasId),
     TypeAliasId(TypeAliasId),
     MacroId(MacroId),
     ImplId(ImplId),
@@ -711,6 +724,7 @@ impl HasModule for GenericDefId {
             GenericDefId::FunctionId(it) => it.lookup(db).module(db),
             GenericDefId::AdtId(it) => it.module(db),
             GenericDefId::TraitId(it) => it.lookup(db).container,
+            GenericDefId::TraitAliasId(it) => it.lookup(db).container,
             GenericDefId::TypeAliasId(it) => it.lookup(db).module(db),
             GenericDefId::ImplId(it) => it.lookup(db).container,
             GenericDefId::EnumVariantId(it) => it.parent.lookup(db).container,
@@ -744,6 +758,7 @@ impl ModuleDefId {
             ModuleDefId::ConstId(id) => id.lookup(db).container.module(db),
             ModuleDefId::StaticId(id) => id.lookup(db).module(db),
             ModuleDefId::TraitId(id) => id.lookup(db).container,
+            ModuleDefId::TraitAliasId(id) => id.lookup(db).container,
             ModuleDefId::TypeAliasId(id) => id.lookup(db).module(db),
             ModuleDefId::MacroId(id) => id.module(db),
             ModuleDefId::BuiltinType(_) => return None,
@@ -762,6 +777,7 @@ impl AttrDefId {
             AttrDefId::StaticId(it) => it.lookup(db).module(db).krate,
             AttrDefId::ConstId(it) => it.lookup(db).module(db).krate,
             AttrDefId::TraitId(it) => it.lookup(db).container.krate,
+            AttrDefId::TraitAliasId(it) => it.lookup(db).container.krate,
             AttrDefId::TypeAliasId(it) => it.lookup(db).module(db).krate,
             AttrDefId::ImplId(it) => it.lookup(db).container.krate,
             AttrDefId::ExternBlockId(it) => it.lookup(db).container.krate,
@@ -895,6 +911,7 @@ pub fn macro_id_to_def_id(db: &dyn db::DefDatabase, id: MacroId) -> MacroDefId {
                     }
                 },
                 local_inner: false,
+                allow_internal_unsafe: loc.allow_internal_unsafe,
             }
         }
         MacroId::MacroRulesId(it) => {
@@ -919,6 +936,7 @@ pub fn macro_id_to_def_id(db: &dyn db::DefDatabase, id: MacroId) -> MacroDefId {
                     }
                 },
                 local_inner: loc.local_inner,
+                allow_internal_unsafe: loc.allow_internal_unsafe,
             }
         }
         MacroId::ProcMacroId(it) => {
@@ -934,6 +952,7 @@ pub fn macro_id_to_def_id(db: &dyn db::DefDatabase, id: MacroId) -> MacroDefId {
                     InFile::new(loc.id.file_id(), makro.ast_id),
                 ),
                 local_inner: false,
+                allow_internal_unsafe: false,
             }
         }
     }
@@ -942,7 +961,7 @@ pub fn macro_id_to_def_id(db: &dyn db::DefDatabase, id: MacroId) -> MacroDefId {
 fn derive_macro_as_call_id(
     db: &dyn db::DefDatabase,
     item_attr: &AstIdWithPath<ast::Adt>,
-    derive_attr: AttrId,
+    derive_attr_index: AttrId,
     derive_pos: u32,
     krate: CrateId,
     resolver: impl Fn(path::ModPath) -> Option<(MacroId, MacroDefId)>,
@@ -955,7 +974,7 @@ fn derive_macro_as_call_id(
         MacroCallKind::Derive {
             ast_id: item_attr.ast_id,
             derive_index: derive_pos,
-            derive_attr_index: derive_attr.ast_index,
+            derive_attr_index,
         },
     );
     Ok((macro_id, def_id, call_id))
@@ -969,23 +988,33 @@ fn attr_macro_as_call_id(
     def: MacroDefId,
     is_derive: bool,
 ) -> MacroCallId {
-    let mut arg = match macro_attr.input.as_deref() {
-        Some(attr::AttrInput::TokenTree(tt, map)) => (tt.clone(), map.clone()),
-        _ => Default::default(),
+    let arg = match macro_attr.input.as_deref() {
+        Some(AttrInput::TokenTree(tt, map)) => (
+            {
+                let mut tt = tt.clone();
+                tt.delimiter = tt::Delimiter::UNSPECIFIED;
+                tt
+            },
+            map.clone(),
+        ),
+        _ => (tt::Subtree::empty(), Default::default()),
     };
 
-    // The parentheses are always disposed here.
-    arg.0.delimiter = None;
-
-    let res = def.as_lazy_macro(
+    def.as_lazy_macro(
         db.upcast(),
         krate,
         MacroCallKind::Attr {
             ast_id: item_attr.ast_id,
             attr_args: Arc::new(arg),
-            invoc_attr_index: macro_attr.id.ast_index,
+            invoc_attr_index: macro_attr.id,
             is_derive,
         },
-    );
-    res
+    )
 }
+intern::impl_internable!(
+    crate::type_ref::TypeRef,
+    crate::type_ref::TraitRef,
+    crate::type_ref::TypeBound,
+    crate::path::GenericArgs,
+    generics::GenericParams,
+);

@@ -299,7 +299,7 @@ impl<'a, 'tcx> PrintVisitor<'a, 'tcx> {
                 };
                 kind!("Float(_, {float_ty})");
             },
-            LitKind::ByteStr(ref vec) => {
+            LitKind::ByteStr(ref vec, _) => {
                 bind!(self, vec);
                 kind!("ByteStr(ref {vec})");
                 chain!(self, "let [{:?}] = **{vec}", vec.value);
@@ -394,11 +394,6 @@ impl<'a, 'tcx> PrintVisitor<'a, 'tcx> {
                     self.qpath(qpath);
                 }
                 self.expr(field!(let_expr.init));
-            },
-            ExprKind::Box(inner) => {
-                bind!(self, inner);
-                kind!("Box({inner})");
-                self.expr(inner);
             },
             ExprKind::Array(elements) => {
                 bind!(self, elements);
@@ -588,7 +583,7 @@ impl<'a, 'tcx> PrintVisitor<'a, 'tcx> {
                     },
                 }
             },
-            ExprKind::Err => kind!("Err"),
+            ExprKind::Err(_) => kind!("Err(_)"),
             ExprKind::DropTemps(expr) => {
                 bind!(self, expr);
                 kind!("DropTemps({expr})");

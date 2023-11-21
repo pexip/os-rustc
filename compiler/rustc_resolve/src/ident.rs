@@ -7,7 +7,6 @@ use rustc_middle::ty;
 use rustc_session::lint::builtin::PROC_MACRO_DERIVE_RESOLUTION_FALLBACK;
 use rustc_session::lint::BuiltinLintDiagnostics;
 use rustc_span::def_id::LocalDefId;
-use rustc_span::edition::Edition;
 use rustc_span::hygiene::{ExpnId, ExpnKind, LocalExpnId, MacroKind, SyntaxContext};
 use rustc_span::symbol::{kw, Ident};
 use rustc_span::{Span, DUMMY_SP};
@@ -18,8 +17,8 @@ use crate::late::{
     ConstantHasGenerics, ConstantItemKind, HasGenericParams, PathSource, Rib, RibKind,
 };
 use crate::macros::{sub_namespace_match, MacroRulesScope};
-use crate::{AmbiguityError, AmbiguityErrorMisc, AmbiguityKind, Determinacy, Finalize};
-use crate::{ImportKind, LexicalScopeBinding, Module, ModuleKind, ModuleOrUniformRoot};
+use crate::{errors, AmbiguityError, AmbiguityErrorMisc, AmbiguityKind, Determinacy, Finalize};
+use crate::{Import, ImportKind, LexicalScopeBinding, Module, ModuleKind, ModuleOrUniformRoot};
 use crate::{NameBinding, NameBindingKind, ParentScope, PathResult, PrivacyError, Res};
 use crate::{ResolutionError, Resolver, Scope, ScopeSet, Segment, ToNameBinding, Weak};
 
@@ -29,7 +28,7 @@ use RibKind::*;
 
 type Visibility = ty::Visibility<LocalDefId>;
 
-impl<'a> Resolver<'a> {
+impl<'a, 'tcx> Resolver<'a, 'tcx> {
     /// A generic scope visitor.
     /// Visits scopes in order to resolve some identifier in them or perform other actions.
     /// If the callback returns `Some` result, we stop visiting scopes and return it.
@@ -86,7 +85,7 @@ impl<'a> Resolver<'a> {
         // 4c. Standard library prelude (de-facto closed, controlled).
         // 6. Language prelude: builtin attributes (closed, controlled).
 
-        let rust_2015 = ctxt.edition() == Edition::Edition2015;
+        let rust_2015 = ctxt.edition().is_rust_2015();
         let (ns, macro_kind, is_absolute_path) = match scope_set {
             ScopeSet::All(ns, _) => (ns, None, false),
             ScopeSet::AbsolutePath(ns) => (ns, None, true),
@@ -369,7 +368,7 @@ impl<'a> Resolver<'a> {
     /// This is a variation of `fn resolve_ident_in_lexical_scope` that can be run during
     /// expansion and import resolution (perhaps they can be merged in the future).
     /// The function is used for resolving initial segments of macro paths (e.g., `foo` in
-    /// `foo::bar!(); or `foo!();`) and also for import paths on 2018 edition.
+    /// `foo::bar!();` or `foo!();`) and also for import paths on 2018 edition.
     #[instrument(level = "debug", skip(self, scope_set))]
     pub(crate) fn early_resolve_ident_in_lexical_scope(
         &mut self,
@@ -390,7 +389,7 @@ impl<'a> Resolver<'a> {
             }
         }
 
-        assert!(force || !finalize.is_some()); // `finalize` implies `force`
+        assert!(force || finalize.is_none()); // `finalize` implies `force`
 
         // Make sure `self`, `super` etc produce an error when passed to here.
         if orig_ident.is_path_segment_keyword() {
@@ -870,18 +869,19 @@ impl<'a> Resolver<'a> {
         let resolution =
             self.resolution(module, key).try_borrow_mut().map_err(|_| (Determined, Weak::No))?; // This happens when there is a cycle of imports.
 
-        if let Some(Finalize { path_span, report_private, .. }) = finalize {
-            // If the primary binding is unusable, search further and return the shadowed glob
-            // binding if it exists. What we really want here is having two separate scopes in
-            // a module - one for non-globs and one for globs, but until that's done use this
-            // hack to avoid inconsistent resolution ICEs during import validation.
-            let binding = [resolution.binding, resolution.shadowed_glob]
-                .into_iter()
-                .filter_map(|binding| match (binding, ignore_binding) {
+        // If the primary binding is unusable, search further and return the shadowed glob
+        // binding if it exists. What we really want here is having two separate scopes in
+        // a module - one for non-globs and one for globs, but until that's done use this
+        // hack to avoid inconsistent resolution ICEs during import validation.
+        let binding =
+            [resolution.binding, resolution.shadowed_glob].into_iter().find_map(|binding| {
+                match (binding, ignore_binding) {
                     (Some(binding), Some(ignored)) if ptr::eq(binding, ignored) => None,
                     _ => binding,
-                })
-                .next();
+                }
+            });
+
+        if let Some(Finalize { path_span, report_private, .. }) = finalize {
             let Some(binding) = binding else {
                 return Err((Determined, Weak::No));
             };
@@ -915,7 +915,11 @@ impl<'a> Resolver<'a> {
             }
 
             if !restricted_shadowing && binding.expansion != LocalExpnId::ROOT {
-                if let NameBindingKind::Res(_, true) = binding.kind {
+                if let NameBindingKind::Import {
+                    import: Import { kind: ImportKind::MacroExport, .. },
+                    ..
+                } = binding.kind
+                {
                     self.macro_expanded_macro_export_errors.insert((path_span, binding.span));
                 }
             }
@@ -925,15 +929,12 @@ impl<'a> Resolver<'a> {
         }
 
         let check_usable = |this: &mut Self, binding: &'a NameBinding<'a>| {
-            if let Some(ignored) = ignore_binding && ptr::eq(binding, ignored) {
-                return Err((Determined, Weak::No));
-            }
             let usable = this.is_accessible_from(binding.vis, parent_scope.module);
             if usable { Ok(binding) } else { Err((Determined, Weak::No)) }
         };
 
         // Items and single imports are not shadowable, if we have one, then it's determined.
-        if let Some(binding) = resolution.binding {
+        if let Some(binding) = binding {
             if !binding.is_glob_import() {
                 return check_usable(self, binding);
             }
@@ -948,6 +949,14 @@ impl<'a> Resolver<'a> {
                 continue;
             };
             if !self.is_accessible_from(import_vis, parent_scope.module) {
+                continue;
+            }
+            if let Some(ignored) = ignore_binding &&
+                let NameBindingKind::Import { import, .. } = ignored.kind &&
+                ptr::eq(import, &**single_import) {
+                // Ignore not just the binding itself, but if it has a shadowed_glob,
+                // ignore that, too, because this loop is supposed to only process
+                // named imports.
                 continue;
             }
             let Some(module) = single_import.imported_module.get() else {
@@ -987,7 +996,7 @@ impl<'a> Resolver<'a> {
         // and prohibit access to macro-expanded `macro_export` macros instead (unless restricted
         // shadowing is enabled, see `macro_expanded_macro_export_errors`).
         let unexpanded_macros = !module.unexpanded_invocations.borrow().is_empty();
-        if let Some(binding) = resolution.binding {
+        if let Some(binding) = binding {
             if !unexpanded_macros || ns == MacroNS || restricted_shadowing {
                 return check_usable(self, binding);
             } else {
@@ -1177,7 +1186,7 @@ impl<'a> Resolver<'a> {
                         }
 
                         ConstantItemRibKind(trivial, _) => {
-                            let features = self.session.features_untracked();
+                            let features = self.tcx.sess.features_untracked();
                             // HACK(min_const_generics): We currently only allow `N` or `{ N }`.
                             if !(trivial == ConstantHasGenerics::Yes
                                 || features.generic_const_exprs)
@@ -1206,7 +1215,7 @@ impl<'a> Resolver<'a> {
                                                 is_type: true,
                                             },
                                         );
-                                        self.session.delay_span_bug(span, CG_BUG_STR);
+                                        self.tcx.sess.delay_span_bug(span, CG_BUG_STR);
                                     }
 
                                     return Res::Err;
@@ -1253,7 +1262,7 @@ impl<'a> Resolver<'a> {
                         | ForwardGenericParamBanRibKind => continue,
 
                         ConstantItemRibKind(trivial, _) => {
-                            let features = self.session.features_untracked();
+                            let features = self.tcx.sess.features_untracked();
                             // HACK(min_const_generics): We currently only allow `N` or `{ N }`.
                             if !(trivial == ConstantHasGenerics::Yes
                                 || features.generic_const_exprs)
@@ -1266,7 +1275,7 @@ impl<'a> Resolver<'a> {
                                             is_type: false,
                                         },
                                     );
-                                    self.session.delay_span_bug(span, CG_BUG_STR);
+                                    self.tcx.sess.delay_span_bug(span, CG_BUG_STR);
                                 }
 
                                 return Res::Err;
@@ -1355,7 +1364,7 @@ impl<'a> Resolver<'a> {
                 }
             };
 
-            let is_last = i == path.len() - 1;
+            let is_last = i + 1 == path.len();
             let ns = if is_last { opt_ns.unwrap_or(TypeNS) } else { TypeNS };
             let name = ident.name;
 
@@ -1395,7 +1404,10 @@ impl<'a> Resolver<'a> {
                         module = Some(ModuleOrUniformRoot::ExternPrelude);
                         continue;
                     }
-                    if name == kw::PathRoot && ident.span.rust_2015() && self.session.rust_2018() {
+                    if name == kw::PathRoot
+                        && ident.span.is_rust_2015()
+                        && self.tcx.sess.rust_2018()
+                    {
                         // `::a::b` from 2015 macro on 2018 global edition
                         module = Some(ModuleOrUniformRoot::CrateRootAndExternPrelude);
                         continue;
@@ -1489,15 +1501,12 @@ impl<'a> Resolver<'a> {
                     if let Some(next_module) = binding.module() {
                         module = Some(ModuleOrUniformRoot::Module(next_module));
                         record_segment_res(self, res);
-                    } else if res == Res::ToolMod && i + 1 != path.len() {
+                    } else if res == Res::ToolMod && !is_last && opt_ns.is_some() {
                         if binding.is_import() {
-                            self.session
-                                .struct_span_err(
-                                    ident.span,
-                                    "cannot use a tool module through an import",
-                                )
-                                .span_note(binding.span, "the tool module imported here")
-                                .emit();
+                            self.tcx.sess.emit_err(errors::ToolModuleImported {
+                                span: ident.span,
+                                import: binding.span,
+                            });
                         }
                         let res = Res::NonMacroAttr(NonMacroAttrKind::Tool);
                         return PathResult::NonModule(PartialRes::new(res));

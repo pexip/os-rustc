@@ -69,17 +69,12 @@ surrounded with backticks:
 error: the identifier `foo.bar` is invalid
 ```
 
-### Error explanations
+### Error codes and explanations
 
-Some errors include long form descriptions. They may be viewed with the
-`--explain` flag, or via the [error index]. Each explanation comes with an
-example of how to trigger it and advice on how to fix it.
-
-Please read [RFC 1567] for details on how to format and write long error
-codes.
-
-The descriptions are written in Markdown, and all of them are linked in the
-[`rustc_error_codes`] crate.
+Most errors have an associated error code. Error codes are linked to long-form
+explanations which contains an example of how to trigger the error and in-depth
+details about the error. They may be viewed with the `--explain` flag, or via
+the [error index].
 
 As a general rule, give an error a code (with an associated explanation) if the
 explanation would give more information than the error itself. A lot of the time
@@ -89,12 +84,15 @@ triggers to include useful information for all cases in the error, in which case
 it's a good idea to add an explanation.[^estebank]
 As always, if you are not sure, just ask your reviewer!
 
+If you decide to add a new error with an associated error code, please read
+[this section][error-codes] for a guide and important details about the
+process.
+
 [^estebank]: This rule of thumb was suggested by **@estebank** [here][estebank-comment].
 
-[`rustc_error_codes`]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_error_codes/error_codes/index.html
 [error index]: https://doc.rust-lang.org/error-index.html
-[RFC 1567]: https://github.com/rust-lang/rfcs/blob/master/text/1567-long-error-codes-explanation-normalization.md
 [estebank-comment]: https://github.com/rust-lang/rustc-dev-guide/pull/967#issuecomment-733218283
+[error-codes]: ./diagnostics/error-codes.md
 
 ### Lints versus fixed diagnostics
 
@@ -112,10 +110,11 @@ Here are a few examples:
 - Dead code: this is a lint. While the user probably doesn't want dead code in
   their crate, making this a hard error would make refactoring and development
   very painful.
-- [safe_packed_borrows future compatibility warning][safe_packed_borrows]:
-  this is a silencable lint related to safety. It was judged that the making
-  this a hard (fixed) error would cause too much breakage, so instead a
-  warning is emitted that eventually will be turned into a hard error.
+- [future-incompatible lints]:
+  these are silencable lints.
+  It was decided that making them fixed errors would cause too much breakage,
+  so warnings are instead emitted,
+  and will eventually be turned into fixed (hard) errors.
 
 Hard-coded warnings (those using the `span_warn` methods) should be avoided
 for normal code, preferring to use lints instead. Some cases, such as warnings
@@ -124,7 +123,7 @@ with CLI flags, will require the use of hard-coded warnings.
 See the `deny` [lint level](#diagnostic-levels) below for guidelines when to
 use an error-level lint instead of a fixed error.
 
-[safe_packed_borrows]: https://github.com/rust-lang/rust/issues/46043
+[future-incompatible lints]: #future-incompatible-lints
 
 ## Diagnostic output style guide
 
@@ -269,7 +268,7 @@ book][rustc-lint-levels] and the [reference][reference-diagnostics].
 
 ### Finding the source of errors
 
-There are two main ways to find where a given error is emitted:
+There are three main ways to find where a given error is emitted:
 
 - `grep` for either a sub-part of the error message/label or error code. This
   usually works well and is straightforward, but there are some cases where
@@ -287,6 +286,8 @@ There are two main ways to find where a given error is emitted:
   - The _construction_ of the error is far away from where it is _emitted_,
     a problem similar to the one we faced with the `grep` approach.
     In some cases, we buffer multiple errors in order to emit them in order.
+- Invoking `rustc` with `-Z track-diagnostics` will print error creation
+  locations alongside the error.
 
 The regular development practices apply: judicious use of `debug!()` statements
 and use of a debugger to trigger break points in order to figure out in what
@@ -635,12 +636,12 @@ broader meaning than what rustc exposes to users of the compiler.
 Inside rustc, future-incompatible lints are for signalling to the user that code they have
 written may not compile in the future. In general, future-incompatible code
 exists for two reasons:
-* the user has written unsound code that the compiler mistakenly accepted. While
+* The user has written unsound code that the compiler mistakenly accepted. While
 it is within Rust's backwards compatibility guarantees to fix the soundness hole
 (breaking the user's code), the lint is there to warn the user that this will happen
 in some upcoming version of rustc *regardless of which edition the code uses*. This is the
 meaning that rustc exclusively exposes to users as "future incompatible".
-* the user has written code that will either no longer compiler *or* will change
+* The user has written code that will either no longer compiler *or* will change
 meaning in an upcoming *edition*. These are often called "edition lints" and can be
 typically seen in the various "edition compatibility" lint groups (e.g., `rust_2021_compatibility`)
 that are used to lint against code that will break if the user updates the crate's edition.
@@ -663,7 +664,7 @@ declare_lint! {
 Notice the `reason` field which describes why the future incompatible change is happening.
 This will change the diagnostic message the user receives as well as determine which
 lint groups the lint is added to. In the example above, the lint is an "edition lint"
-(since it's "reason" is `EditionError`) signifying to the user that the use of anonymous
+(since its "reason" is `EditionError`), signifying to the user that the use of anonymous
 parameters will no longer compile in Rust 2018 and beyond.
 
 Inside [LintStore::register_lints][fi-lint-groupings], lints with `future_incompatible`

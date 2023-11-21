@@ -1,5 +1,7 @@
 # Implementing new features
 
+<!-- toc -->
+
 When you want to implement a new significant feature in the compiler,
 you need to go through this process to make sure everything goes
 smoothly.
@@ -33,7 +35,7 @@ like this; for example, the compiler team recommends
 filing a Major Change Proposal ([MCP][mcp]) as a lightweight way to
 garner support and feedback without requiring full consensus.
 
-[mcp]: compiler/mcp.md#public-facing-changes-require-rfcbot-fcp
+[mcp]: https://forge.rust-lang.org/compiler/mcp.html#public-facing-changes-require-rfcbot-fcp
 
 You don't need to have the implementation fully ready for r+ to propose an FCP,
 but it is generally a good idea to have at least a proof

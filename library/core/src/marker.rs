@@ -96,6 +96,8 @@ unsafe impl<T: Sync + ?Sized> Send for &T {}
 )]
 #[fundamental] // for Default, for example, which requires that `[T]: !Default` be evaluatable
 #[rustc_specialization_trait]
+#[rustc_deny_explicit_impl]
+#[rustc_coinductive]
 pub trait Sized {
     // Empty.
 }
@@ -125,8 +127,9 @@ pub trait Sized {
 /// [`Rc`]: ../../std/rc/struct.Rc.html
 /// [RFC982]: https://github.com/rust-lang/rfcs/blob/master/text/0982-dst-coercion.md
 /// [nomicon-coerce]: ../../nomicon/coercions.html
-#[unstable(feature = "unsize", issue = "27732")]
+#[unstable(feature = "unsize", issue = "18598")]
 #[lang = "unsize"]
+#[rustc_deny_explicit_impl]
 pub trait Unsize<T: ?Sized> {
     // Empty.
 }
@@ -321,7 +324,7 @@ pub trait StructuralEq {
 /// attempt to derive a `Copy` implementation, we'll get an error:
 ///
 /// ```text
-/// the trait `Copy` may not be implemented for this type; field `points` does not implement `Copy`
+/// the trait `Copy` cannot be implemented for this type; field `points` does not implement `Copy`
 /// ```
 ///
 /// Shared references (`&T`) are also `Copy`, so a type can be `Copy`, even when it holds
@@ -467,6 +470,62 @@ pub macro Copy($item:item) {
 #[cfg_attr(not(test), rustc_diagnostic_item = "Sync")]
 #[lang = "sync"]
 #[rustc_on_unimplemented(
+    on(
+        _Self = "std::cell::OnceCell<T>",
+        note = "if you want to do aliasing and mutation between multiple threads, use `std::sync::OnceLock` instead"
+    ),
+    on(
+        _Self = "std::cell::Cell<u8>",
+        note = "if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` or `std::sync::atomic::AtomicU8` instead",
+    ),
+    on(
+        _Self = "std::cell::Cell<u16>",
+        note = "if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` or `std::sync::atomic::AtomicU16` instead",
+    ),
+    on(
+        _Self = "std::cell::Cell<u32>",
+        note = "if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` or `std::sync::atomic::AtomicU32` instead",
+    ),
+    on(
+        _Self = "std::cell::Cell<u64>",
+        note = "if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` or `std::sync::atomic::AtomicU64` instead",
+    ),
+    on(
+        _Self = "std::cell::Cell<usize>",
+        note = "if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` or `std::sync::atomic::AtomicUsize` instead",
+    ),
+    on(
+        _Self = "std::cell::Cell<i8>",
+        note = "if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` or `std::sync::atomic::AtomicI8` instead",
+    ),
+    on(
+        _Self = "std::cell::Cell<i16>",
+        note = "if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` or `std::sync::atomic::AtomicI16` instead",
+    ),
+    on(
+        _Self = "std::cell::Cell<i32>",
+        note = "if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` or `std::sync::atomic::AtomicI32` instead",
+    ),
+    on(
+        _Self = "std::cell::Cell<i64>",
+        note = "if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` or `std::sync::atomic::AtomicI64` instead",
+    ),
+    on(
+        _Self = "std::cell::Cell<isize>",
+        note = "if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` or `std::sync::atomic::AtomicIsize` instead",
+    ),
+    on(
+        _Self = "std::cell::Cell<bool>",
+        note = "if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` or `std::sync::atomic::AtomicBool` instead",
+    ),
+    on(
+        _Self = "std::cell::Cell<T>",
+        note = "if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock`",
+    ),
+    on(
+        _Self = "std::cell::RefCell<T>",
+        note = "if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead",
+    ),
     message = "`{Self}` cannot be shared between threads safely",
     label = "`{Self}` cannot be shared between threads safely"
 )]
@@ -621,6 +680,12 @@ impl<T: ?Sized> !Sync for *mut T {}
 /// (ideally) or `PhantomData<*const T>` (if no lifetime applies), so
 /// as not to indicate ownership.
 ///
+/// ## Layout
+///
+/// For all `T`, the following are guaranteed:
+/// * `size_of::<PhantomData<T>>() == 0`
+/// * `align_of::<PhantomData<T>>() == 1`
+///
 /// [drop check]: ../../nomicon/dropck.html
 #[lang = "phantom_data"]
 #[stable(feature = "rust1", since = "1.0.0")]
@@ -693,6 +758,7 @@ impl<T: ?Sized> StructuralEq for PhantomData<T> {}
     reason = "this trait is unlikely to ever be stabilized, use `mem::discriminant` instead"
 )]
 #[lang = "discriminant_kind"]
+#[rustc_deny_explicit_impl]
 pub trait DiscriminantKind {
     /// The type of the discriminant, which must satisfy the trait
     /// bounds required by `mem::Discriminant`.
@@ -757,7 +823,7 @@ unsafe impl<T: ?Sized> Freeze for &mut T {}
 /// [`pin` module]: crate::pin
 #[stable(feature = "pin", since = "1.33.0")]
 #[rustc_on_unimplemented(
-    note = "consider using `Box::pin`",
+    note = "consider using the `pin!` macro\nconsider using `Box::pin` if you need to access the pinned value outside of the current scope",
     message = "`{Self}` cannot be unpinned"
 )]
 #[lang = "unpin"]
@@ -793,6 +859,7 @@ impl<T: ?Sized> Unpin for *mut T {}
 #[lang = "destruct"]
 #[rustc_on_unimplemented(message = "can't drop `{Self}`", append_const_msg)]
 #[const_trait]
+#[rustc_deny_explicit_impl]
 pub trait Destruct {}
 
 /// A marker for tuple types.
@@ -802,7 +869,20 @@ pub trait Destruct {}
 #[unstable(feature = "tuple_trait", issue = "none")]
 #[lang = "tuple_trait"]
 #[rustc_on_unimplemented(message = "`{Self}` is not a tuple")]
+#[rustc_deny_explicit_impl]
 pub trait Tuple {}
+
+/// A marker for pointer-like types.
+///
+/// All types that have the same size and alignment as a `usize` or
+/// `*const ()` automatically implement this trait.
+#[unstable(feature = "pointer_like_trait", issue = "none")]
+#[lang = "pointer_like"]
+#[rustc_on_unimplemented(
+    message = "`{Self}` needs to have the same ABI as a pointer",
+    label = "`{Self}` needs to be a pointer-like type"
+)]
+pub trait PointerLike {}
 
 /// Implementations of `Copy` for primitive types.
 ///
@@ -841,4 +921,19 @@ mod copy_impls {
     /// Shared references can be copied, but mutable references *cannot*!
     #[stable(feature = "rust1", since = "1.0.0")]
     impl<T: ?Sized> Copy for &T {}
+}
+
+/// A common trait implemented by all function pointers.
+#[unstable(
+    feature = "fn_ptr_trait",
+    issue = "none",
+    reason = "internal trait for implementing various traits for all function pointers"
+)]
+#[lang = "fn_ptr_trait"]
+#[cfg(not(bootstrap))]
+#[rustc_deny_explicit_impl]
+pub trait FnPtr: Copy + Clone {
+    /// Returns the address of the function pointer.
+    #[lang = "fn_ptr_addr"]
+    fn addr(self) -> *const ();
 }

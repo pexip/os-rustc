@@ -14,7 +14,8 @@ use syntax::{ast, AstNode};
 
 use crate::{
     Adt, AssocItem, Const, ConstParam, Enum, Field, Function, GenericParam, Impl, LifetimeParam,
-    Macro, Module, ModuleDef, Static, Struct, Trait, TypeAlias, TypeParam, Union, Variant,
+    Macro, Module, ModuleDef, Static, Struct, Trait, TraitAlias, TypeAlias, TypeParam, Union,
+    Variant,
 };
 
 pub trait HasAttrs {
@@ -60,6 +61,7 @@ impl_has_attrs![
     (Static, StaticId),
     (Const, ConstId),
     (Trait, TraitId),
+    (TraitAlias, TraitAliasId),
     (TypeAlias, TypeAliasId),
     (Macro, MacroId),
     (Function, FunctionId),
@@ -134,6 +136,7 @@ fn resolve_doc_path(
         AttrDefId::StaticId(it) => it.resolver(db.upcast()),
         AttrDefId::ConstId(it) => it.resolver(db.upcast()),
         AttrDefId::TraitId(it) => it.resolver(db.upcast()),
+        AttrDefId::TraitAliasId(it) => it.resolver(db.upcast()),
         AttrDefId::TypeAliasId(it) => it.resolver(db.upcast()),
         AttrDefId::ImplId(it) => it.resolver(db.upcast()),
         AttrDefId::ExternBlockId(it) => it.resolver(db.upcast()),
@@ -148,7 +151,7 @@ fn resolve_doc_path(
 
     let modpath = {
         // FIXME: this is not how we should get a mod path here
-        let ast_path = ast::SourceFile::parse(&format!("type T = {};", link))
+        let ast_path = ast::SourceFile::parse(&format!("type T = {link};"))
             .syntax_node()
             .descendants()
             .find_map(ast::Path::cast)?;

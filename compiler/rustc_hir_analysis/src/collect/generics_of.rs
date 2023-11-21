@@ -1,20 +1,20 @@
-use crate::middle::resolve_lifetime as rl;
+use crate::middle::resolve_bound_vars as rbv;
 use hir::{
     intravisit::{self, Visitor},
     GenericParamKind, HirId, Node,
 };
 use rustc_hir as hir;
 use rustc_hir::def::DefKind;
-use rustc_hir::def_id::DefId;
+use rustc_hir::def_id::LocalDefId;
 use rustc_middle::ty::{self, TyCtxt};
 use rustc_session::lint;
 use rustc_span::symbol::{kw, Symbol};
 use rustc_span::Span;
 
-pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: DefId) -> ty::Generics {
+pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Generics {
     use rustc_hir::*;
 
-    let hir_id = tcx.hir().local_def_id_to_hir_id(def_id.expect_local());
+    let hir_id = tcx.hir().local_def_id_to_hir_id(def_id);
 
     let node = tcx.hir().get(hir_id);
     let parent_def_id = match node {
@@ -51,7 +51,7 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: DefId) -> ty::Generics {
                 // of a const parameter type, e.g. `struct Foo<const N: usize, const M: [u8; N]>` is not allowed.
                 None
             } else if tcx.lazy_normalization() {
-                if let Some(param_id) = tcx.hir().opt_const_param_default_param_hir_id(hir_id) {
+                if let Some(param_id) = tcx.hir().opt_const_param_default_param_def_id(hir_id) {
                     // If the def_id we are calling generics_of on is an anon ct default i.e:
                     //
                     // struct Foo<const N: usize = { .. }>;
@@ -77,10 +77,9 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: DefId) -> ty::Generics {
                     // This has some implications for how we get the predicates available to the anon const
                     // see `explicit_predicates_of` for more information on this
                     let generics = tcx.generics_of(parent_def_id.to_def_id());
-                    let param_def = tcx.hir().local_def_id(param_id).to_def_id();
-                    let param_def_idx = generics.param_def_id_to_index[&param_def];
+                    let param_def_idx = generics.param_def_id_to_index[&param_id.to_def_id()];
                     // In the above example this would be .params[..N#0]
-                    let params = generics.params[..param_def_idx as usize].to_owned();
+                    let params = generics.params_to(param_def_idx as usize, tcx).to_owned();
                     let param_def_id_to_index =
                         params.iter().map(|param| (param.def_id, param.index)).collect();
 
@@ -105,24 +104,24 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: DefId) -> ty::Generics {
                 // `min_const_generics`.
                 Some(parent_def_id.to_def_id())
             } else {
-                let parent_node = tcx.hir().get(tcx.hir().get_parent_node(hir_id));
+                let parent_node = tcx.hir().get_parent(hir_id);
                 match parent_node {
                     // HACK(eddyb) this provides the correct generics for repeat
                     // expressions' count (i.e. `N` in `[x; N]`), and explicit
                     // `enum` discriminants (i.e. `D` in `enum Foo { Bar = D }`),
                     // as they shouldn't be able to cause query cycle errors.
-                    Node::Expr(&Expr { kind: ExprKind::Repeat(_, ref constant), .. })
+                    Node::Expr(Expr { kind: ExprKind::Repeat(_, constant), .. })
                         if constant.hir_id() == hir_id =>
                     {
                         Some(parent_def_id.to_def_id())
                     }
-                    Node::Variant(Variant { disr_expr: Some(ref constant), .. })
+                    Node::Variant(Variant { disr_expr: Some(constant), .. })
                         if constant.hir_id == hir_id =>
                     {
                         Some(parent_def_id.to_def_id())
                     }
                     Node::Expr(&Expr { kind: ExprKind::ConstBlock(_), .. }) => {
-                        Some(tcx.typeck_root_def_id(def_id))
+                        Some(tcx.typeck_root_def_id(def_id.to_def_id()))
                     }
                     // Exclude `GlobalAsm` here which cannot have generics.
                     Node::Expr(&Expr { kind: ExprKind::InlineAsm(asm), .. })
@@ -141,7 +140,7 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: DefId) -> ty::Generics {
             }
         }
         Node::Expr(&hir::Expr { kind: hir::ExprKind::Closure { .. }, .. }) => {
-            Some(tcx.typeck_root_def_id(def_id))
+            Some(tcx.typeck_root_def_id(def_id.to_def_id()))
         }
         Node::Item(item) => match item.kind {
             ItemKind::OpaqueTy(hir::OpaqueTy {
@@ -190,7 +189,7 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: DefId) -> ty::Generics {
                     let opt_self = Some(ty::GenericParamDef {
                         index: 0,
                         name: kw::SelfUpper,
-                        def_id,
+                        def_id: def_id.to_def_id(),
                         pure_wrt_drop: false,
                         kind: ty::GenericParamDefKind::Type {
                             has_default: false,
@@ -241,7 +240,7 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: DefId) -> ty::Generics {
     params.extend(early_lifetimes.enumerate().map(|(i, param)| ty::GenericParamDef {
         name: param.name.ident().name,
         index: own_start + i as u32,
-        def_id: tcx.hir().local_def_id(param.hir_id).to_def_id(),
+        def_id: param.def_id.to_def_id(),
         pure_wrt_drop: param.pure_wrt_drop,
         kind: ty::GenericParamDefKind::Lifetime,
     }));
@@ -260,7 +259,7 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: DefId) -> ty::Generics {
 
     params.extend(ast_generics.params.iter().filter_map(|param| match param.kind {
         GenericParamKind::Lifetime { .. } => None,
-        GenericParamKind::Type { ref default, synthetic, .. } => {
+        GenericParamKind::Type { default, synthetic, .. } => {
             if default.is_some() {
                 match allow_defaults {
                     Defaults::Allowed => {}
@@ -286,7 +285,7 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: DefId) -> ty::Generics {
             Some(ty::GenericParamDef {
                 index: next_index(),
                 name: param.name.ident().name,
-                def_id: tcx.hir().local_def_id(param.hir_id).to_def_id(),
+                def_id: param.def_id.to_def_id(),
                 pure_wrt_drop: param.pure_wrt_drop,
                 kind,
             })
@@ -303,7 +302,7 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: DefId) -> ty::Generics {
             Some(ty::GenericParamDef {
                 index: next_index(),
                 name: param.name.ident().name,
-                def_id: tcx.hir().local_def_id(param.hir_id).to_def_id(),
+                def_id: param.def_id.to_def_id(),
                 pure_wrt_drop: param.pure_wrt_drop,
                 kind: ty::GenericParamDefKind::Const { has_default: default.is_some() },
             })
@@ -327,7 +326,7 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: DefId) -> ty::Generics {
         params.extend(dummy_args.iter().map(|&arg| ty::GenericParamDef {
             index: next_index(),
             name: Symbol::intern(arg),
-            def_id,
+            def_id: def_id.to_def_id(),
             pure_wrt_drop: false,
             kind: ty::GenericParamDefKind::Type { has_default: false, synthetic: false },
         }));
@@ -335,12 +334,12 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: DefId) -> ty::Generics {
 
     // provide junk type parameter defs for const blocks.
     if let Node::AnonConst(_) = node {
-        let parent_node = tcx.hir().get(tcx.hir().get_parent_node(hir_id));
+        let parent_node = tcx.hir().get_parent(hir_id);
         if let Node::Expr(&Expr { kind: ExprKind::ConstBlock(_), .. }) = parent_node {
             params.push(ty::GenericParamDef {
                 index: next_index(),
                 name: Symbol::intern("<const_ty>"),
-                def_id,
+                def_id: def_id.to_def_id(),
                 pure_wrt_drop: false,
                 kind: ty::GenericParamDefKind::Type { has_default: false, synthetic: false },
             });
@@ -395,11 +394,17 @@ fn has_late_bound_regions<'tcx>(tcx: TyCtxt<'tcx>, node: Node<'tcx>) -> Option<S
                 return;
             }
 
-            match self.tcx.named_region(lt.hir_id) {
-                Some(rl::Region::Static | rl::Region::EarlyBound(..)) => {}
-                Some(rl::Region::LateBound(debruijn, _, _)) if debruijn < self.outer_index => {}
-                Some(rl::Region::LateBound(..) | rl::Region::Free(..)) | None => {
-                    self.has_late_bound_regions = Some(lt.span);
+            match self.tcx.named_bound_var(lt.hir_id) {
+                Some(rbv::ResolvedArg::StaticLifetime | rbv::ResolvedArg::EarlyBound(..)) => {}
+                Some(rbv::ResolvedArg::LateBound(debruijn, _, _))
+                    if debruijn < self.outer_index => {}
+                Some(
+                    rbv::ResolvedArg::LateBound(..)
+                    | rbv::ResolvedArg::Free(..)
+                    | rbv::ResolvedArg::Error(_),
+                )
+                | None => {
+                    self.has_late_bound_regions = Some(lt.ident.span);
                 }
             }
         }
@@ -427,26 +432,22 @@ fn has_late_bound_regions<'tcx>(tcx: TyCtxt<'tcx>, node: Node<'tcx>) -> Option<S
     }
 
     match node {
-        Node::TraitItem(item) => match item.kind {
-            hir::TraitItemKind::Fn(ref sig, _) => {
-                has_late_bound_regions(tcx, &item.generics, sig.decl)
-            }
+        Node::TraitItem(item) => match &item.kind {
+            hir::TraitItemKind::Fn(sig, _) => has_late_bound_regions(tcx, &item.generics, sig.decl),
             _ => None,
         },
-        Node::ImplItem(item) => match item.kind {
-            hir::ImplItemKind::Fn(ref sig, _) => {
-                has_late_bound_regions(tcx, &item.generics, sig.decl)
-            }
+        Node::ImplItem(item) => match &item.kind {
+            hir::ImplItemKind::Fn(sig, _) => has_late_bound_regions(tcx, &item.generics, sig.decl),
             _ => None,
         },
         Node::ForeignItem(item) => match item.kind {
-            hir::ForeignItemKind::Fn(fn_decl, _, ref generics) => {
+            hir::ForeignItemKind::Fn(fn_decl, _, generics) => {
                 has_late_bound_regions(tcx, generics, fn_decl)
             }
             _ => None,
         },
-        Node::Item(item) => match item.kind {
-            hir::ItemKind::Fn(ref sig, .., ref generics, _) => {
+        Node::Item(item) => match &item.kind {
+            hir::ItemKind::Fn(sig, .., generics, _) => {
                 has_late_bound_regions(tcx, generics, sig.decl)
             }
             _ => None,

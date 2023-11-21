@@ -1,5 +1,4 @@
-use rustc_index::bit_set::BitSet;
-use rustc_middle::mir::{self, BasicBlock, Location, SwitchTargets};
+use rustc_middle::mir::{self, BasicBlock, Location, SwitchTargets, UnwindAction};
 use rustc_middle::ty::TyCtxt;
 use std::ops::RangeInclusive;
 
@@ -54,7 +53,6 @@ pub trait Direction {
         analysis: &A,
         tcx: TyCtxt<'tcx>,
         body: &mir::Body<'tcx>,
-        dead_unwinds: Option<&BitSet<BasicBlock>>,
         exit_state: &mut A::Domain,
         block: (BasicBlock, &'_ mir::BasicBlockData<'tcx>),
         propagate: impl FnMut(BasicBlock, &A::Domain),
@@ -221,7 +219,6 @@ impl Direction for Backward {
         analysis: &A,
         _tcx: TyCtxt<'tcx>,
         body: &mir::Body<'tcx>,
-        dead_unwinds: Option<&BitSet<BasicBlock>>,
         exit_state: &mut A::Domain,
         (bb, _bb_data): (BasicBlock, &'_ mir::BasicBlockData<'tcx>),
         mut propagate: impl FnMut(BasicBlock, &A::Domain),
@@ -261,7 +258,7 @@ impl Direction for Backward {
                     propagate(pred, &tmp);
                 }
 
-                mir::TerminatorKind::SwitchInt { targets: _, ref discr, switch_ty: _ } => {
+                mir::TerminatorKind::SwitchInt { targets: _, ref discr } => {
                     let mut applier = BackwardSwitchIntEdgeEffectsApplier {
                         body,
                         pred,
@@ -278,20 +275,6 @@ impl Direction for Backward {
                     }
                 }
 
-                // Ignore dead unwinds.
-                mir::TerminatorKind::Call { cleanup: Some(unwind), .. }
-                | mir::TerminatorKind::Assert { cleanup: Some(unwind), .. }
-                | mir::TerminatorKind::Drop { unwind: Some(unwind), .. }
-                | mir::TerminatorKind::DropAndReplace { unwind: Some(unwind), .. }
-                | mir::TerminatorKind::FalseUnwind { unwind: Some(unwind), .. }
-                | mir::TerminatorKind::InlineAsm { cleanup: Some(unwind), .. }
-                    if unwind == bb =>
-                {
-                    if dead_unwinds.map_or(true, |dead| !dead.contains(bb)) {
-                        propagate(pred, exit_state);
-                    }
-                }
-
                 _ => propagate(pred, exit_state),
             }
         }
@@ -304,7 +287,6 @@ struct BackwardSwitchIntEdgeEffectsApplier<'a, 'tcx, D, F> {
     exit_state: &'a mut D,
     bb: BasicBlock,
     propagate: &'a mut F,
-
     effects_applied: bool,
 }
 
@@ -484,7 +466,6 @@ impl Direction for Forward {
         analysis: &A,
         _tcx: TyCtxt<'tcx>,
         _body: &mir::Body<'tcx>,
-        dead_unwinds: Option<&BitSet<BasicBlock>>,
         exit_state: &mut A::Domain,
         (bb, bb_data): (BasicBlock, &'_ mir::BasicBlockData<'tcx>),
         mut propagate: impl FnMut(BasicBlock, &A::Domain),
@@ -493,18 +474,15 @@ impl Direction for Forward {
     {
         use mir::TerminatorKind::*;
         match bb_data.terminator().kind {
-            Return | Resume | Abort | GeneratorDrop | Unreachable => {}
+            Return | Resume | Terminate | GeneratorDrop | Unreachable => {}
 
             Goto { target } => propagate(target, exit_state),
 
-            Assert { target, cleanup: unwind, expected: _, msg: _, cond: _ }
+            Assert { target, unwind, expected: _, msg: _, cond: _ }
             | Drop { target, unwind, place: _ }
-            | DropAndReplace { target, unwind, value: _, place: _ }
             | FalseUnwind { real_target: target, unwind } => {
-                if let Some(unwind) = unwind {
-                    if dead_unwinds.map_or(true, |dead| !dead.contains(bb)) {
-                        propagate(unwind, exit_state);
-                    }
+                if let UnwindAction::Cleanup(unwind) = unwind {
+                    propagate(unwind, exit_state);
                 }
 
                 propagate(target, exit_state);
@@ -525,7 +503,7 @@ impl Direction for Forward {
             }
 
             Call {
-                cleanup,
+                unwind,
                 destination,
                 target,
                 func: _,
@@ -533,10 +511,8 @@ impl Direction for Forward {
                 from_hir_call: _,
                 fn_span: _,
             } => {
-                if let Some(unwind) = cleanup {
-                    if dead_unwinds.map_or(true, |dead| !dead.contains(bb)) {
-                        propagate(unwind, exit_state);
-                    }
+                if let UnwindAction::Cleanup(unwind) = unwind {
+                    propagate(unwind, exit_state);
                 }
 
                 if let Some(target) = target {
@@ -557,12 +533,10 @@ impl Direction for Forward {
                 options: _,
                 line_spans: _,
                 destination,
-                cleanup,
+                unwind,
             } => {
-                if let Some(unwind) = cleanup {
-                    if dead_unwinds.map_or(true, |dead| !dead.contains(bb)) {
-                        propagate(unwind, exit_state);
-                    }
+                if let UnwindAction::Cleanup(unwind) = unwind {
+                    propagate(unwind, exit_state);
                 }
 
                 if let Some(target) = destination {
@@ -577,7 +551,7 @@ impl Direction for Forward {
                 }
             }
 
-            SwitchInt { ref targets, ref discr, switch_ty: _ } => {
+            SwitchInt { ref targets, ref discr } => {
                 let mut applier = ForwardSwitchIntEdgeEffectsApplier {
                     exit_state,
                     targets,

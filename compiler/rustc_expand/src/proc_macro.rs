@@ -1,4 +1,5 @@
 use crate::base::{self, *};
+use crate::errors;
 use crate::proc_macro_server;
 
 use rustc_ast as ast;
@@ -53,18 +54,19 @@ impl base::BangProcMacro for BangProcMacro {
     ) -> Result<TokenStream, ErrorGuaranteed> {
         let _timer =
             ecx.sess.prof.generic_activity_with_arg_recorder("expand_proc_macro", |recorder| {
-                recorder.record_arg_with_span(ecx.expansion_descr(), span);
+                recorder.record_arg_with_span(ecx.sess.source_map(), ecx.expansion_descr(), span);
             });
 
         let proc_macro_backtrace = ecx.ecfg.proc_macro_backtrace;
         let strategy = exec_strategy(ecx);
         let server = proc_macro_server::Rustc::new(ecx);
         self.client.run(&strategy, server, input, proc_macro_backtrace).map_err(|e| {
-            let mut err = ecx.struct_span_err(span, "proc macro panicked");
-            if let Some(s) = e.as_str() {
-                err.help(&format!("message: {}", s));
-            }
-            err.emit()
+            ecx.sess.emit_err(errors::ProcMacroPanicked {
+                span,
+                message: e
+                    .as_str()
+                    .map(|message| errors::ProcMacroPanickedHelp { message: message.into() }),
+            })
         })
     }
 }
@@ -83,7 +85,7 @@ impl base::AttrProcMacro for AttrProcMacro {
     ) -> Result<TokenStream, ErrorGuaranteed> {
         let _timer =
             ecx.sess.prof.generic_activity_with_arg_recorder("expand_proc_macro", |recorder| {
-                recorder.record_arg_with_span(ecx.expansion_descr(), span);
+                recorder.record_arg_with_span(ecx.sess.source_map(), ecx.expansion_descr(), span);
             });
 
         let proc_macro_backtrace = ecx.ecfg.proc_macro_backtrace;
@@ -112,6 +114,7 @@ impl MultiItemModifier for DeriveProcMacro {
         span: Span,
         _meta_item: &ast::MetaItem,
         item: Annotatable,
+        _is_derive_const: bool,
     ) -> ExpandResult<Vec<Annotatable>, Annotatable> {
         // We need special handling for statement items
         // (e.g. `fn foo() { #[derive(Debug)] struct Bar; }`)
@@ -131,7 +134,11 @@ impl MultiItemModifier for DeriveProcMacro {
         let stream = {
             let _timer =
                 ecx.sess.prof.generic_activity_with_arg_recorder("expand_proc_macro", |recorder| {
-                    recorder.record_arg_with_span(ecx.expansion_descr(), span);
+                    recorder.record_arg_with_span(
+                        ecx.sess.source_map(),
+                        ecx.expansion_descr(),
+                        span,
+                    );
                 });
             let proc_macro_backtrace = ecx.ecfg.proc_macro_backtrace;
             let strategy = exec_strategy(ecx);
@@ -173,7 +180,7 @@ impl MultiItemModifier for DeriveProcMacro {
 
         // fail if there have been errors emitted
         if ecx.sess.parse_sess.span_diagnostic.err_count() > error_count_before {
-            ecx.struct_span_err(span, "proc-macro derive produced unparseable tokens").emit();
+            ecx.sess.emit_err(errors::ProcMacroDeriveTokens { span });
         }
 
         ExpandResult::Ready(items)

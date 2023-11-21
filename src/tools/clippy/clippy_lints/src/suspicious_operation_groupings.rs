@@ -578,11 +578,11 @@ fn ident_difference_expr_with_base_location(
         | (Assign(_, _, _), Assign(_, _, _))
         | (TryBlock(_), TryBlock(_))
         | (Await(_), Await(_))
-        | (Async(_, _, _), Async(_, _, _))
+        | (Async(_, _), Async(_, _))
         | (Block(_, _), Block(_, _))
-        | (Closure(_, _, _, _, _, _, _), Closure(_, _, _, _, _, _, _))
+        | (Closure(_), Closure(_))
         | (Match(_, _), Match(_, _))
-        | (Loop(_, _), Loop(_, _))
+        | (Loop(_, _, _), Loop(_, _, _))
         | (ForLoop(_, _, _, _), ForLoop(_, _, _, _))
         | (While(_, _, _), While(_, _, _))
         | (If(_, _, _), If(_, _, _))
@@ -593,11 +593,10 @@ fn ident_difference_expr_with_base_location(
         | (Unary(_, _), Unary(_, _))
         | (Binary(_, _, _), Binary(_, _, _))
         | (Tup(_), Tup(_))
-        | (MethodCall(_, _, _, _), MethodCall(_, _, _, _))
+        | (MethodCall(_), MethodCall(_))
         | (Call(_, _), Call(_, _))
         | (ConstBlock(_), ConstBlock(_))
-        | (Array(_), Array(_))
-        | (Box(_), Box(_)) => {
+        | (Array(_), Array(_)) => {
             // keep going
         },
         _ => {

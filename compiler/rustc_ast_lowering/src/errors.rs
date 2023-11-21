@@ -79,11 +79,12 @@ pub struct MisplacedImplTrait<'a> {
     pub position: DiagnosticArgFromDisplay<'a>,
 }
 
-#[derive(Diagnostic, Clone, Copy)]
-#[diag(ast_lowering_rustc_box_attribute_error)]
-pub struct RustcBoxAttributeError {
+#[derive(Diagnostic)]
+#[diag(ast_lowering_misplaced_assoc_ty_binding)]
+pub struct MisplacedAssocTyBinding<'a> {
     #[primary_span]
     pub span: Span,
+    pub position: DiagnosticArgFromDisplay<'a>,
 }
 
 #[derive(Diagnostic, Clone, Copy)]
@@ -136,7 +137,7 @@ pub struct AsyncNonMoveClosureNotSupported {
 
 #[derive(Diagnostic, Clone, Copy)]
 #[diag(ast_lowering_functional_record_update_destructuring_assignment)]
-pub struct FunctionalRecordUpdateDestructuringAssignemnt {
+pub struct FunctionalRecordUpdateDestructuringAssignment {
     #[primary_span]
     #[suggestion(code = "", applicability = "machine-applicable")]
     pub span: Span,
@@ -277,8 +278,9 @@ pub struct RegisterConflict<'a> {
 pub struct SubTupleBinding<'a> {
     #[primary_span]
     #[label]
-    #[suggestion_verbose(
+    #[suggestion(
         ast_lowering_sub_tuple_binding_suggestion,
+        style = "verbose",
         code = "..",
         applicability = "maybe-incorrect"
     )]
@@ -338,10 +340,26 @@ pub struct InclusiveRangeWithNoEnd {
 #[derive(Diagnostic, Clone, Copy)]
 #[diag(ast_lowering_trait_fn_async, code = "E0706")]
 #[note]
-#[note(note2)]
+#[note(ast_lowering_note2)]
 pub struct TraitFnAsync {
     #[primary_span]
     pub fn_span: Span,
     #[label]
     pub span: Span,
+}
+
+#[derive(Diagnostic)]
+pub enum BadReturnTypeNotation {
+    #[diag(ast_lowering_bad_return_type_notation_inputs)]
+    Inputs {
+        #[primary_span]
+        #[suggestion(code = "()", applicability = "maybe-incorrect")]
+        span: Span,
+    },
+    #[diag(ast_lowering_bad_return_type_notation_output)]
+    Output {
+        #[primary_span]
+        #[suggestion(code = "", applicability = "maybe-incorrect")]
+        span: Span,
+    },
 }

@@ -2,12 +2,16 @@
 
 use std::{collections::HashMap, path::PathBuf};
 
+use ide_db::line_index::WideEncoding;
 use lsp_types::request::Request;
+use lsp_types::PositionEncodingKind;
 use lsp_types::{
     notification::Notification, CodeActionKind, DocumentOnTypeFormattingParams,
     PartialResultParams, Position, Range, TextDocumentIdentifier, WorkDoneProgressParams,
 };
 use serde::{Deserialize, Serialize};
+
+use crate::line_index::PositionEncoding;
 
 pub enum AnalyzerStatus {}
 
@@ -68,6 +72,14 @@ impl Request for ViewHir {
     type Params = lsp_types::TextDocumentPositionParams;
     type Result = String;
     const METHOD: &'static str = "rust-analyzer/viewHir";
+}
+
+pub enum ViewMir {}
+
+impl Request for ViewMir {
+    type Params = lsp_types::TextDocumentPositionParams;
+    type Result = String;
+    const METHOD: &'static str = "rust-analyzer/viewMir";
 }
 
 pub enum ViewFileText {}
@@ -131,10 +143,36 @@ pub struct ExpandedMacro {
 
 pub enum CancelFlycheck {}
 
-impl Request for CancelFlycheck {
+impl Notification for CancelFlycheck {
     type Params = ();
-    type Result = ();
     const METHOD: &'static str = "rust-analyzer/cancelFlycheck";
+}
+
+pub enum RunFlycheck {}
+
+impl Notification for RunFlycheck {
+    type Params = RunFlycheckParams;
+    const METHOD: &'static str = "rust-analyzer/runFlycheck";
+}
+
+pub enum ClearFlycheck {}
+
+impl Notification for ClearFlycheck {
+    type Params = ();
+    const METHOD: &'static str = "rust-analyzer/clearFlycheck";
+}
+
+pub enum OpenServerLogs {}
+
+impl Notification for OpenServerLogs {
+    type Params = ();
+    const METHOD: &'static str = "rust-analyzer/openServerLogs";
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct RunFlycheckParams {
+    pub text_document: Option<TextDocumentIdentifier>,
 }
 
 pub enum MatchingBrace {}
@@ -454,8 +492,22 @@ pub(crate) enum CodeLensResolveData {
     References(lsp_types::TextDocumentPositionParams),
 }
 
-pub fn supports_utf8(caps: &lsp_types::ClientCapabilities) -> bool {
-    caps.offset_encoding.as_deref().unwrap_or_default().iter().any(|it| it == "utf-8")
+pub fn negotiated_encoding(caps: &lsp_types::ClientCapabilities) -> PositionEncoding {
+    let client_encodings = match &caps.general {
+        Some(general) => general.position_encodings.as_deref().unwrap_or_default(),
+        None => &[],
+    };
+
+    for enc in client_encodings {
+        if enc == &PositionEncodingKind::UTF8 {
+            return PositionEncoding::Utf8;
+        } else if enc == &PositionEncodingKind::UTF32 {
+            return PositionEncoding::Wide(WideEncoding::Utf32);
+        }
+        // NB: intentionally prefer just about anything else to utf-16.
+    }
+
+    PositionEncoding::Wide(WideEncoding::Utf16)
 }
 
 pub enum MoveItem {}
@@ -540,10 +592,7 @@ pub struct CompletionResolveData {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct InlayHintResolveData {
-    pub text_document: TextDocumentIdentifier,
-    pub position: PositionOrRange,
-}
+pub struct InlayHintResolveData {}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CompletionImport {

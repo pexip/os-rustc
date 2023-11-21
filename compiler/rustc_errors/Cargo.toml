@@ -17,13 +17,22 @@ rustc_data_structures = { path = "../rustc_data_structures" }
 rustc_target = { path = "../rustc_target" }
 rustc_hir = { path = "../rustc_hir" }
 rustc_lint_defs = { path = "../rustc_lint_defs" }
+rustc_type_ir = { path = "../rustc_type_ir" }
 unicode-width = "0.1.4"
-atty = "0.2"
 termcolor = "1.0"
 annotate-snippets = "0.9"
 termize = "0.1.1"
 serde = { version = "1.0.125", features = [ "derive" ] }
 serde_json = "1.0.59"
 
-[target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3", features = [ "handleapi", "synchapi", "winbase" ] }
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.46.0"
+features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_Threading",
+    "Win32_System_WindowsProgramming",
+]
+
+[features]
+rustc_use_parallel_compiler = ['rustc_error_messages/rustc_use_parallel_compiler']

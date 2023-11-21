@@ -47,7 +47,7 @@ use std::cmp::Ordering;
 use std::ops::RangeBounds;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::{error, fmt, iter};
+use std::{error, fmt};
 
 /// Determines whether proc_macro has been made accessible to the currently
 /// running program.
@@ -74,6 +74,7 @@ pub fn is_available() -> bool {
 ///
 /// This is both the input and output of `#[proc_macro]`, `#[proc_macro_attribute]`
 /// and `#[proc_macro_derive]` definitions.
+#[rustc_diagnostic_item = "TokenStream"]
 #[stable(feature = "proc_macro_lib", since = "1.15.0")]
 #[derive(Clone)]
 pub struct TokenStream(Option<bridge::client::TokenStream>);
@@ -309,7 +310,7 @@ impl ConcatStreamsHelper {
 
 /// Collects a number of token trees into a single stream.
 #[stable(feature = "proc_macro_lib2", since = "1.29.0")]
-impl iter::FromIterator<TokenTree> for TokenStream {
+impl FromIterator<TokenTree> for TokenStream {
     fn from_iter<I: IntoIterator<Item = TokenTree>>(trees: I) -> Self {
         let iter = trees.into_iter();
         let mut builder = ConcatTreesHelper::new(iter.size_hint().0);
@@ -321,7 +322,7 @@ impl iter::FromIterator<TokenTree> for TokenStream {
 /// A "flattening" operation on token streams, collects token trees
 /// from multiple token streams into a single stream.
 #[stable(feature = "proc_macro_lib", since = "1.15.0")]
-impl iter::FromIterator<TokenStream> for TokenStream {
+impl FromIterator<TokenStream> for TokenStream {
     fn from_iter<I: IntoIterator<Item = TokenStream>>(streams: I) -> Self {
         let iter = streams.into_iter();
         let mut builder = ConcatStreamsHelper::new(iter.size_hint().0);
@@ -581,7 +582,7 @@ impl fmt::Debug for Span {
 
 /// A line-column pair representing the start or end of a `Span`.
 #[unstable(feature = "proc_macro_span", issue = "54725")]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LineColumn {
     /// The 1-indexed line in the source file on which the span starts or ends (inclusive).
     #[unstable(feature = "proc_macro_span", issue = "54725")]
@@ -1493,7 +1494,7 @@ pub mod tracked_env {
     use std::ffi::OsStr;
 
     /// Retrieve an environment variable and add it to build dependency info.
-    /// Build system executing the compiler will know that the variable was accessed during
+    /// The build system executing the compiler will know that the variable was accessed during
     /// compilation, and will be able to rerun the build when the value of that variable changes.
     /// Besides the dependency tracking this function should be equivalent to `env::var` from the
     /// standard library, except that the argument must be UTF-8.

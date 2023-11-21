@@ -13,6 +13,7 @@ mod builder;
 mod chalk_db;
 mod chalk_ext;
 pub mod consteval;
+pub mod mir;
 mod infer;
 mod inhabitedness;
 mod interner;
@@ -20,38 +21,47 @@ mod lower;
 mod mapping;
 mod tls;
 mod utils;
-mod walk;
 pub mod db;
 pub mod diagnostics;
 pub mod display;
 pub mod method_resolution;
 pub mod primitive;
 pub mod traits;
+pub mod layout;
+pub mod lang_items;
 
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod test_db;
 
-use std::sync::Arc;
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use chalk_ir::{
     fold::{Shift, TypeFoldable},
     interner::HasInterner,
-    NoSolution,
+    visit::{TypeSuperVisitable, TypeVisitable, TypeVisitor},
+    NoSolution, TyData,
 };
+use either::Either;
 use hir_def::{expr::ExprId, type_ref::Rawness, TypeOrConstParamId};
-use itertools::Either;
+use hir_expand::name;
+use la_arena::{Arena, Idx};
+use mir::MirEvalError;
+use rustc_hash::FxHashSet;
+use traits::FnTrait;
 use utils::Generics;
 
-use crate::{consteval::unknown_const, db::HirDatabase, utils::generics};
+use crate::{
+    consteval::unknown_const, db::HirDatabase, infer::unify::InferenceTable, utils::generics,
+};
 
 pub use autoderef::autoderef;
 pub use builder::{ParamKind, TyBuilder};
 pub use chalk_ext::*;
 pub use infer::{
     could_coerce, could_unify, Adjust, Adjustment, AutoBorrow, BindingMode, InferenceDiagnostic,
-    InferenceResult,
+    InferenceResult, OverloadedDeref, PointerCast,
 };
 pub use interner::Interner;
 pub use lower::{
@@ -65,7 +75,6 @@ pub use mapping::{
 };
 pub use traits::TraitEnvironment;
 pub use utils::{all_super_traits, is_fn_unsafe_to_call};
-pub use walk::TypeWalk;
 
 pub use chalk_ir::{
     cast::Cast, AdtId, BoundVar, DebruijnIndex, Mutability, Safety, Scalar, TyVariableKind,
@@ -81,13 +90,27 @@ pub type PlaceholderIndex = chalk_ir::PlaceholderIndex;
 pub type VariableKind = chalk_ir::VariableKind<Interner>;
 pub type VariableKinds = chalk_ir::VariableKinds<Interner>;
 pub type CanonicalVarKinds = chalk_ir::CanonicalVarKinds<Interner>;
+/// Represents generic parameters and an item bound by them. When the item has parent, the binders
+/// also contain the generic parameters for its parent. See chalk's documentation for details.
+///
+/// One thing to keep in mind when working with `Binders` (and `Substitution`s, which represent
+/// generic arguments) in rust-analyzer is that the ordering within *is* significant - the generic
+/// parameters/arguments for an item MUST come before those for its parent. This is to facilitate
+/// the integration with chalk-solve, which mildly puts constraints as such. See #13335 for its
+/// motivation in detail.
 pub type Binders<T> = chalk_ir::Binders<T>;
+/// Interned list of generic arguments for an item. When an item has parent, the `Substitution` for
+/// it contains generic arguments for both its parent and itself. See chalk's documentation for
+/// details.
+///
+/// See `Binders` for the constraint on the ordering.
 pub type Substitution = chalk_ir::Substitution<Interner>;
 pub type GenericArg = chalk_ir::GenericArg<Interner>;
 pub type GenericArgData = chalk_ir::GenericArgData<Interner>;
 
 pub type Ty = chalk_ir::Ty<Interner>;
 pub type TyKind = chalk_ir::TyKind<Interner>;
+pub type TypeFlags = chalk_ir::TypeFlags;
 pub type DynTy = chalk_ir::DynTy<Interner>;
 pub type FnPointer = chalk_ir::FnPointer<Interner>;
 // pub type FnSubst = chalk_ir::FnSubst<Interner>;
@@ -124,12 +147,47 @@ pub type ConstrainedSubst = chalk_ir::ConstrainedSubst<Interner>;
 pub type Guidance = chalk_solve::Guidance<Interner>;
 pub type WhereClause = chalk_ir::WhereClause<Interner>;
 
-// FIXME: get rid of this
-pub fn subst_prefix(s: &Substitution, n: usize) -> Substitution {
-    Substitution::from_iter(
-        Interner,
-        s.as_slice(Interner)[..std::cmp::min(s.len(Interner), n)].iter().cloned(),
-    )
+/// A constant can have reference to other things. Memory map job is holding
+/// the neccessary bits of memory of the const eval session to keep the constant
+/// meaningful.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct MemoryMap(pub HashMap<usize, Vec<u8>>);
+
+impl MemoryMap {
+    fn insert(&mut self, addr: usize, x: Vec<u8>) {
+        self.0.insert(addr, x);
+    }
+
+    /// This functions convert each address by a function `f` which gets the byte intervals and assign an address
+    /// to them. It is useful when you want to load a constant with a memory map in a new memory. You can pass an
+    /// allocator function as `f` and it will return a mapping of old addresses to new addresses.
+    fn transform_addresses(
+        &self,
+        mut f: impl FnMut(&[u8]) -> Result<usize, MirEvalError>,
+    ) -> Result<HashMap<usize, usize>, MirEvalError> {
+        self.0.iter().map(|x| Ok((*x.0, f(x.1)?))).collect()
+    }
+}
+
+/// A concrete constant value
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ConstScalar {
+    Bytes(Vec<u8>, MemoryMap),
+    /// Case of an unknown value that rustc might know but we don't
+    // FIXME: this is a hack to get around chalk not being able to represent unevaluatable
+    // constants
+    // https://github.com/rust-lang/rust-analyzer/pull/8813#issuecomment-840679177
+    // https://rust-lang.zulipchat.com/#narrow/stream/144729-wg-traits/topic/Handling.20non.20evaluatable.20constants'.20equality/near/238386348
+    Unknown,
+}
+
+impl Hash for ConstScalar {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state);
+        if let ConstScalar::Bytes(b, _) = self {
+            b.hash(state)
+        }
+    }
 }
 
 /// Return an index of a parameter in the generic type parameter list by it's id.
@@ -203,6 +261,7 @@ pub(crate) fn make_binders<T: HasInterner<Interner = Interner>>(
 pub struct CallableSig {
     params_and_return: Arc<[Ty]>,
     is_varargs: bool,
+    safety: Safety,
 }
 
 has_interner!(CallableSig);
@@ -211,9 +270,14 @@ has_interner!(CallableSig);
 pub type PolyFnSig = Binders<CallableSig>;
 
 impl CallableSig {
-    pub fn from_params_and_return(mut params: Vec<Ty>, ret: Ty, is_varargs: bool) -> CallableSig {
+    pub fn from_params_and_return(
+        mut params: Vec<Ty>,
+        ret: Ty,
+        is_varargs: bool,
+        safety: Safety,
+    ) -> CallableSig {
         params.push(ret);
-        CallableSig { params_and_return: params.into(), is_varargs }
+        CallableSig { params_and_return: params.into(), is_varargs, safety }
     }
 
     pub fn from_fn_ptr(fn_ptr: &FnPointer) -> CallableSig {
@@ -230,13 +294,14 @@ impl CallableSig {
                 .map(|arg| arg.assert_ty_ref(Interner).clone())
                 .collect(),
             is_varargs: fn_ptr.sig.variadic,
+            safety: fn_ptr.sig.safety,
         }
     }
 
     pub fn to_fn_ptr(&self) -> FnPointer {
         FnPointer {
             num_binders: 0,
-            sig: FnSig { abi: (), safety: Safety::Safe, variadic: self.is_varargs },
+            sig: FnSig { abi: (), safety: self.safety, variadic: self.is_varargs },
             substitution: FnSubst(Substitution::from_iter(
                 Interner,
                 self.params_and_return.iter().cloned(),
@@ -261,27 +326,33 @@ impl TypeFoldable<Interner> for CallableSig {
     ) -> Result<Self, E> {
         let vec = self.params_and_return.to_vec();
         let folded = vec.try_fold_with(folder, outer_binder)?;
-        Ok(CallableSig { params_and_return: folded.into(), is_varargs: self.is_varargs })
+        Ok(CallableSig {
+            params_and_return: folded.into(),
+            is_varargs: self.is_varargs,
+            safety: self.safety,
+        })
     }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum ImplTraitId {
-    ReturnTypeImplTrait(hir_def::FunctionId, u16),
+    ReturnTypeImplTrait(hir_def::FunctionId, RpitId),
     AsyncBlockTypeImplTrait(hir_def::DefWithBodyId, ExprId),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct ReturnTypeImplTraits {
-    pub(crate) impl_traits: Vec<ReturnTypeImplTrait>,
+    pub(crate) impl_traits: Arena<ReturnTypeImplTrait>,
 }
 
 has_interner!(ReturnTypeImplTraits);
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-pub(crate) struct ReturnTypeImplTrait {
+pub struct ReturnTypeImplTrait {
     pub(crate) bounds: Binders<Vec<QuantifiedWhereClause>>,
 }
+
+pub type RpitId = Idx<ReturnTypeImplTrait>;
 
 pub fn static_lifetime() -> Lifetime {
     LifetimeData::Static.intern(Interner)
@@ -382,7 +453,6 @@ pub(crate) fn fold_tys_and_consts<T: HasInterner<Interner = Interner> + TypeFold
 pub fn replace_errors_with_variables<T>(t: &T) -> Canonical<T>
 where
     T: HasInterner<Interner = Interner> + TypeFoldable<Interner> + Clone,
-    T: HasInterner<Interner = Interner>,
 {
     use chalk_ir::{
         fold::{FallibleTypeFolder, TypeSuperFoldable},
@@ -494,7 +564,7 @@ where
     let mut error_replacer = ErrorReplacer { vars: 0 };
     let value = match t.clone().try_fold_with(&mut error_replacer, DebruijnIndex::INNERMOST) {
         Ok(t) => t,
-        Err(_) => panic!("Encountered unbound or inference vars in {:?}", t),
+        Err(_) => panic!("Encountered unbound or inference vars in {t:?}"),
     };
     let kinds = (0..error_replacer.vars).map(|_| {
         chalk_ir::CanonicalVarKind::new(
@@ -503,4 +573,107 @@ where
         )
     });
     Canonical { value, binders: chalk_ir::CanonicalVarKinds::from_iter(Interner, kinds) }
+}
+
+pub fn callable_sig_from_fnonce(
+    self_ty: &Ty,
+    env: Arc<TraitEnvironment>,
+    db: &dyn HirDatabase,
+) -> Option<CallableSig> {
+    let krate = env.krate;
+    let fn_once_trait = FnTrait::FnOnce.get_id(db, krate)?;
+    let output_assoc_type = db.trait_data(fn_once_trait).associated_type_by_name(&name![Output])?;
+
+    let mut table = InferenceTable::new(db, env.clone());
+    let b = TyBuilder::trait_ref(db, fn_once_trait);
+    if b.remaining() != 2 {
+        return None;
+    }
+
+    // Register two obligations:
+    // - Self: FnOnce<?args_ty>
+    // - <Self as FnOnce<?args_ty>>::Output == ?ret_ty
+    let args_ty = table.new_type_var();
+    let trait_ref = b.push(self_ty.clone()).push(args_ty.clone()).build();
+    let projection = TyBuilder::assoc_type_projection(
+        db,
+        output_assoc_type,
+        Some(trait_ref.substitution.clone()),
+    )
+    .build();
+    table.register_obligation(trait_ref.cast(Interner));
+    let ret_ty = table.normalize_projection_ty(projection);
+
+    let ret_ty = table.resolve_completely(ret_ty);
+    let args_ty = table.resolve_completely(args_ty);
+
+    let params =
+        args_ty.as_tuple()?.iter(Interner).map(|it| it.assert_ty_ref(Interner)).cloned().collect();
+
+    Some(CallableSig::from_params_and_return(params, ret_ty, false, Safety::Safe))
+}
+
+struct PlaceholderCollector<'db> {
+    db: &'db dyn HirDatabase,
+    placeholders: FxHashSet<TypeOrConstParamId>,
+}
+
+impl PlaceholderCollector<'_> {
+    fn collect(&mut self, idx: PlaceholderIndex) {
+        let id = from_placeholder_idx(self.db, idx);
+        self.placeholders.insert(id);
+    }
+}
+
+impl TypeVisitor<Interner> for PlaceholderCollector<'_> {
+    type BreakTy = ();
+
+    fn as_dyn(&mut self) -> &mut dyn TypeVisitor<Interner, BreakTy = Self::BreakTy> {
+        self
+    }
+
+    fn interner(&self) -> Interner {
+        Interner
+    }
+
+    fn visit_ty(
+        &mut self,
+        ty: &Ty,
+        outer_binder: DebruijnIndex,
+    ) -> std::ops::ControlFlow<Self::BreakTy> {
+        let has_placeholder_bits = TypeFlags::HAS_TY_PLACEHOLDER | TypeFlags::HAS_CT_PLACEHOLDER;
+        let TyData { kind, flags } = ty.data(Interner);
+
+        if let TyKind::Placeholder(idx) = kind {
+            self.collect(*idx);
+        } else if flags.intersects(has_placeholder_bits) {
+            return ty.super_visit_with(self, outer_binder);
+        } else {
+            // Fast path: don't visit inner types (e.g. generic arguments) when `flags` indicate
+            // that there are no placeholders.
+        }
+
+        std::ops::ControlFlow::Continue(())
+    }
+
+    fn visit_const(
+        &mut self,
+        constant: &chalk_ir::Const<Interner>,
+        _outer_binder: DebruijnIndex,
+    ) -> std::ops::ControlFlow<Self::BreakTy> {
+        if let chalk_ir::ConstValue::Placeholder(idx) = constant.data(Interner).value {
+            self.collect(idx);
+        }
+        std::ops::ControlFlow::Continue(())
+    }
+}
+
+/// Returns unique placeholders for types and consts contained in `value`.
+pub fn collect_placeholders<T>(value: &T, db: &dyn HirDatabase) -> Vec<TypeOrConstParamId>
+where
+    T: ?Sized + TypeVisitable<Interner>,
+{
+    let mut collector = PlaceholderCollector { db, placeholders: FxHashSet::default() };
+    value.visit_with(&mut collector, DebruijnIndex::INNERMOST);
+    collector.placeholders.into_iter().collect()
 }

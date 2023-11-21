@@ -84,9 +84,9 @@ mod prelude {
     pub(crate) use rustc_middle::ty::layout::{self, LayoutOf, TyAndLayout};
     pub(crate) use rustc_middle::ty::{
         self, FloatTy, Instance, InstanceDef, IntTy, ParamEnv, Ty, TyCtxt, TypeAndMut,
-        TypeFoldable, TypeVisitable, UintTy,
+        TypeFoldable, TypeVisitableExt, UintTy,
     };
-    pub(crate) use rustc_target::abi::{Abi, Scalar, Size, VariantIdx};
+    pub(crate) use rustc_target::abi::{Abi, FieldIdx, Scalar, Size, VariantIdx, FIRST_VARIANT};
 
     pub(crate) use rustc_data_structures::fx::FxHashMap;
 
@@ -170,6 +170,11 @@ pub struct CraneliftCodegenBackend {
 }
 
 impl CodegenBackend for CraneliftCodegenBackend {
+    fn locale_resource(&self) -> &'static str {
+        // FIXME(rust-lang/rust#100717) - cranelift codegen backend is not yet translated
+        ""
+    }
+
     fn init(&self, sess: &Session) {
         use rustc_session::config::Lto;
         match sess.lto() {
@@ -244,7 +249,7 @@ fn target_triple(sess: &Session) -> target_lexicon::Triple {
     }
 }
 
-fn build_isa(sess: &Session, backend_config: &BackendConfig) -> Box<dyn isa::TargetIsa + 'static> {
+fn build_isa(sess: &Session, backend_config: &BackendConfig) -> Arc<dyn isa::TargetIsa + 'static> {
     use target_lexicon::BinaryFormat;
 
     let target_triple = crate::target_triple(sess);
@@ -278,12 +283,17 @@ fn build_isa(sess: &Session, backend_config: &BackendConfig) -> Box<dyn isa::Tar
         }
     }
 
-    if target_triple.architecture == target_lexicon::Architecture::X86_64 {
-        // Windows depends on stack probes to grow the committed part of the stack
+    if let target_lexicon::Architecture::Aarch64(_)
+    | target_lexicon::Architecture::Riscv64(_)
+    | target_lexicon::Architecture::X86_64 = target_triple.architecture
+    {
+        // Windows depends on stack probes to grow the committed part of the stack.
+        // On other platforms it helps prevents stack smashing.
         flags_builder.enable("enable_probestack").unwrap();
         flags_builder.set("probestack_strategy", "inline").unwrap();
     } else {
-        // __cranelift_probestack is not provided and inline stack probes are only supported on x86_64
+        // __cranelift_probestack is not provided and inline stack probes are only supported on
+        // AArch64, Riscv64 and x86_64.
         flags_builder.set("enable_probestack", "false").unwrap();
     }
 

@@ -1,12 +1,12 @@
 // run-rustfix
-// aux-build: proc_macro_with_span.rs
+// aux-build: proc_macros.rs
 #![warn(clippy::unnecessary_lazy_evaluations)]
 #![allow(clippy::redundant_closure)]
 #![allow(clippy::bind_instead_of_map)]
 #![allow(clippy::map_identity)]
 
-extern crate proc_macro_with_span;
-use proc_macro_with_span::with_span;
+extern crate proc_macros;
+use proc_macros::with_span;
 
 struct Deep(Option<usize>);
 
@@ -30,6 +30,14 @@ struct Issue9427(i32);
 impl Drop for Issue9427 {
     fn drop(&mut self) {
         println!("{}", self.0);
+    }
+}
+
+struct Issue9427FollowUp;
+
+impl Drop for Issue9427FollowUp {
+    fn drop(&mut self) {
+        panic!("side effect drop");
     }
 }
 
@@ -87,6 +95,7 @@ fn main() {
 
     // Should not lint - bool
     let _ = (0 == 1).then(|| Issue9427(0)); // Issue9427 has a significant drop
+    let _ = false.then(|| Issue9427FollowUp); // Issue9427FollowUp has a significant drop
 
     // should not lint, bind_instead_of_map takes priority
     let _ = Some(10).and_then(|idx| Some(ext_arr[idx]));
@@ -133,13 +142,13 @@ fn main() {
     let _: Result<usize, usize> = res.or_else(|_| Ok(astronomers_pi));
     let _: Result<usize, usize> = res.or_else(|_| Ok(ext_str.some_field));
     let _: Result<usize, usize> = res.
-        // some lines
-        // some lines
-        // some lines
-        // some lines
-        // some lines
-        // some lines
-        or_else(|_| Ok(ext_str.some_field));
+    // some lines
+    // some lines
+    // some lines
+    // some lines
+    // some lines
+    // some lines
+    or_else(|_| Ok(ext_str.some_field));
 
     // neither bind_instead_of_map nor unnecessary_lazy_eval applies here
     let _: Result<usize, usize> = res.and_then(|x| Err(x));

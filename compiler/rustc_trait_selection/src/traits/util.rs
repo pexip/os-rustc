@@ -1,14 +1,14 @@
+use super::NormalizeExt;
+use super::{ObligationCause, PredicateObligation, SelectionContext};
+use rustc_data_structures::fx::FxHashSet;
 use rustc_errors::Diagnostic;
+use rustc_hir::def_id::DefId;
+use rustc_infer::infer::InferOk;
+use rustc_middle::ty::SubstsRef;
+use rustc_middle::ty::{self, ImplSubject, ToPredicate, Ty, TyCtxt, TypeVisitableExt};
 use rustc_span::Span;
-use smallvec::smallvec;
 use smallvec::SmallVec;
 
-use rustc_data_structures::fx::FxHashSet;
-use rustc_hir::def_id::DefId;
-use rustc_middle::ty::{self, ImplSubject, ToPredicate, Ty, TyCtxt, TypeVisitable};
-use rustc_middle::ty::{GenericArg, SubstsRef};
-
-use super::{Normalized, Obligation, ObligationCause, PredicateObligation, SelectionContext};
 pub use rustc_infer::traits::{self, util::*};
 
 ///////////////////////////////////////////////////////////////////////////
@@ -115,7 +115,7 @@ impl<'tcx> TraitAliasExpander<'tcx> {
         }
 
         // Get components of trait alias.
-        let predicates = tcx.super_predicates_of(trait_ref.def_id());
+        let predicates = tcx.implied_predicates_of(trait_ref.def_id());
         debug!(?predicates);
 
         let items = predicates.predicates.iter().rev().filter_map(|(pred, span)| {
@@ -198,15 +198,16 @@ pub fn impl_subject_and_oblig<'a, 'tcx>(
     impl_def_id: DefId,
     impl_substs: SubstsRef<'tcx>,
 ) -> (ImplSubject<'tcx>, impl Iterator<Item = PredicateObligation<'tcx>>) {
-    let subject = selcx.tcx().bound_impl_subject(impl_def_id);
+    let subject = selcx.tcx().impl_subject(impl_def_id);
     let subject = subject.subst(selcx.tcx(), impl_substs);
-    let Normalized { value: subject, obligations: normalization_obligations1 } =
-        super::normalize(selcx, param_env, ObligationCause::dummy(), subject);
+
+    let InferOk { value: subject, obligations: normalization_obligations1 } =
+        selcx.infcx.at(&ObligationCause::dummy(), param_env).normalize(subject);
 
     let predicates = selcx.tcx().predicates_of(impl_def_id);
     let predicates = predicates.instantiate(selcx.tcx(), impl_substs);
-    let Normalized { value: predicates, obligations: normalization_obligations2 } =
-        super::normalize(selcx, param_env, ObligationCause::dummy(), predicates);
+    let InferOk { value: predicates, obligations: normalization_obligations2 } =
+        selcx.infcx.at(&ObligationCause::dummy(), param_env).normalize(predicates);
     let impl_obligations =
         super::predicates_for_generics(|_, _| ObligationCause::dummy(), param_env, predicates);
 
@@ -215,35 +216,6 @@ pub fn impl_subject_and_oblig<'a, 'tcx>(
         .chain(normalization_obligations2.into_iter());
 
     (subject, impl_obligations)
-}
-
-pub fn predicate_for_trait_ref<'tcx>(
-    tcx: TyCtxt<'tcx>,
-    cause: ObligationCause<'tcx>,
-    param_env: ty::ParamEnv<'tcx>,
-    trait_ref: ty::TraitRef<'tcx>,
-    recursion_depth: usize,
-) -> PredicateObligation<'tcx> {
-    Obligation {
-        cause,
-        param_env,
-        recursion_depth,
-        predicate: ty::Binder::dummy(trait_ref).without_const().to_predicate(tcx),
-    }
-}
-
-pub fn predicate_for_trait_def<'tcx>(
-    tcx: TyCtxt<'tcx>,
-    param_env: ty::ParamEnv<'tcx>,
-    cause: ObligationCause<'tcx>,
-    trait_def_id: DefId,
-    recursion_depth: usize,
-    self_ty: Ty<'tcx>,
-    params: &[GenericArg<'tcx>],
-) -> PredicateObligation<'tcx> {
-    let trait_ref =
-        ty::TraitRef { def_id: trait_def_id, substs: tcx.mk_substs_trait(self_ty, params) };
-    predicate_for_trait_ref(tcx, cause, param_env, trait_ref, recursion_depth)
 }
 
 /// Casts a trait reference into a reference to one of its super
@@ -259,16 +231,6 @@ pub fn upcast_choices<'tcx>(
     }
 
     supertraits(tcx, source_trait_ref).filter(|r| r.def_id() == target_trait_def_id).collect()
-}
-
-/// Given a trait `trait_ref`, returns the number of vtable entries
-/// that come from `trait_ref`, excluding its supertraits. Used in
-/// computing the vtable base for an upcast trait of a trait object.
-pub fn count_own_vtable_entries<'tcx>(
-    tcx: TyCtxt<'tcx>,
-    trait_ref: ty::PolyTraitRef<'tcx>,
-) -> usize {
-    tcx.own_existential_vtable_entries(trait_ref.def_id()).len()
 }
 
 /// Given an upcast trait object described by `object`, returns the
@@ -300,15 +262,12 @@ pub fn closure_trait_ref_and_return_type<'tcx>(
     sig: ty::PolyFnSig<'tcx>,
     tuple_arguments: TupleArgumentsFlag,
 ) -> ty::Binder<'tcx, (ty::TraitRef<'tcx>, Ty<'tcx>)> {
+    assert!(!self_ty.has_escaping_bound_vars());
     let arguments_tuple = match tuple_arguments {
         TupleArgumentsFlag::No => sig.skip_binder().inputs()[0],
-        TupleArgumentsFlag::Yes => tcx.intern_tup(sig.skip_binder().inputs()),
+        TupleArgumentsFlag::Yes => tcx.mk_tup(sig.skip_binder().inputs()),
     };
-    debug_assert!(!self_ty.has_escaping_bound_vars());
-    let trait_ref = ty::TraitRef {
-        def_id: fn_trait_def_id,
-        substs: tcx.mk_substs_trait(self_ty, &[arguments_tuple.into()]),
-    };
+    let trait_ref = tcx.mk_trait_ref(fn_trait_def_id, [self_ty, arguments_tuple]);
     sig.map_bound(|sig| (trait_ref, sig.output()))
 }
 
@@ -318,12 +277,20 @@ pub fn generator_trait_ref_and_outputs<'tcx>(
     self_ty: Ty<'tcx>,
     sig: ty::PolyGenSig<'tcx>,
 ) -> ty::Binder<'tcx, (ty::TraitRef<'tcx>, Ty<'tcx>, Ty<'tcx>)> {
-    debug_assert!(!self_ty.has_escaping_bound_vars());
-    let trait_ref = ty::TraitRef {
-        def_id: fn_trait_def_id,
-        substs: tcx.mk_substs_trait(self_ty, &[sig.skip_binder().resume_ty.into()]),
-    };
+    assert!(!self_ty.has_escaping_bound_vars());
+    let trait_ref = tcx.mk_trait_ref(fn_trait_def_id, [self_ty, sig.skip_binder().resume_ty]);
     sig.map_bound(|sig| (trait_ref, sig.yield_ty, sig.return_ty))
+}
+
+pub fn future_trait_ref_and_outputs<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    fn_trait_def_id: DefId,
+    self_ty: Ty<'tcx>,
+    sig: ty::PolyGenSig<'tcx>,
+) -> ty::Binder<'tcx, (ty::TraitRef<'tcx>, Ty<'tcx>)> {
+    assert!(!self_ty.has_escaping_bound_vars());
+    let trait_ref = tcx.mk_trait_ref(fn_trait_def_id, [self_ty]);
+    sig.map_bound(|sig| (trait_ref, sig.return_ty))
 }
 
 pub fn impl_item_is_final(tcx: TyCtxt<'_>, assoc_item: &ty::AssocItem) -> bool {

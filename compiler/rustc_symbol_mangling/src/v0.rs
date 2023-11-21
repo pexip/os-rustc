@@ -1,5 +1,5 @@
 use rustc_data_structures::base_n;
-use rustc_data_structures::fx::{FxHashMap, FxHashSet};
+use rustc_data_structures::fx::FxHashMap;
 use rustc_data_structures::intern::Interned;
 use rustc_hir as hir;
 use rustc_hir::def::CtorKind;
@@ -8,7 +8,8 @@ use rustc_hir::definitions::{DefPathData, DisambiguatedDefPathData};
 use rustc_middle::ty::layout::IntegerExt;
 use rustc_middle::ty::print::{Print, Printer};
 use rustc_middle::ty::{
-    self, EarlyBinder, FloatTy, Instance, IntTy, Ty, TyCtxt, TypeVisitable, UintTy,
+    self, EarlyBinder, FloatTy, Instance, IntTy, Ty, TyCtxt, TypeVisitable, TypeVisitableExt,
+    UintTy,
 };
 use rustc_middle::ty::{GenericArg, GenericArgKind};
 use rustc_span::symbol::kw;
@@ -41,6 +42,7 @@ pub(super) fn mangle<'tcx>(
 
     // Append `::{shim:...#0}` to shims that can coexist with a non-shim instance.
     let shim_kind = match instance.def {
+        ty::InstanceDef::ThreadLocalShim(_) => Some("tls"),
         ty::InstanceDef::VTableShim(_) => Some("vtable"),
         ty::InstanceDef::ReifyShim(_) => Some("reify"),
 
@@ -79,9 +81,9 @@ pub(super) fn mangle_typeid_for_trait_ref<'tcx>(
 struct BinderLevel {
     /// The range of distances from the root of what's
     /// being printed, to the lifetimes in a binder.
-    /// Specifically, a `BrAnon(i)` lifetime has depth
-    /// `lifetime_depths.start + i`, going away from the
-    /// the root and towards its use site, as `i` increases.
+    /// Specifically, a `BrAnon` lifetime has depth
+    /// `lifetime_depths.start + index`, going away from the
+    /// the root and towards its use site, as the var index increases.
     /// This is used to flatten rustc's pairing of `BrAnon`
     /// (intra-binder disambiguation) with a `DebruijnIndex`
     /// (binder addressing), to "true" de Bruijn indices,
@@ -204,25 +206,17 @@ impl<'tcx> SymbolMangler<'tcx> {
         print_value: impl FnOnce(&'a mut Self, &T) -> Result<&'a mut Self, !>,
     ) -> Result<&'a mut Self, !>
     where
-        T: TypeVisitable<'tcx>,
+        T: TypeVisitable<TyCtxt<'tcx>>,
     {
-        let regions = if value.has_late_bound_regions() {
-            self.tcx.collect_referenced_late_bound_regions(value)
-        } else {
-            FxHashSet::default()
-        };
-
         let mut lifetime_depths =
             self.binders.last().map(|b| b.lifetime_depths.end).map_or(0..0, |i| i..i);
 
-        let lifetimes = regions
-            .into_iter()
-            .map(|br| match br {
-                ty::BrAnon(i) => i,
-                _ => bug!("symbol_names: non-anonymized region `{:?}` in `{:?}`", br, value),
-            })
-            .max()
-            .map_or(0, |max| max + 1);
+        // FIXME(non-lifetime-binders): What to do here?
+        let lifetimes = value
+            .bound_vars()
+            .iter()
+            .filter(|var| matches!(var, ty::BoundVariableKind::Region(..)))
+            .count() as u32;
 
         self.push_opt_integer_62("G", lifetimes as u64);
         lifetime_depths.end += lifetimes;
@@ -335,9 +329,9 @@ impl<'tcx> Printer<'tcx> for &mut SymbolMangler<'tcx> {
 
             // Late-bound lifetimes use indices starting at 1,
             // see `BinderLevel` for more details.
-            ty::ReLateBound(debruijn, ty::BoundRegion { kind: ty::BrAnon(i), .. }) => {
+            ty::ReLateBound(debruijn, ty::BoundRegion { var, kind: ty::BrAnon(_) }) => {
                 let binder = &self.binders[self.binders.len() - 1 - debruijn.index()];
-                let depth = binder.lifetime_depths.start + i;
+                let depth = binder.lifetime_depths.start + var.as_u32();
 
                 1 + (self.binders.last().unwrap().lifetime_depths.end - 1 - depth)
             }
@@ -439,8 +433,7 @@ impl<'tcx> Printer<'tcx> for &mut SymbolMangler<'tcx> {
             // Mangle all nominal types as paths.
             ty::Adt(ty::AdtDef(Interned(&ty::AdtDefData { did: def_id, .. }, _)), substs)
             | ty::FnDef(def_id, substs)
-            | ty::Opaque(def_id, substs)
-            | ty::Projection(ty::ProjectionTy { item_def_id: def_id, substs })
+            | ty::Alias(_, ty::AliasTy { def_id, substs, .. })
             | ty::Closure(def_id, substs)
             | ty::Generator(def_id, substs, _) => {
                 self = self.print_def_path(def_id, substs)?;
@@ -490,6 +483,7 @@ impl<'tcx> Printer<'tcx> for &mut SymbolMangler<'tcx> {
             }
 
             ty::GeneratorWitness(_) => bug!("symbol_names: unexpected `GeneratorWitness`"),
+            ty::GeneratorWitnessMIR(..) => bug!("symbol_names: unexpected `GeneratorWitnessMIR`"),
         }
 
         // Only cache types that do not refer to an enclosing
@@ -502,7 +496,7 @@ impl<'tcx> Printer<'tcx> for &mut SymbolMangler<'tcx> {
 
     fn print_dyn_existential(
         mut self,
-        predicates: &'tcx ty::List<ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>>,
+        predicates: &'tcx ty::List<ty::PolyExistentialPredicate<'tcx>>,
     ) -> Result<Self::DynExistential, Self::Error> {
         // Okay, so this is a bit tricky. Imagine we have a trait object like
         // `dyn for<'a> Foo<'a, Bar = &'a ()>`. When we mangle this, the
@@ -539,12 +533,12 @@ impl<'tcx> Printer<'tcx> for &mut SymbolMangler<'tcx> {
                 match predicate.as_ref().skip_binder() {
                     ty::ExistentialPredicate::Trait(trait_ref) => {
                         // Use a type that can't appear in defaults of type parameters.
-                        let dummy_self = cx.tcx.mk_ty_infer(ty::FreshTy(0));
+                        let dummy_self = cx.tcx.mk_fresh_ty(0);
                         let trait_ref = trait_ref.with_self_ty(cx.tcx, dummy_self);
                         cx = cx.print_def_path(trait_ref.def_id, trait_ref.substs)?;
                     }
                     ty::ExistentialPredicate::Projection(projection) => {
-                        let name = cx.tcx.associated_item(projection.item_def_id).name;
+                        let name = cx.tcx.associated_item(projection.def_id).name;
                         cx.push("p");
                         cx.push_ident(name.as_str());
                         cx = match projection.term.unpack() {
@@ -575,6 +569,7 @@ impl<'tcx> Printer<'tcx> for &mut SymbolMangler<'tcx> {
             // a path), even for it we still need to encode a placeholder, as
             // the path could refer back to e.g. an `impl` using the constant.
             ty::ConstKind::Unevaluated(_)
+            | ty::ConstKind::Expr(_)
             | ty::ConstKind::Param(_)
             | ty::ConstKind::Infer(_)
             | ty::ConstKind::Bound(..)
@@ -609,7 +604,7 @@ impl<'tcx> Printer<'tcx> for &mut SymbolMangler<'tcx> {
                     bits = val.unsigned_abs();
                 }
 
-                let _ = write!(self.out, "{:x}_", bits);
+                let _ = write!(self.out, "{bits:x}_");
             }
 
             // FIXME(valtrees): Remove the special case for `str`
@@ -621,7 +616,7 @@ impl<'tcx> Printer<'tcx> for &mut SymbolMangler<'tcx> {
                 });
 
                 match inner_ty.kind() {
-                    ty::Str if *mutbl == hir::Mutability::Not => {
+                    ty::Str if mutbl.is_not() => {
                         match ct.kind() {
                             ty::ConstKind::Value(valtree) => {
                                 let slice =
@@ -637,7 +632,7 @@ impl<'tcx> Printer<'tcx> for &mut SymbolMangler<'tcx> {
 
                                 // FIXME(eddyb) use a specialized hex-encoding loop.
                                 for byte in s.bytes() {
-                                    let _ = write!(self.out, "{:02x}", byte);
+                                    let _ = write!(self.out, "{byte:02x}");
                                 }
 
                                 self.push("_");
@@ -654,8 +649,7 @@ impl<'tcx> Printer<'tcx> for &mut SymbolMangler<'tcx> {
                             .builtin_deref(true)
                             .expect("tried to dereference on non-ptr type")
                             .ty;
-                        let dereferenced_const =
-                            self.tcx.mk_const(ty::ConstS { kind: ct.kind(), ty: pointee_ty });
+                        let dereferenced_const = self.tcx.mk_const(ct.kind(), pointee_ty);
                         self = dereferenced_const.print(self)?;
                     }
                 }
@@ -690,15 +684,15 @@ impl<'tcx> Printer<'tcx> for &mut SymbolMangler<'tcx> {
                         self.push("V");
                         self = self.print_def_path(variant_def.def_id, substs)?;
 
-                        match variant_def.ctor_kind {
-                            CtorKind::Const => {
+                        match variant_def.ctor_kind() {
+                            Some(CtorKind::Const) => {
                                 self.push("U");
                             }
-                            CtorKind::Fn => {
+                            Some(CtorKind::Fn) => {
                                 self.push("T");
                                 self = print_field_list(self)?;
                             }
-                            CtorKind::Fictive => {
+                            None => {
                                 self.push("S");
                                 for (field_def, field) in iter::zip(&variant_def.fields, fields) {
                                     // HACK(eddyb) this mimics `path_append`,
@@ -790,6 +784,7 @@ impl<'tcx> Printer<'tcx> for &mut SymbolMangler<'tcx> {
             | DefPathData::Use
             | DefPathData::GlobalAsm
             | DefPathData::Impl
+            | DefPathData::ImplTraitAssocTy
             | DefPathData::MacroNs(_)
             | DefPathData::LifetimeNs(_) => {
                 bug!("symbol_names: unexpected DefPathData: {:?}", disambiguated_data.data)

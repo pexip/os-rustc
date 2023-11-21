@@ -51,6 +51,7 @@ impl TestOpts {
             skip: vec![],
             time_options: None,
             options: Options::new(),
+            fail_fast: false,
         }
     }
 }
@@ -62,6 +63,16 @@ fn one_ignored_one_unignored_test() -> Vec<TestDescAndFn> {
                 name: StaticTestName("1"),
                 ignore: true,
                 ignore_message: None,
+                #[cfg(not(bootstrap))]
+                source_file: "",
+                #[cfg(not(bootstrap))]
+                start_line: 0,
+                #[cfg(not(bootstrap))]
+                start_col: 0,
+                #[cfg(not(bootstrap))]
+                end_line: 0,
+                #[cfg(not(bootstrap))]
+                end_col: 0,
                 should_panic: ShouldPanic::No,
                 compile_fail: false,
                 no_run: false,
@@ -74,6 +85,16 @@ fn one_ignored_one_unignored_test() -> Vec<TestDescAndFn> {
                 name: StaticTestName("2"),
                 ignore: false,
                 ignore_message: None,
+                #[cfg(not(bootstrap))]
+                source_file: "",
+                #[cfg(not(bootstrap))]
+                start_line: 0,
+                #[cfg(not(bootstrap))]
+                start_col: 0,
+                #[cfg(not(bootstrap))]
+                end_line: 0,
+                #[cfg(not(bootstrap))]
+                end_col: 0,
                 should_panic: ShouldPanic::No,
                 compile_fail: false,
                 no_run: false,
@@ -94,6 +115,16 @@ pub fn do_not_run_ignored_tests() {
             name: StaticTestName("whatever"),
             ignore: true,
             ignore_message: None,
+            #[cfg(not(bootstrap))]
+            source_file: "",
+            #[cfg(not(bootstrap))]
+            start_line: 0,
+            #[cfg(not(bootstrap))]
+            start_col: 0,
+            #[cfg(not(bootstrap))]
+            end_line: 0,
+            #[cfg(not(bootstrap))]
+            end_col: 0,
             should_panic: ShouldPanic::No,
             compile_fail: false,
             no_run: false,
@@ -102,7 +133,7 @@ pub fn do_not_run_ignored_tests() {
         testfn: DynTestFn(Box::new(f)),
     };
     let (tx, rx) = channel();
-    run_test(&TestOpts::new(), false, TestId(0), desc, RunStrategy::InProcess, tx, Concurrent::No);
+    run_test(&TestOpts::new(), false, TestId(0), desc, RunStrategy::InProcess, tx);
     let result = rx.recv().unwrap().result;
     assert_ne!(result, TrOk);
 }
@@ -117,6 +148,16 @@ pub fn ignored_tests_result_in_ignored() {
             name: StaticTestName("whatever"),
             ignore: true,
             ignore_message: None,
+            #[cfg(not(bootstrap))]
+            source_file: "",
+            #[cfg(not(bootstrap))]
+            start_line: 0,
+            #[cfg(not(bootstrap))]
+            start_col: 0,
+            #[cfg(not(bootstrap))]
+            end_line: 0,
+            #[cfg(not(bootstrap))]
+            end_col: 0,
             should_panic: ShouldPanic::No,
             compile_fail: false,
             no_run: false,
@@ -125,7 +166,7 @@ pub fn ignored_tests_result_in_ignored() {
         testfn: DynTestFn(Box::new(f)),
     };
     let (tx, rx) = channel();
-    run_test(&TestOpts::new(), false, TestId(0), desc, RunStrategy::InProcess, tx, Concurrent::No);
+    run_test(&TestOpts::new(), false, TestId(0), desc, RunStrategy::InProcess, tx);
     let result = rx.recv().unwrap().result;
     assert_eq!(result, TrIgnored);
 }
@@ -142,6 +183,16 @@ fn test_should_panic() {
             name: StaticTestName("whatever"),
             ignore: false,
             ignore_message: None,
+            #[cfg(not(bootstrap))]
+            source_file: "",
+            #[cfg(not(bootstrap))]
+            start_line: 0,
+            #[cfg(not(bootstrap))]
+            start_col: 0,
+            #[cfg(not(bootstrap))]
+            end_line: 0,
+            #[cfg(not(bootstrap))]
+            end_col: 0,
             should_panic: ShouldPanic::Yes,
             compile_fail: false,
             no_run: false,
@@ -150,7 +201,7 @@ fn test_should_panic() {
         testfn: DynTestFn(Box::new(f)),
     };
     let (tx, rx) = channel();
-    run_test(&TestOpts::new(), false, TestId(0), desc, RunStrategy::InProcess, tx, Concurrent::No);
+    run_test(&TestOpts::new(), false, TestId(0), desc, RunStrategy::InProcess, tx);
     let result = rx.recv().unwrap().result;
     assert_eq!(result, TrOk);
 }
@@ -167,6 +218,16 @@ fn test_should_panic_good_message() {
             name: StaticTestName("whatever"),
             ignore: false,
             ignore_message: None,
+            #[cfg(not(bootstrap))]
+            source_file: "",
+            #[cfg(not(bootstrap))]
+            start_line: 0,
+            #[cfg(not(bootstrap))]
+            start_col: 0,
+            #[cfg(not(bootstrap))]
+            end_line: 0,
+            #[cfg(not(bootstrap))]
+            end_col: 0,
             should_panic: ShouldPanic::YesWithMessage("error message"),
             compile_fail: false,
             no_run: false,
@@ -175,7 +236,7 @@ fn test_should_panic_good_message() {
         testfn: DynTestFn(Box::new(f)),
     };
     let (tx, rx) = channel();
-    run_test(&TestOpts::new(), false, TestId(0), desc, RunStrategy::InProcess, tx, Concurrent::No);
+    run_test(&TestOpts::new(), false, TestId(0), desc, RunStrategy::InProcess, tx);
     let result = rx.recv().unwrap().result;
     assert_eq!(result, TrOk);
 }
@@ -197,6 +258,16 @@ fn test_should_panic_bad_message() {
             name: StaticTestName("whatever"),
             ignore: false,
             ignore_message: None,
+            #[cfg(not(bootstrap))]
+            source_file: "",
+            #[cfg(not(bootstrap))]
+            start_line: 0,
+            #[cfg(not(bootstrap))]
+            start_col: 0,
+            #[cfg(not(bootstrap))]
+            end_line: 0,
+            #[cfg(not(bootstrap))]
+            end_col: 0,
             should_panic: ShouldPanic::YesWithMessage(expected),
             compile_fail: false,
             no_run: false,
@@ -205,7 +276,7 @@ fn test_should_panic_bad_message() {
         testfn: DynTestFn(Box::new(f)),
     };
     let (tx, rx) = channel();
-    run_test(&TestOpts::new(), false, TestId(0), desc, RunStrategy::InProcess, tx, Concurrent::No);
+    run_test(&TestOpts::new(), false, TestId(0), desc, RunStrategy::InProcess, tx);
     let result = rx.recv().unwrap().result;
     assert_eq!(result, TrFailedMsg(failed_msg.to_string()));
 }
@@ -231,6 +302,16 @@ fn test_should_panic_non_string_message_type() {
             name: StaticTestName("whatever"),
             ignore: false,
             ignore_message: None,
+            #[cfg(not(bootstrap))]
+            source_file: "",
+            #[cfg(not(bootstrap))]
+            start_line: 0,
+            #[cfg(not(bootstrap))]
+            start_col: 0,
+            #[cfg(not(bootstrap))]
+            end_line: 0,
+            #[cfg(not(bootstrap))]
+            end_col: 0,
             should_panic: ShouldPanic::YesWithMessage(expected),
             compile_fail: false,
             no_run: false,
@@ -239,7 +320,7 @@ fn test_should_panic_non_string_message_type() {
         testfn: DynTestFn(Box::new(f)),
     };
     let (tx, rx) = channel();
-    run_test(&TestOpts::new(), false, TestId(0), desc, RunStrategy::InProcess, tx, Concurrent::No);
+    run_test(&TestOpts::new(), false, TestId(0), desc, RunStrategy::InProcess, tx);
     let result = rx.recv().unwrap().result;
     assert_eq!(result, TrFailedMsg(failed_msg));
 }
@@ -259,6 +340,16 @@ fn test_should_panic_but_succeeds() {
                 name: StaticTestName("whatever"),
                 ignore: false,
                 ignore_message: None,
+                #[cfg(not(bootstrap))]
+                source_file: "",
+                #[cfg(not(bootstrap))]
+                start_line: 0,
+                #[cfg(not(bootstrap))]
+                start_col: 0,
+                #[cfg(not(bootstrap))]
+                end_line: 0,
+                #[cfg(not(bootstrap))]
+                end_col: 0,
                 should_panic,
                 compile_fail: false,
                 no_run: false,
@@ -267,15 +358,7 @@ fn test_should_panic_but_succeeds() {
             testfn: DynTestFn(Box::new(f)),
         };
         let (tx, rx) = channel();
-        run_test(
-            &TestOpts::new(),
-            false,
-            TestId(0),
-            desc,
-            RunStrategy::InProcess,
-            tx,
-            Concurrent::No,
-        );
+        run_test(&TestOpts::new(), false, TestId(0), desc, RunStrategy::InProcess, tx);
         let result = rx.recv().unwrap().result;
         assert_eq!(
             result,
@@ -295,6 +378,16 @@ fn report_time_test_template(report_time: bool) -> Option<TestExecTime> {
             name: StaticTestName("whatever"),
             ignore: false,
             ignore_message: None,
+            #[cfg(not(bootstrap))]
+            source_file: "",
+            #[cfg(not(bootstrap))]
+            start_line: 0,
+            #[cfg(not(bootstrap))]
+            start_col: 0,
+            #[cfg(not(bootstrap))]
+            end_line: 0,
+            #[cfg(not(bootstrap))]
+            end_col: 0,
             should_panic: ShouldPanic::No,
             compile_fail: false,
             no_run: false,
@@ -306,7 +399,7 @@ fn report_time_test_template(report_time: bool) -> Option<TestExecTime> {
 
     let test_opts = TestOpts { time_options, ..TestOpts::new() };
     let (tx, rx) = channel();
-    run_test(&test_opts, false, TestId(0), desc, RunStrategy::InProcess, tx, Concurrent::No);
+    run_test(&test_opts, false, TestId(0), desc, RunStrategy::InProcess, tx);
     let exec_time = rx.recv().unwrap().exec_time;
     exec_time
 }
@@ -332,6 +425,16 @@ fn time_test_failure_template(test_type: TestType) -> TestResult {
             name: StaticTestName("whatever"),
             ignore: false,
             ignore_message: None,
+            #[cfg(not(bootstrap))]
+            source_file: "",
+            #[cfg(not(bootstrap))]
+            start_line: 0,
+            #[cfg(not(bootstrap))]
+            start_col: 0,
+            #[cfg(not(bootstrap))]
+            end_line: 0,
+            #[cfg(not(bootstrap))]
+            end_col: 0,
             should_panic: ShouldPanic::No,
             compile_fail: false,
             no_run: false,
@@ -345,7 +448,7 @@ fn time_test_failure_template(test_type: TestType) -> TestResult {
 
     let test_opts = TestOpts { time_options: Some(time_options), ..TestOpts::new() };
     let (tx, rx) = channel();
-    run_test(&test_opts, false, TestId(0), desc, RunStrategy::InProcess, tx, Concurrent::No);
+    run_test(&test_opts, false, TestId(0), desc, RunStrategy::InProcess, tx);
     let result = rx.recv().unwrap().result;
 
     result
@@ -371,6 +474,16 @@ fn typed_test_desc(test_type: TestType) -> TestDesc {
         name: StaticTestName("whatever"),
         ignore: false,
         ignore_message: None,
+        #[cfg(not(bootstrap))]
+        source_file: "",
+        #[cfg(not(bootstrap))]
+        start_line: 0,
+        #[cfg(not(bootstrap))]
+        start_col: 0,
+        #[cfg(not(bootstrap))]
+        end_line: 0,
+        #[cfg(not(bootstrap))]
+        end_col: 0,
         should_panic: ShouldPanic::No,
         compile_fail: false,
         no_run: false,
@@ -483,6 +596,16 @@ pub fn exclude_should_panic_option() {
             name: StaticTestName("3"),
             ignore: false,
             ignore_message: None,
+            #[cfg(not(bootstrap))]
+            source_file: "",
+            #[cfg(not(bootstrap))]
+            start_line: 0,
+            #[cfg(not(bootstrap))]
+            start_col: 0,
+            #[cfg(not(bootstrap))]
+            end_line: 0,
+            #[cfg(not(bootstrap))]
+            end_col: 0,
             should_panic: ShouldPanic::Yes,
             compile_fail: false,
             no_run: false,
@@ -507,6 +630,16 @@ pub fn exact_filter_match() {
                     name: StaticTestName(name),
                     ignore: false,
                     ignore_message: None,
+                    #[cfg(not(bootstrap))]
+                    source_file: "",
+                    #[cfg(not(bootstrap))]
+                    start_line: 0,
+                    #[cfg(not(bootstrap))]
+                    start_col: 0,
+                    #[cfg(not(bootstrap))]
+                    end_line: 0,
+                    #[cfg(not(bootstrap))]
+                    end_col: 0,
                     should_panic: ShouldPanic::No,
                     compile_fail: false,
                     no_run: false,
@@ -598,6 +731,16 @@ fn sample_tests() -> Vec<TestDescAndFn> {
                 name: DynTestName((*name).clone()),
                 ignore: false,
                 ignore_message: None,
+                #[cfg(not(bootstrap))]
+                source_file: "",
+                #[cfg(not(bootstrap))]
+                start_line: 0,
+                #[cfg(not(bootstrap))]
+                start_col: 0,
+                #[cfg(not(bootstrap))]
+                end_line: 0,
+                #[cfg(not(bootstrap))]
+                end_col: 0,
                 should_panic: ShouldPanic::No,
                 compile_fail: false,
                 no_run: false,
@@ -727,6 +870,16 @@ pub fn test_bench_no_iter() {
         name: StaticTestName("f"),
         ignore: false,
         ignore_message: None,
+        #[cfg(not(bootstrap))]
+        source_file: "",
+        #[cfg(not(bootstrap))]
+        start_line: 0,
+        #[cfg(not(bootstrap))]
+        start_col: 0,
+        #[cfg(not(bootstrap))]
+        end_line: 0,
+        #[cfg(not(bootstrap))]
+        end_col: 0,
         should_panic: ShouldPanic::No,
         compile_fail: false,
         no_run: false,
@@ -750,6 +903,16 @@ pub fn test_bench_iter() {
         name: StaticTestName("f"),
         ignore: false,
         ignore_message: None,
+        #[cfg(not(bootstrap))]
+        source_file: "",
+        #[cfg(not(bootstrap))]
+        start_line: 0,
+        #[cfg(not(bootstrap))]
+        start_col: 0,
+        #[cfg(not(bootstrap))]
+        end_line: 0,
+        #[cfg(not(bootstrap))]
+        end_col: 0,
         should_panic: ShouldPanic::No,
         compile_fail: false,
         no_run: false,
@@ -766,6 +929,16 @@ fn should_sort_failures_before_printing_them() {
         name: StaticTestName("a"),
         ignore: false,
         ignore_message: None,
+        #[cfg(not(bootstrap))]
+        source_file: "",
+        #[cfg(not(bootstrap))]
+        start_line: 0,
+        #[cfg(not(bootstrap))]
+        start_col: 0,
+        #[cfg(not(bootstrap))]
+        end_line: 0,
+        #[cfg(not(bootstrap))]
+        end_col: 0,
         should_panic: ShouldPanic::No,
         compile_fail: false,
         no_run: false,
@@ -776,6 +949,16 @@ fn should_sort_failures_before_printing_them() {
         name: StaticTestName("b"),
         ignore: false,
         ignore_message: None,
+        #[cfg(not(bootstrap))]
+        source_file: "",
+        #[cfg(not(bootstrap))]
+        start_line: 0,
+        #[cfg(not(bootstrap))]
+        start_col: 0,
+        #[cfg(not(bootstrap))]
+        end_line: 0,
+        #[cfg(not(bootstrap))]
+        end_col: 0,
         should_panic: ShouldPanic::No,
         compile_fail: false,
         no_run: false,
@@ -797,6 +980,7 @@ fn should_sort_failures_before_printing_them() {
         failures: vec![(test_b, Vec::new()), (test_a, Vec::new())],
         options: Options::new(),
         not_failures: Vec::new(),
+        ignores: Vec::new(),
         time_failures: Vec::new(),
     };
 
@@ -822,6 +1006,16 @@ fn test_dyn_bench_returning_err_fails_when_run_as_test() {
             name: StaticTestName("whatever"),
             ignore: false,
             ignore_message: None,
+            #[cfg(not(bootstrap))]
+            source_file: "",
+            #[cfg(not(bootstrap))]
+            start_line: 0,
+            #[cfg(not(bootstrap))]
+            start_col: 0,
+            #[cfg(not(bootstrap))]
+            end_line: 0,
+            #[cfg(not(bootstrap))]
+            end_col: 0,
             should_panic: ShouldPanic::No,
             compile_fail: false,
             no_run: false,

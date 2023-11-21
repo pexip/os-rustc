@@ -1,5 +1,7 @@
 mod atom;
 
+use crate::grammar::attributes::ATTRIBUTE_FIRST;
+
 use super::*;
 
 pub(crate) use self::atom::{block_expr, match_arm_list};
@@ -14,9 +16,9 @@ pub(super) enum Semicolon {
 
 const EXPR_FIRST: TokenSet = LHS_FIRST;
 
-pub(super) fn expr(p: &mut Parser<'_>) -> bool {
+pub(super) fn expr(p: &mut Parser<'_>) -> Option<CompletedMarker> {
     let r = Restrictions { forbid_structs: false, prefer_stmt: false };
-    expr_bp(p, None, r, 1).is_some()
+    expr_bp(p, None, r, 1).map(|(m, _)| m)
 }
 
 pub(super) fn expr_stmt(
@@ -68,6 +70,12 @@ pub(super) fn stmt(p: &mut Parser<'_>, semicolon: Semicolon) {
         Err(m) => m,
     };
 
+    if !p.at_ts(EXPR_FIRST) {
+        p.err_and_bump("expected expression, item or let statement");
+        m.abandon(p);
+        return;
+    }
+
     if let Some((cm, blocklike)) = expr_stmt(p, Some(m)) {
         if !(p.at(T!['}']) || (semicolon != Semicolon::Required && p.at(EOF))) {
             // test no_semi_after_block
@@ -112,16 +120,27 @@ pub(super) fn stmt(p: &mut Parser<'_>, semicolon: Semicolon) {
             // fn f() { let x: i32; }
             types::ascription(p);
         }
+
+        let mut expr_after_eq: Option<CompletedMarker> = None;
         if p.eat(T![=]) {
             // test let_stmt_init
             // fn f() { let x = 92; }
-            expressions::expr(p);
+            expr_after_eq = expressions::expr(p);
         }
 
         if p.at(T![else]) {
+            // test_err let_else_right_curly_brace
+            // fn func() { let Some(_) = {Some(1)} else { panic!("h") };}
+            if let Some(expr) = expr_after_eq {
+                if BlockLike::is_blocklike(expr.kind()) {
+                    p.error(
+                        "right curly brace `}` before `else` in a `let...else` statement not allowed",
+                    )
+                }
+            }
+
             // test let_else
             // fn f() { let Some(x) = opt else { return }; }
-
             let m = p.start();
             p.bump(T![else]);
             block_expr(p);
@@ -227,6 +246,12 @@ fn expr_bp(
         attributes::outer_attrs(p);
         m
     });
+
+    if !p.at_ts(EXPR_FIRST) {
+        p.err_recover("expected expression", atom::EXPR_RECOVERY_SET);
+        m.abandon(p);
+        return None;
+    }
     let mut lhs = match lhs(p, r) {
         Some((lhs, blocklike)) => {
             let lhs = lhs.extend_to(p, m);
@@ -288,7 +313,7 @@ fn expr_bp(
 }
 
 const LHS_FIRST: TokenSet =
-    atom::ATOM_EXPR_FIRST.union(TokenSet::new(&[T![&], T![*], T![!], T![.], T![-]]));
+    atom::ATOM_EXPR_FIRST.union(TokenSet::new(&[T![&], T![*], T![!], T![.], T![-], T![_]]));
 
 fn lhs(p: &mut Parser<'_>, r: Restrictions) -> Option<(CompletedMarker, BlockLike)> {
     let m;
@@ -379,7 +404,7 @@ fn postfix_expr(
             // }
             T!['('] if allow_calls => call_expr(p, lhs),
             T!['['] if allow_calls => index_expr(p, lhs),
-            T![.] => match postfix_dot_expr(p, lhs) {
+            T![.] => match postfix_dot_expr::<false>(p, lhs) {
                 Ok(it) => it,
                 Err(it) => {
                     lhs = it;
@@ -393,35 +418,44 @@ fn postfix_expr(
         block_like = BlockLike::NotBlock;
     }
     return (lhs, block_like);
+}
 
-    fn postfix_dot_expr(
-        p: &mut Parser<'_>,
-        lhs: CompletedMarker,
-    ) -> Result<CompletedMarker, CompletedMarker> {
+fn postfix_dot_expr<const FLOAT_RECOVERY: bool>(
+    p: &mut Parser<'_>,
+    lhs: CompletedMarker,
+) -> Result<CompletedMarker, CompletedMarker> {
+    if !FLOAT_RECOVERY {
         assert!(p.at(T![.]));
-        if p.nth(1) == IDENT && (p.nth(2) == T!['('] || p.nth_at(2, T![::])) {
-            return Ok(method_call_expr(p, lhs));
-        }
-
-        // test await_expr
-        // fn foo() {
-        //     x.await;
-        //     x.0.await;
-        //     x.0().await?.hello();
-        // }
-        if p.nth(1) == T![await] {
-            let m = lhs.precede(p);
-            p.bump(T![.]);
-            p.bump(T![await]);
-            return Ok(m.complete(p, AWAIT_EXPR));
-        }
-
-        if p.at(T![..=]) || p.at(T![..]) {
-            return Err(lhs);
-        }
-
-        Ok(field_expr(p, lhs))
     }
+    let nth1 = if FLOAT_RECOVERY { 0 } else { 1 };
+    let nth2 = if FLOAT_RECOVERY { 1 } else { 2 };
+
+    if p.nth(nth1) == IDENT && (p.nth(nth2) == T!['('] || p.nth_at(nth2, T![::])) {
+        return Ok(method_call_expr::<FLOAT_RECOVERY>(p, lhs));
+    }
+
+    // test await_expr
+    // fn foo() {
+    //     x.await;
+    //     x.0.await;
+    //     x.0().await?.hello();
+    //     x.0.0.await;
+    //     x.0. await;
+    // }
+    if p.nth(nth1) == T![await] {
+        let m = lhs.precede(p);
+        if !FLOAT_RECOVERY {
+            p.bump(T![.]);
+        }
+        p.bump(T![await]);
+        return Ok(m.complete(p, AWAIT_EXPR));
+    }
+
+    if p.at(T![..=]) || p.at(T![..]) {
+        return Err(lhs);
+    }
+
+    field_expr::<FLOAT_RECOVERY>(p, lhs)
 }
 
 // test call_expr
@@ -455,11 +489,22 @@ fn index_expr(p: &mut Parser<'_>, lhs: CompletedMarker) -> CompletedMarker {
 // fn foo() {
 //     x.foo();
 //     y.bar::<T>(1, 2,);
+//     x.0.0.call();
+//     x.0. call();
 // }
-fn method_call_expr(p: &mut Parser<'_>, lhs: CompletedMarker) -> CompletedMarker {
-    assert!(p.at(T![.]) && p.nth(1) == IDENT && (p.nth(2) == T!['('] || p.nth_at(2, T![::])));
+fn method_call_expr<const FLOAT_RECOVERY: bool>(
+    p: &mut Parser<'_>,
+    lhs: CompletedMarker,
+) -> CompletedMarker {
+    if FLOAT_RECOVERY {
+        assert!(p.nth(0) == IDENT && (p.nth(1) == T!['('] || p.nth_at(1, T![::])));
+    } else {
+        assert!(p.at(T![.]) && p.nth(1) == IDENT && (p.nth(2) == T!['('] || p.nth_at(2, T![::])));
+    }
     let m = lhs.precede(p);
-    p.bump_any();
+    if !FLOAT_RECOVERY {
+        p.bump(T![.]);
+    }
     name_ref(p);
     generic_args::opt_generic_arg_list(p, true);
     if p.at(T!['(']) {
@@ -472,21 +517,35 @@ fn method_call_expr(p: &mut Parser<'_>, lhs: CompletedMarker) -> CompletedMarker
 // fn foo() {
 //     x.foo;
 //     x.0.bar;
+//     x.0.1;
+//     x.0. bar;
 //     x.0();
 // }
-fn field_expr(p: &mut Parser<'_>, lhs: CompletedMarker) -> CompletedMarker {
-    assert!(p.at(T![.]));
+fn field_expr<const FLOAT_RECOVERY: bool>(
+    p: &mut Parser<'_>,
+    lhs: CompletedMarker,
+) -> Result<CompletedMarker, CompletedMarker> {
+    if !FLOAT_RECOVERY {
+        assert!(p.at(T![.]));
+    }
     let m = lhs.precede(p);
-    p.bump(T![.]);
+    if !FLOAT_RECOVERY {
+        p.bump(T![.]);
+    }
     if p.at(IDENT) || p.at(INT_NUMBER) {
         name_ref_or_index(p);
     } else if p.at(FLOAT_NUMBER) {
-        // FIXME: How to recover and instead parse INT + T![.]?
-        p.bump_any();
+        return match p.split_float(m) {
+            (true, m) => {
+                let lhs = m.complete(p, FIELD_EXPR);
+                postfix_dot_expr::<true>(p, lhs)
+            }
+            (false, m) => Ok(m.complete(p, FIELD_EXPR)),
+        };
     } else {
         p.error("expected field name or number");
     }
-    m.complete(p, FIELD_EXPR)
+    Ok(m.complete(p, FIELD_EXPR))
 }
 
 // test try_expr
@@ -517,23 +576,27 @@ fn cast_expr(p: &mut Parser<'_>, lhs: CompletedMarker) -> CompletedMarker {
     m.complete(p, CAST_EXPR)
 }
 
+// test_err arg_list_recovery
+// fn main() {
+//     foo(bar::);
+//     foo(bar:);
+//     foo(bar+);
+// }
 fn arg_list(p: &mut Parser<'_>) {
     assert!(p.at(T!['(']));
     let m = p.start();
-    p.bump(T!['(']);
-    while !p.at(T![')']) && !p.at(EOF) {
-        // test arg_with_attr
-        // fn main() {
-        //     foo(#[attr] 92)
-        // }
-        if !expr(p) {
-            break;
-        }
-        if !p.at(T![')']) && !p.expect(T![,]) {
-            break;
-        }
-    }
-    p.eat(T![')']);
+    // test arg_with_attr
+    // fn main() {
+    //     foo(#[attr] 92)
+    // }
+    delimited(
+        p,
+        T!['('],
+        T![')'],
+        T![,],
+        EXPR_FIRST.union(ATTRIBUTE_FIRST),
+        |p: &mut Parser<'_>| expr(p).is_some(),
+    );
     m.complete(p, ARG_LIST);
 }
 

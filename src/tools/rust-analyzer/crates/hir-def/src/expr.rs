@@ -15,11 +15,12 @@
 use std::fmt;
 
 use hir_expand::name::Name;
+use intern::Interned;
 use la_arena::{Idx, RawIdx};
+use smallvec::SmallVec;
 
 use crate::{
     builtin_type::{BuiltinFloat, BuiltinInt, BuiltinUint},
-    intern::Interned,
     path::{GenericArgs, Path},
     type_ref::{Mutability, Rawness, TypeRef},
     BlockId,
@@ -29,12 +30,21 @@ pub use syntax::ast::{ArithOp, BinaryOp, CmpOp, LogicOp, Ordering, RangeOp, Unar
 
 pub type ExprId = Idx<Expr>;
 
+pub type BindingId = Idx<Binding>;
+
 /// FIXME: this is a hacky function which should be removed
 pub(crate) fn dummy_expr_id() -> ExprId {
     ExprId::from_raw(RawIdx::from(u32::MAX))
 }
 
 pub type PatId = Idx<Pat>;
+
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum ExprOrPatId {
+    ExprId(ExprId),
+    PatId(PatId),
+}
+stdx::impl_from!(ExprId, PatId for ExprOrPatId);
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Label {
@@ -45,12 +55,20 @@ pub type LabelId = Idx<Label>;
 // We convert float values into bits and that's how we don't need to deal with f32 and f64.
 // For PartialEq, bits comparison should work, as ordering is not important
 // https://github.com/rust-lang/rust-analyzer/issues/12380#issuecomment-1137284360
-#[derive(Default, Debug, Clone, Eq, PartialEq)]
+#[derive(Default, Debug, Clone, Copy, Eq, PartialEq)]
 pub struct FloatTypeWrapper(u64);
 
 impl FloatTypeWrapper {
     pub fn new(value: f64) -> Self {
         Self(value.to_bits())
+    }
+
+    pub fn into_f64(self) -> f64 {
+        f64::from_bits(self.0)
+    }
+
+    pub fn into_f32(self) -> f32 {
+        f64::from_bits(self.0) as f32
     }
 }
 
@@ -93,6 +111,26 @@ pub enum Expr {
         statements: Box<[Statement]>,
         tail: Option<ExprId>,
         label: Option<LabelId>,
+    },
+    TryBlock {
+        id: BlockId,
+        statements: Box<[Statement]>,
+        tail: Option<ExprId>,
+    },
+    Async {
+        id: BlockId,
+        statements: Box<[Statement]>,
+        tail: Option<ExprId>,
+    },
+    Const {
+        id: BlockId,
+        statements: Box<[Statement]>,
+        tail: Option<ExprId>,
+    },
+    Unsafe {
+        id: BlockId,
+        statements: Box<[Statement]>,
+        tail: Option<ExprId>,
     },
     Loop {
         body: ExprId,
@@ -137,6 +175,9 @@ pub enum Expr {
     Yield {
         expr: Option<ExprId>,
     },
+    Yeet {
+        expr: Option<ExprId>,
+    },
     RecordLit {
         path: Option<Box<Path>>,
         fields: Box<[RecordLitField]>,
@@ -153,15 +194,6 @@ pub enum Expr {
     },
     Try {
         expr: ExprId,
-    },
-    TryBlock {
-        body: ExprId,
-    },
-    Async {
-        body: ExprId,
-    },
-    Const {
-        body: ExprId,
     },
     Cast {
         expr: ExprId,
@@ -204,9 +236,6 @@ pub enum Expr {
         exprs: Box<[ExprId]>,
         is_assignee_expr: bool,
     },
-    Unsafe {
-        body: ExprId,
-    },
     Array(Array),
     Literal(Literal),
     Underscore,
@@ -216,6 +245,7 @@ pub enum Expr {
 pub enum ClosureKind {
     Closure,
     Generator(Movability),
+    Async,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -272,11 +302,18 @@ impl Expr {
             Expr::Let { expr, .. } => {
                 f(*expr);
             }
-            Expr::Block { statements, tail, .. } => {
+            Expr::Block { statements, tail, .. }
+            | Expr::TryBlock { statements, tail, .. }
+            | Expr::Unsafe { statements, tail, .. }
+            | Expr::Async { statements, tail, .. }
+            | Expr::Const { statements, tail, .. } => {
                 for stmt in statements.iter() {
                     match stmt {
-                        Statement::Let { initializer, .. } => {
+                        Statement::Let { initializer, else_branch, .. } => {
                             if let &Some(expr) = initializer {
+                                f(expr);
+                            }
+                            if let &Some(expr) = else_branch {
                                 f(expr);
                             }
                         }
@@ -287,10 +324,6 @@ impl Expr {
                     f(expr);
                 }
             }
-            Expr::TryBlock { body }
-            | Expr::Unsafe { body }
-            | Expr::Async { body }
-            | Expr::Const { body } => f(*body),
             Expr::Loop { body, .. } => f(*body),
             Expr::While { condition, body, .. } => {
                 f(*condition);
@@ -313,7 +346,10 @@ impl Expr {
                 arms.iter().map(|arm| arm.expr).for_each(f);
             }
             Expr::Continue { .. } => {}
-            Expr::Break { expr, .. } | Expr::Return { expr } | Expr::Yield { expr } => {
+            Expr::Break { expr, .. }
+            | Expr::Return { expr }
+            | Expr::Yield { expr }
+            | Expr::Yeet { expr } => {
                 if let &Some(expr) = expr {
                     f(expr);
                 }
@@ -402,6 +438,13 @@ impl BindingAnnotation {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Binding {
+    pub name: Name,
+    pub mode: BindingAnnotation,
+    pub definitions: SmallVec<[PatId; 1]>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RecordFieldPat {
     pub name: Name,
     pub pat: PatId,
@@ -419,7 +462,7 @@ pub enum Pat {
     Slice { prefix: Box<[PatId]>, slice: Option<PatId>, suffix: Box<[PatId]> },
     Path(Box<Path>),
     Lit(ExprId),
-    Bind { mode: BindingAnnotation, name: Name, subpat: Option<PatId> },
+    Bind { id: BindingId, subpat: Option<PatId> },
     TupleStruct { path: Option<Box<Path>>, args: Box<[PatId]>, ellipsis: Option<usize> },
     Ref { pat: PatId, mutability: Mutability },
     Box { inner: PatId },

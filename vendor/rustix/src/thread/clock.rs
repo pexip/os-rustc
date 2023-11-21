@@ -1,18 +1,17 @@
-use crate::{imp, io};
+use crate::{backend, io};
 
-pub use imp::time::types::Timespec;
+pub use backend::time::types::Timespec;
 
 #[cfg(not(any(
+    apple,
     target_os = "dragonfly",
     target_os = "emscripten",
     target_os = "freebsd", // FreeBSD 12 has clock_nanosleep, but libc targets FreeBSD 11.
-    target_os = "ios",
-    target_os = "macos",
     target_os = "openbsd",
     target_os = "redox",
     target_os = "wasi",
 )))]
-pub use imp::time::types::ClockId;
+pub use backend::time::types::ClockId;
 
 /// `clock_nanosleep(id, 0, request, remain)`—Sleeps for a duration on a
 /// given clock.
@@ -27,18 +26,18 @@ pub use imp::time::types::ClockId;
 /// [POSIX]: https://pubs.opengroup.org/onlinepubs/9699919799/functions/clock_nanosleep.html
 /// [Linux]: https://man7.org/linux/man-pages/man2/clock_nanosleep.2.html
 #[cfg(not(any(
+    apple,
     target_os = "dragonfly",
     target_os = "emscripten",
     target_os = "freebsd", // FreeBSD 12 has clock_nanosleep, but libc targets FreeBSD 11.
-    target_os = "ios",
-    target_os = "macos",
+    target_os = "haiku",
     target_os = "openbsd",
     target_os = "redox",
     target_os = "wasi",
 )))]
 #[inline]
 pub fn clock_nanosleep_relative(id: ClockId, request: &Timespec) -> NanosleepRelativeResult {
-    imp::thread::syscalls::clock_nanosleep_relative(id, request)
+    backend::thread::syscalls::clock_nanosleep_relative(id, request)
 }
 
 /// `clock_nanosleep(id, TIMER_ABSTIME, request, NULL)`—Sleeps until an
@@ -54,18 +53,18 @@ pub fn clock_nanosleep_relative(id: ClockId, request: &Timespec) -> NanosleepRel
 /// [POSIX]: https://pubs.opengroup.org/onlinepubs/9699919799/functions/clock_nanosleep.html
 /// [Linux]: https://man7.org/linux/man-pages/man2/clock_nanosleep.2.html
 #[cfg(not(any(
+    apple,
     target_os = "dragonfly",
     target_os = "emscripten",
     target_os = "freebsd", // FreeBSD 12 has clock_nanosleep, but libc targets FreeBSD 11.
-    target_os = "ios",
-    target_os = "macos",
+    target_os = "haiku",
     target_os = "openbsd",
     target_os = "redox",
     target_os = "wasi",
 )))]
 #[inline]
 pub fn clock_nanosleep_absolute(id: ClockId, request: &Timespec) -> io::Result<()> {
-    imp::thread::syscalls::clock_nanosleep_absolute(id, request)
+    backend::thread::syscalls::clock_nanosleep_absolute(id, request)
 }
 
 /// `nanosleep(request, remain)`—Sleeps for a duration.
@@ -80,7 +79,7 @@ pub fn clock_nanosleep_absolute(id: ClockId, request: &Timespec) -> io::Result<(
 /// [Linux]: https://man7.org/linux/man-pages/man2/nanosleep.2.html
 #[inline]
 pub fn nanosleep(request: &Timespec) -> NanosleepRelativeResult {
-    imp::thread::syscalls::nanosleep(request)
+    backend::thread::syscalls::nanosleep(request)
 }
 
 /// A return type for `nanosleep` and `clock_nanosleep_relative`.

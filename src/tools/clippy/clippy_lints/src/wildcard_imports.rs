@@ -155,19 +155,13 @@ impl LateLintPass<'_> for WildcardImports {
                     )
                 };
 
-                let imports_string = if used_imports.len() == 1 {
-                    used_imports.iter().next().unwrap().to_string()
+                let mut imports = used_imports.items().map(ToString::to_string).into_sorted_stable_ord(false);
+                let imports_string = if imports.len() == 1 {
+                    imports.pop().unwrap()
+                } else if braced_glob {
+                    imports.join(", ")
                 } else {
-                    let mut imports = used_imports
-                        .iter()
-                        .map(ToString::to_string)
-                        .collect::<Vec<_>>();
-                    imports.sort();
-                    if braced_glob {
-                        imports.join(", ")
-                    } else {
-                        format!("{{{}}}", imports.join(", "))
-                    }
+                    format!("{{{}}}", imports.join(", "))
                 };
 
                 let sugg = if braced_glob {
@@ -176,7 +170,8 @@ impl LateLintPass<'_> for WildcardImports {
                     format!("{import_source_snippet}::{imports_string}")
                 };
 
-                let (lint, message) = if let Res::Def(DefKind::Enum, _) = use_path.res {
+                // Glob imports always have a single resolution.
+                let (lint, message) = if let Res::Def(DefKind::Enum, _) = use_path.res[0] {
                     (ENUM_GLOB_USE, "usage of wildcard import for enum variants")
                 } else {
                     (WILDCARD_IMPORTS, "usage of wildcard import")

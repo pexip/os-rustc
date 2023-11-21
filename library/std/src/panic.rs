@@ -114,6 +114,9 @@ where
 /// aborting the process as well. This function *only* catches unwinding panics,
 /// not those that abort the process.
 ///
+/// Note that if a custom panic hook has been set, it will be invoked before
+/// the panic is caught, before unwinding.
+///
 /// Also note that unwinding into Rust code with a foreign exception (e.g.
 /// an exception thrown from C++ code) is undefined behavior.
 ///
@@ -305,8 +308,7 @@ pub fn get_backtrace_style() -> Option<BacktraceStyle> {
                 BacktraceStyle::Short
             }
         })
-        .unwrap_or(if cfg!(target_os = "fuchsia") {
-            // Fuchsia components default to full backtrace.
+        .unwrap_or(if crate::sys::FULL_BACKTRACE_DEFAULT {
             BacktraceStyle::Full
         } else {
             BacktraceStyle::Off

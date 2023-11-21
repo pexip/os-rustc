@@ -12,17 +12,21 @@ use base_db::CrateId;
 use cfg::{CfgExpr, CfgOptions};
 use drop_bomb::DropBomb;
 use either::Either;
-use hir_expand::{hygiene::Hygiene, ExpandError, ExpandResult, HirFileId, InFile, MacroCallId};
+use hir_expand::{
+    attrs::RawAttrs, hygiene::Hygiene, ExpandError, ExpandResult, HirFileId, InFile, MacroCallId,
+};
 use la_arena::{Arena, ArenaMap};
 use limit::Limit;
 use profile::Count;
 use rustc_hash::FxHashMap;
-use syntax::{ast, AstPtr, SyntaxNodePtr};
+use syntax::{ast, AstPtr, SyntaxNode, SyntaxNodePtr};
 
 use crate::{
-    attr::{Attrs, RawAttrs},
+    attr::Attrs,
     db::DefDatabase,
-    expr::{dummy_expr_id, Expr, ExprId, Label, LabelId, Pat, PatId},
+    expr::{
+        dummy_expr_id, Binding, BindingId, Expr, ExprId, Label, LabelId, Pat, PatId, RecordFieldPat,
+    },
     item_scope::BuiltinShadowMode,
     macro_id_to_def_id,
     nameres::DefMap,
@@ -49,7 +53,8 @@ pub struct Expander {
     def_map: Arc<DefMap>,
     current_file_id: HirFileId,
     module: LocalModuleId,
-    recursion_limit: usize,
+    /// `recursion_depth == usize::MAX` indicates that the recursion limit has been reached.
+    recursion_depth: usize,
 }
 
 impl CfgExpander {
@@ -64,7 +69,7 @@ impl CfgExpander {
     }
 
     pub(crate) fn parse_attrs(&self, db: &dyn DefDatabase, owner: &dyn ast::HasAttrs) -> Attrs {
-        RawAttrs::new(db, owner, &self.hygiene).filter(db, self.krate)
+        Attrs::filter(db, self.krate, RawAttrs::new(db.upcast(), owner, &self.hygiene))
     }
 
     pub(crate) fn is_cfg_enabled(&self, db: &dyn DefDatabase, owner: &dyn ast::HasAttrs) -> bool {
@@ -82,7 +87,7 @@ impl Expander {
             def_map,
             current_file_id,
             module: module.local_id,
-            recursion_limit: 0,
+            recursion_depth: 0,
         }
     }
 
@@ -91,31 +96,37 @@ impl Expander {
         db: &dyn DefDatabase,
         macro_call: ast::MacroCall,
     ) -> Result<ExpandResult<Option<(Mark, T)>>, UnresolvedMacro> {
-        if self.recursion_limit(db).check(self.recursion_limit + 1).is_err() {
-            cov_mark::hit!(your_stack_belongs_to_me);
-            return Ok(ExpandResult::only_err(ExpandError::Other(
-                "reached recursion limit during macro expansion".into(),
-            )));
+        let mut unresolved_macro_err = None;
+
+        let result = self.within_limit(db, |this| {
+            let macro_call = InFile::new(this.current_file_id, &macro_call);
+
+            let resolver =
+                |path| this.resolve_path_as_macro(db, &path).map(|it| macro_id_to_def_id(db, it));
+
+            let mut err = None;
+            let call_id = match macro_call.as_call_id_with_errors(
+                db,
+                this.def_map.krate(),
+                resolver,
+                &mut |e| {
+                    err.get_or_insert(e);
+                },
+            ) {
+                Ok(call_id) => call_id,
+                Err(resolve_err) => {
+                    unresolved_macro_err = Some(resolve_err);
+                    return ExpandResult { value: None, err: None };
+                }
+            };
+            ExpandResult { value: call_id.ok(), err }
+        });
+
+        if let Some(err) = unresolved_macro_err {
+            Err(err)
+        } else {
+            Ok(result)
         }
-
-        let macro_call = InFile::new(self.current_file_id, &macro_call);
-
-        let resolver =
-            |path| self.resolve_path_as_macro(db, &path).map(|it| macro_id_to_def_id(db, it));
-
-        let mut err = None;
-        let call_id =
-            macro_call.as_call_id_with_errors(db, self.def_map.krate(), resolver, &mut |e| {
-                err.get_or_insert(e);
-            })?;
-        let call_id = match call_id {
-            Ok(it) => it,
-            Err(_) => {
-                return Ok(ExpandResult { value: None, err });
-            }
-        };
-
-        Ok(self.enter_expand_inner(db, call_id, err))
     }
 
     pub fn enter_expand_id<T: ast::AstNode>(
@@ -123,15 +134,14 @@ impl Expander {
         db: &dyn DefDatabase,
         call_id: MacroCallId,
     ) -> ExpandResult<Option<(Mark, T)>> {
-        self.enter_expand_inner(db, call_id, None)
+        self.within_limit(db, |_this| ExpandResult::ok(Some(call_id)))
     }
 
-    fn enter_expand_inner<T: ast::AstNode>(
-        &mut self,
+    fn enter_expand_inner(
         db: &dyn DefDatabase,
         call_id: MacroCallId,
         mut err: Option<ExpandError>,
-    ) -> ExpandResult<Option<(Mark, T)>> {
+    ) -> ExpandResult<Option<(HirFileId, SyntaxNode)>> {
         if err.is_none() {
             err = db.macro_expand_error(call_id);
         }
@@ -152,29 +162,21 @@ impl Expander {
             }
         };
 
-        let node = match T::cast(raw_node) {
-            Some(it) => it,
-            None => {
-                // This can happen without being an error, so only forward previous errors.
-                return ExpandResult { value: None, err };
-            }
-        };
-
-        tracing::debug!("macro expansion {:#?}", node.syntax());
-
-        self.recursion_limit += 1;
-        let mark =
-            Mark { file_id: self.current_file_id, bomb: DropBomb::new("expansion mark dropped") };
-        self.cfg_expander.hygiene = Hygiene::new(db.upcast(), file_id);
-        self.current_file_id = file_id;
-
-        ExpandResult { value: Some((mark, node)), err }
+        ExpandResult { value: Some((file_id, raw_node)), err }
     }
 
     pub fn exit(&mut self, db: &dyn DefDatabase, mut mark: Mark) {
         self.cfg_expander.hygiene = Hygiene::new(db.upcast(), mark.file_id);
         self.current_file_id = mark.file_id;
-        self.recursion_limit -= 1;
+        if self.recursion_depth == usize::MAX {
+            // Recursion limit has been reached somewhere in the macro expansion tree. Reset the
+            // depth only when we get out of the tree.
+            if !self.current_file_id.is_macro() {
+                self.recursion_depth = 0;
+            }
+        } else {
+            self.recursion_depth -= 1;
+        }
         mark.bomb.defuse();
     }
 
@@ -213,6 +215,50 @@ impl Expander {
         #[cfg(test)]
         return Limit::new(std::cmp::min(32, limit));
     }
+
+    fn within_limit<F, T: ast::AstNode>(
+        &mut self,
+        db: &dyn DefDatabase,
+        op: F,
+    ) -> ExpandResult<Option<(Mark, T)>>
+    where
+        F: FnOnce(&mut Self) -> ExpandResult<Option<MacroCallId>>,
+    {
+        if self.recursion_depth == usize::MAX {
+            // Recursion limit has been reached somewhere in the macro expansion tree. We should
+            // stop expanding other macro calls in this tree, or else this may result in
+            // exponential number of macro expansions, leading to a hang.
+            //
+            // The overflow error should have been reported when it occurred (see the next branch),
+            // so don't return overflow error here to avoid diagnostics duplication.
+            cov_mark::hit!(overflow_but_not_me);
+            return ExpandResult::only_err(ExpandError::RecursionOverflowPosioned);
+        } else if self.recursion_limit(db).check(self.recursion_depth + 1).is_err() {
+            self.recursion_depth = usize::MAX;
+            cov_mark::hit!(your_stack_belongs_to_me);
+            return ExpandResult::only_err(ExpandError::Other(
+                "reached recursion limit during macro expansion".into(),
+            ));
+        }
+
+        let ExpandResult { value, err } = op(self);
+        let Some(call_id) = value else {
+            return ExpandResult { value: None, err };
+        };
+
+        Self::enter_expand_inner(db, call_id, err).map(|value| {
+            value.and_then(|(new_file_id, node)| {
+                let node = T::cast(node)?;
+
+                self.recursion_depth += 1;
+                self.cfg_expander.hygiene = Hygiene::new(db.upcast(), new_file_id);
+                let old_file_id = std::mem::replace(&mut self.current_file_id, new_file_id);
+                let mark =
+                    Mark { file_id: old_file_id, bomb: DropBomb::new("expansion mark dropped") };
+                Some((mark, node))
+            })
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -226,7 +272,7 @@ pub struct Mark {
 pub struct Body {
     pub exprs: Arena<Expr>,
     pub pats: Arena<Pat>,
-    pub or_pats: FxHashMap<PatId, Arc<[PatId]>>,
+    pub bindings: Arena<Binding>,
     pub labels: Arena<Label>,
     /// The patterns for the function's parameters. While the parameter types are
     /// part of the function signature, the patterns are not (they don't change
@@ -365,18 +411,6 @@ impl Body {
             .map(move |&block| (block, db.block_def_map(block).expect("block ID without DefMap")))
     }
 
-    pub fn pattern_representative(&self, pat: PatId) -> PatId {
-        self.or_pats.get(&pat).and_then(|pats| pats.first().copied()).unwrap_or(pat)
-    }
-
-    /// Retrieves all ident patterns this pattern shares the ident with.
-    pub fn ident_patterns_for<'slf>(&'slf self, pat: &'slf PatId) -> &'slf [PatId] {
-        match self.or_pats.get(pat) {
-            Some(pats) => &**pats,
-            None => std::slice::from_ref(pat),
-        }
-    }
-
     pub fn pretty_print(&self, db: &dyn DefDatabase, owner: DefWithBodyId) -> String {
         pretty::print_body_hir(db, self, owner)
     }
@@ -391,13 +425,52 @@ impl Body {
     }
 
     fn shrink_to_fit(&mut self) {
-        let Self { _c: _, body_expr: _, block_scopes, or_pats, exprs, labels, params, pats } = self;
+        let Self { _c: _, body_expr: _, block_scopes, exprs, labels, params, pats, bindings } =
+            self;
         block_scopes.shrink_to_fit();
-        or_pats.shrink_to_fit();
         exprs.shrink_to_fit();
         labels.shrink_to_fit();
         params.shrink_to_fit();
         pats.shrink_to_fit();
+        bindings.shrink_to_fit();
+    }
+
+    pub fn walk_bindings_in_pat(&self, pat_id: PatId, mut f: impl FnMut(BindingId)) {
+        self.walk_pats(pat_id, &mut |pat| {
+            if let Pat::Bind { id, .. } = pat {
+                f(*id);
+            }
+        });
+    }
+
+    pub fn walk_pats(&self, pat_id: PatId, f: &mut impl FnMut(&Pat)) {
+        let pat = &self[pat_id];
+        f(pat);
+        match pat {
+            Pat::Range { .. }
+            | Pat::Lit(..)
+            | Pat::Path(..)
+            | Pat::ConstBlock(..)
+            | Pat::Wild
+            | Pat::Missing => {}
+            &Pat::Bind { subpat, .. } => {
+                if let Some(subpat) = subpat {
+                    self.walk_pats(subpat, f);
+                }
+            }
+            Pat::Or(args) | Pat::Tuple { args, .. } | Pat::TupleStruct { args, .. } => {
+                args.iter().copied().for_each(|p| self.walk_pats(p, f));
+            }
+            Pat::Ref { pat, .. } => self.walk_pats(*pat, f),
+            Pat::Slice { prefix, slice, suffix } => {
+                let total_iter = prefix.iter().chain(slice.iter()).chain(suffix.iter());
+                total_iter.copied().for_each(|p| self.walk_pats(p, f));
+            }
+            Pat::Record { args, .. } => {
+                args.iter().for_each(|RecordFieldPat { pat, .. }| self.walk_pats(*pat, f));
+            }
+            Pat::Box { inner } => self.walk_pats(*inner, f),
+        }
     }
 }
 
@@ -407,7 +480,7 @@ impl Default for Body {
             body_expr: dummy_expr_id(),
             exprs: Default::default(),
             pats: Default::default(),
-            or_pats: Default::default(),
+            bindings: Default::default(),
             labels: Default::default(),
             params: Default::default(),
             block_scopes: Default::default(),
@@ -437,6 +510,14 @@ impl Index<LabelId> for Body {
 
     fn index(&self, label: LabelId) -> &Label {
         &self.labels[label]
+    }
+}
+
+impl Index<BindingId> for Body {
+    type Output = Binding;
+
+    fn index(&self, b: BindingId) -> &Binding {
+        &self.bindings[b]
     }
 }
 

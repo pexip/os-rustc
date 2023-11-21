@@ -32,12 +32,12 @@ pub(crate) fn complete_dot(
         complete_fields(
             acc,
             ctx,
-            &receiver_ty,
+            receiver_ty,
             |acc, field, ty| acc.add_field(ctx, dot_access, None, field, &ty),
             |acc, field, ty| acc.add_tuple_field(ctx, None, field, &ty),
         );
     }
-    complete_methods(ctx, &receiver_ty, |func| acc.add_method(ctx, dot_access, func, None, None));
+    complete_methods(ctx, receiver_ty, |func| acc.add_method(ctx, dot_access, func, None, None));
 }
 
 pub(crate) fn complete_undotted_self(
@@ -122,7 +122,7 @@ fn complete_methods(
     mut f: impl FnMut(hir::Function),
 ) {
     let mut seen_methods = FxHashSet::default();
-    receiver.iterate_method_candidates(
+    receiver.iterate_method_candidates_with_traits(
         ctx.db,
         &ctx.scope,
         &ctx.traits_in_scope(),
@@ -415,7 +415,6 @@ fn foo(a: lib::A) { a.$0 }
     fn test_local_impls() {
         check(
             r#"
-//- /lib.rs crate:lib
 pub struct A {}
 mod m {
     impl super::A {
@@ -427,9 +426,8 @@ mod m {
         }
     }
 }
-//- /main.rs crate:main deps:lib
-fn foo(a: lib::A) {
-    impl lib::A {
+fn foo(a: A) {
+    impl A {
         fn local_method(&self) {}
     }
     a.$0

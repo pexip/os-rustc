@@ -14,6 +14,7 @@ pub use self::book::{load_book, Book, BookItem, BookItems, Chapter};
 pub use self::init::BookBuilder;
 pub use self::summary::{parse_summary, Link, SectionNumber, Summary, SummaryItem};
 
+use log::{debug, error, info, log_enabled, trace, warn};
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
@@ -195,21 +196,26 @@ impl MDBook {
         Ok(())
     }
 
-    /// Run the entire build process for a particular [`Renderer`].
-    pub fn execute_build_process(&self, renderer: &dyn Renderer) -> Result<()> {
-        let mut preprocessed_book = self.book.clone();
+    /// Run preprocessors and return the final book.
+    pub fn preprocess_book(&self, renderer: &dyn Renderer) -> Result<(Book, PreprocessorContext)> {
         let preprocess_ctx = PreprocessorContext::new(
             self.root.clone(),
             self.config.clone(),
             renderer.name().to_string(),
         );
-
+        let mut preprocessed_book = self.book.clone();
         for preprocessor in &self.preprocessors {
             if preprocessor_should_run(&**preprocessor, renderer, &self.config) {
                 debug!("Running the {} preprocessor.", preprocessor.name());
                 preprocessed_book = preprocessor.run(&preprocess_ctx, preprocessed_book)?;
             }
         }
+        Ok((preprocessed_book, preprocess_ctx))
+    }
+
+    /// Run the entire build process for a particular [`Renderer`].
+    pub fn execute_build_process(&self, renderer: &dyn Renderer) -> Result<()> {
+        let (preprocessed_book, preprocess_ctx) = self.preprocess_book(renderer)?;
 
         let name = renderer.name();
         let build_dir = self.build_dir_for(name);
@@ -246,6 +252,13 @@ impl MDBook {
 
     /// Run `rustdoc` tests on the book, linking against the provided libraries.
     pub fn test(&mut self, library_paths: Vec<&str>) -> Result<()> {
+        // test_chapter with chapter:None will run all tests.
+        self.test_chapter(library_paths, None)
+    }
+
+    /// Run `rustdoc` tests on a specific chapter of the book, linking against the provided libraries.
+    /// If `chapter` is `None`, all tests will be run.
+    pub fn test_chapter(&mut self, library_paths: Vec<&str>, chapter: Option<&str>) -> Result<()> {
         let library_args: Vec<&str> = (0..library_paths.len())
             .map(|_| "-L")
             .zip(library_paths.into_iter())
@@ -254,13 +267,27 @@ impl MDBook {
 
         let temp_dir = TempFileBuilder::new().prefix("mdbook-").tempdir()?;
 
-        // FIXME: Is "test" the proper renderer name to use here?
-        let preprocess_context =
-            PreprocessorContext::new(self.root.clone(), self.config.clone(), "test".to_string());
+        let mut chapter_found = false;
 
-        let book = LinkPreprocessor::new().run(&preprocess_context, self.book.clone())?;
-        // Index Preprocessor is disabled so that chapter paths continue to point to the
-        // actual markdown files.
+        struct TestRenderer;
+        impl Renderer for TestRenderer {
+            // FIXME: Is "test" the proper renderer name to use here?
+            fn name(&self) -> &str {
+                "test"
+            }
+
+            fn render(&self, _: &RenderContext) -> Result<()> {
+                Ok(())
+            }
+        }
+
+        // Index Preprocessor is disabled so that chapter paths
+        // continue to point to the actual markdown files.
+        self.preprocessors = determine_preprocessors(&self.config)?
+            .into_iter()
+            .filter(|pre| pre.name() != IndexPreprocessor::NAME)
+            .collect();
+        let (book, _) = self.preprocess_book(&TestRenderer)?;
 
         let mut failed = false;
         for item in book.iter() {
@@ -270,8 +297,16 @@ impl MDBook {
                     _ => continue,
                 };
 
-                let path = self.source_dir().join(&chapter_path);
-                info!("Testing file: {:?}", path);
+                if let Some(chapter) = chapter {
+                    if ch.name != chapter && chapter_path.to_str() != Some(chapter) {
+                        if chapter == "?" {
+                            info!("Skipping chapter '{}'...", ch.name);
+                        }
+                        continue;
+                    }
+                }
+                chapter_found = true;
+                info!("Testing chapter '{}': {:?}", ch.name, chapter_path);
 
                 // write preprocessed file to tempdir
                 let path = temp_dir.path().join(&chapter_path);
@@ -295,6 +330,7 @@ impl MDBook {
                     }
                 }
 
+                debug!("running {:?}", cmd);
                 let output = cmd.output()?;
 
                 if !output.status.success() {
@@ -310,6 +346,11 @@ impl MDBook {
         }
         if failed {
             bail!("One or more tests failed");
+        }
+        if let Some(chapter) = chapter {
+            if !chapter_found {
+                bail!("Chapter not found: {}", chapter);
+            }
         }
         Ok(())
     }

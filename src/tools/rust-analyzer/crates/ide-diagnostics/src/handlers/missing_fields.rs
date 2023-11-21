@@ -1,11 +1,11 @@
 use either::Either;
 use hir::{
-    db::{AstDatabase, HirDatabase},
+    db::{ExpandDatabase, HirDatabase},
     known, AssocItem, HirDisplay, InFile, Type,
 };
 use ide_db::{
     assists::Assist, famous_defs::FamousDefs, imports::import_assets::item_for_path_search,
-    source_change::SourceChange, use_trivial_contructor::use_trivial_constructor, FxHashMap,
+    source_change::SourceChange, use_trivial_constructor::use_trivial_constructor, FxHashMap,
 };
 use stdx::format_to;
 use syntax::{
@@ -128,9 +128,9 @@ fn fixes(ctx: &DiagnosticsContext<'_>, d: &hir::MissingFields) -> Option<Vec<Ass
                         )?;
 
                         use_trivial_constructor(
-                            &ctx.sema.db,
+                            ctx.sema.db,
                             ide_db::helpers::mod_path_to_ast(&type_path),
-                            &ty,
+                            ty,
                         )
                     })();
 

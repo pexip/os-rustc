@@ -12,13 +12,6 @@ use crate::ops::{BitAnd, BitOr, BitXor, Sub};
 
 use super::map::{map_try_reserve_error, RandomState};
 
-// Future Optimization (FIXME!)
-// ============================
-//
-// Iteration over zero sized values is a noop. There is no need
-// for `bucket.val` in the case of HashSet. I suppose we would need HKT
-// to get rid of it properly.
-
 /// A [hash set] implemented as a `HashMap` where the value is `()`.
 ///
 /// As with the [`HashMap`] type, a `HashSet` requires that the elements
@@ -317,7 +310,7 @@ impl<T, S> HashSet<T, S> {
     ///
     /// let mut set = HashSet::from([1, 2, 3, 4, 5, 6]);
     /// set.retain(|&k| k % 2 == 0);
-    /// assert_eq!(set.len(), 3);
+    /// assert_eq!(set, HashSet::from([2, 4, 6]));
     /// ```
     ///
     /// # Performance
@@ -1279,7 +1272,6 @@ pub struct Iter<'a, K: 'a> {
 /// (provided by the [`IntoIterator`] trait). See its documentation for more.
 ///
 /// [`into_iter`]: IntoIterator::into_iter
-/// [`IntoIterator`]: crate::iter::IntoIterator
 ///
 /// # Examples
 ///

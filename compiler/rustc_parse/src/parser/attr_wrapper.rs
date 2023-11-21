@@ -5,9 +5,9 @@ use rustc_ast::tokenstream::{AttrTokenTree, DelimSpan, LazyAttrTokenStream, Spac
 use rustc_ast::{self as ast};
 use rustc_ast::{AttrVec, Attribute, HasAttrs, HasTokens};
 use rustc_errors::PResult;
-use rustc_span::{sym, Span};
+use rustc_session::parse::ParseSess;
+use rustc_span::{sym, Span, DUMMY_SP};
 
-use std::convert::TryInto;
 use std::ops::Range;
 
 /// A wrapper type to ensure that the parser handles outer attributes correctly.
@@ -39,12 +39,17 @@ impl AttrWrapper {
     pub fn empty() -> AttrWrapper {
         AttrWrapper { attrs: AttrVec::new(), start_pos: usize::MAX }
     }
-    // FIXME: Delay span bug here?
-    pub(crate) fn take_for_recovery(self) -> AttrVec {
+
+    pub(crate) fn take_for_recovery(self, sess: &ParseSess) -> AttrVec {
+        sess.span_diagnostic.delay_span_bug(
+            self.attrs.get(0).map(|attr| attr.span).unwrap_or(DUMMY_SP),
+            "AttrVec is taken for recovery but no error is produced",
+        );
+
         self.attrs
     }
 
-    // Prepend `self.attrs` to `attrs`.
+    /// Prepend `self.attrs` to `attrs`.
     // FIXME: require passing an NT to prevent misuse of this method
     pub(crate) fn prepend_to_nt_inner(self, attrs: &mut AttrVec) {
         let mut self_attrs = self.attrs;
@@ -129,11 +134,11 @@ impl ToAttrTokenStream for LazyAttrTokenStreamImpl {
             // Process the replace ranges, starting from the highest start
             // position and working our way back. If have tokens like:
             //
-            // `#[cfg(FALSE)]` struct Foo { #[cfg(FALSE)] field: bool }`
+            // `#[cfg(FALSE)] struct Foo { #[cfg(FALSE)] field: bool }`
             //
             // Then we will generate replace ranges for both
             // the `#[cfg(FALSE)] field: bool` and the entire
-            // `#[cfg(FALSE)]` struct Foo { #[cfg(FALSE)] field: bool }`
+            // `#[cfg(FALSE)] struct Foo { #[cfg(FALSE)] field: bool }`
             //
             // By starting processing from the replace range with the greatest
             // start position, we ensure that any replace range which encloses
@@ -464,6 +469,6 @@ mod size_asserts {
     use rustc_data_structures::static_assert_size;
     // tidy-alphabetical-start
     static_assert_size!(AttrWrapper, 16);
-    static_assert_size!(LazyAttrTokenStreamImpl, 144);
+    static_assert_size!(LazyAttrTokenStreamImpl, 120);
     // tidy-alphabetical-end
 }

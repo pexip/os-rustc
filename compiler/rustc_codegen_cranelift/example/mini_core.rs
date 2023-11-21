@@ -19,6 +19,9 @@ pub trait Sized {}
 #[lang = "destruct"]
 pub trait Destruct {}
 
+#[lang = "tuple_trait"]
+pub trait Tuple {}
+
 #[lang = "unsize"]
 pub trait Unsize<T: ?Sized> {}
 
@@ -443,7 +446,7 @@ pub struct PhantomData<T: ?Sized>;
 
 #[lang = "fn_once"]
 #[rustc_paren_sugar]
-pub trait FnOnce<Args> {
+pub trait FnOnce<Args: Tuple> {
     #[lang = "fn_once_output"]
     type Output;
 
@@ -452,7 +455,7 @@ pub trait FnOnce<Args> {
 
 #[lang = "fn_mut"]
 #[rustc_paren_sugar]
-pub trait FnMut<Args>: FnOnce<Args> {
+pub trait FnMut<Args: Tuple>: FnOnce<Args> {
     extern "rust-call" fn call_mut(&mut self, args: Args) -> Self::Output;
 }
 
@@ -514,6 +517,17 @@ impl<T: ?Sized, U: ?Sized> DispatchFromDyn<Unique<U>> for Unique<T> where T: Uns
 pub struct Box<T: ?Sized>(Unique<T>, ());
 
 impl<T: ?Sized + Unsize<U>, U: ?Sized> CoerceUnsized<Box<U>> for Box<T> {}
+
+impl<T> Box<T> {
+    pub fn new(val: T) -> Box<T> {
+        unsafe {
+            let size = intrinsics::size_of::<T>();
+            let ptr = libc::malloc(size);
+            intrinsics::copy(&val as *const T as *const u8, ptr, size);
+            Box(Unique { pointer: NonNull(ptr as *const T), _marker: PhantomData }, ())
+        }
+    }
+}
 
 impl<T: ?Sized> Drop for Box<T> {
     fn drop(&mut self) {

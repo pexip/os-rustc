@@ -1,6 +1,6 @@
 use crate::cmp;
 use crate::ffi::CStr;
-use crate::io::{self, IoSlice, IoSliceMut};
+use crate::io::{self, BorrowedBuf, BorrowedCursor, IoSlice, IoSliceMut};
 use crate::mem;
 use crate::net::{Shutdown, SocketAddr};
 use crate::os::unix::io::{AsFd, AsRawFd, BorrowedFd, FromRawFd, IntoRawFd, RawFd};
@@ -78,6 +78,7 @@ impl Socket {
                     target_os = "linux",
                     target_os = "netbsd",
                     target_os = "openbsd",
+                    target_os = "nto",
                 ))] {
                     // On platforms that support it we pass the SOCK_CLOEXEC
                     // flag to atomically create the socket and set it as
@@ -115,6 +116,7 @@ impl Socket {
                     target_os = "linux",
                     target_os = "netbsd",
                     target_os = "openbsd",
+                    target_os = "nto",
                 ))] {
                     // Like above, set cloexec atomically
                     cvt(libc::socketpair(fam, ty | libc::SOCK_CLOEXEC, 0, fds.as_mut_ptr()))?;
@@ -240,19 +242,35 @@ impl Socket {
         self.0.duplicate().map(Socket)
     }
 
-    fn recv_with_flags(&self, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
+    fn recv_with_flags(&self, mut buf: BorrowedCursor<'_>, flags: c_int) -> io::Result<()> {
         let ret = cvt(unsafe {
-            libc::recv(self.as_raw_fd(), buf.as_mut_ptr() as *mut c_void, buf.len(), flags)
+            libc::recv(
+                self.as_raw_fd(),
+                buf.as_mut().as_mut_ptr() as *mut c_void,
+                buf.capacity(),
+                flags,
+            )
         })?;
-        Ok(ret as usize)
+        unsafe {
+            buf.advance(ret as usize);
+        }
+        Ok(())
     }
 
     pub fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
-        self.recv_with_flags(buf, 0)
+        let mut buf = BorrowedBuf::from(buf);
+        self.recv_with_flags(buf.unfilled(), 0)?;
+        Ok(buf.len())
     }
 
     pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
-        self.recv_with_flags(buf, MSG_PEEK)
+        let mut buf = BorrowedBuf::from(buf);
+        self.recv_with_flags(buf.unfilled(), MSG_PEEK)?;
+        Ok(buf.len())
+    }
+
+    pub fn read_buf(&self, buf: BorrowedCursor<'_>) -> io::Result<()> {
+        self.recv_with_flags(buf, 0)
     }
 
     pub fn read_vectored(&self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
@@ -425,6 +443,17 @@ impl Socket {
         Ok(passcred != 0)
     }
 
+    #[cfg(target_os = "freebsd")]
+    pub fn set_passcred(&self, passcred: bool) -> io::Result<()> {
+        setsockopt(self, libc::AF_LOCAL, libc::LOCAL_CREDS_PERSISTENT, passcred as libc::c_int)
+    }
+
+    #[cfg(target_os = "freebsd")]
+    pub fn passcred(&self) -> io::Result<bool> {
+        let passcred: libc::c_int = getsockopt(self, libc::AF_LOCAL, libc::LOCAL_CREDS_PERSISTENT)?;
+        Ok(passcred != 0)
+    }
+
     #[cfg(not(any(target_os = "solaris", target_os = "illumos")))]
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
         let mut nonblocking = nonblocking as libc::c_int;
@@ -512,7 +541,7 @@ impl FromRawFd for Socket {
 // A workaround for this bug is to call the res_init libc function, to clear
 // the cached configs. Unfortunately, while we believe glibc's implementation
 // of res_init is thread-safe, we know that other implementations are not
-// (https://github.com/rust-lang/rust/issues/43592). Code here in libstd could
+// (https://github.com/rust-lang/rust/issues/43592). Code here in std could
 // try to synchronize its res_init calls with a Mutex, but that wouldn't
 // protect programs that call into libc in other ways. So instead of calling
 // res_init unconditionally, we call it only when we detect we're linking

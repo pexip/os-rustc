@@ -10,6 +10,7 @@ use crate::value::Value;
 use rustc_ast::Mutability;
 use rustc_codegen_ssa::mir::place::PlaceRef;
 use rustc_codegen_ssa::traits::*;
+use rustc_data_structures::stable_hasher::{HashStable, StableHasher};
 use rustc_hir::def_id::DefId;
 use rustc_middle::bug;
 use rustc_middle::mir::interpret::{ConstAllocation, GlobalAlloc, Scalar};
@@ -129,6 +130,10 @@ impl<'ll, 'tcx> ConstMethods<'tcx> for CodegenCx<'ll, 'tcx> {
         unsafe { llvm::LLVMGetUndef(t) }
     }
 
+    fn const_poison(&self, t: &'ll Type) -> &'ll Value {
+        unsafe { llvm::LLVMGetPoison(t) }
+    }
+
     fn const_int(&self, t: &'ll Type, i: i64) -> &'ll Value {
         unsafe { llvm::LLVMConstInt(t, i as u64, True) }
     }
@@ -236,7 +241,7 @@ impl<'ll, 'tcx> ConstMethods<'tcx> for CodegenCx<'ll, 'tcx> {
             Scalar::Int(int) => {
                 let data = int.assert_bits(layout.size(self));
                 let llval = self.const_uint_big(self.type_ix(bitsize), data);
-                if layout.primitive() == Pointer {
+                if matches!(layout.primitive(), Pointer(_)) {
                     unsafe { llvm::LLVMConstIntToPtr(llval, llty) }
                 } else {
                     self.const_bitcast(llval, llty)
@@ -252,8 +257,13 @@ impl<'ll, 'tcx> ConstMethods<'tcx> for CodegenCx<'ll, 'tcx> {
                             Mutability::Mut => self.static_addr_of_mut(init, alloc.align, None),
                             _ => self.static_addr_of(init, alloc.align, None),
                         };
-                        if !self.sess().fewer_names() {
-                            llvm::set_value_name(value, format!("{:?}", alloc_id).as_bytes());
+                        if !self.sess().fewer_names() && llvm::get_value_name(value).is_empty() {
+                            let hash = self.tcx.with_stable_hashing_context(|mut hcx| {
+                                let mut hasher = StableHasher::new();
+                                alloc.hash_stable(&mut hcx, &mut hasher);
+                                hasher.finish::<u128>()
+                            });
+                            llvm::set_value_name(value, format!("alloc_{hash:032x}").as_bytes());
                         }
                         (value, AddressSpace::DATA)
                     }
@@ -284,7 +294,7 @@ impl<'ll, 'tcx> ConstMethods<'tcx> for CodegenCx<'ll, 'tcx> {
                         1,
                     )
                 };
-                if layout.primitive() != Pointer {
+                if !matches!(layout.primitive(), Pointer(_)) {
                     unsafe { llvm::LLVMConstPtrToInt(llval, llty) }
                 } else {
                     self.const_bitcast(llval, llty)
@@ -368,8 +378,7 @@ pub(crate) fn get_dllimport<'tcx>(
     name: &str,
 ) -> Option<&'tcx DllImport> {
     tcx.native_library(id)
-        .map(|lib| lib.dll_imports.iter().find(|di| di.name.as_str() == name))
-        .flatten()
+        .and_then(|lib| lib.dll_imports.iter().find(|di| di.name.as_str() == name))
 }
 
 pub(crate) fn is_mingw_gnu_toolchain(target: &Target) -> bool {

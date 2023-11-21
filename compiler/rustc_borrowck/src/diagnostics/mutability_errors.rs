@@ -1,6 +1,4 @@
-use rustc_errors::{
-    Applicability, Diagnostic, DiagnosticBuilder, EmissionGuarantee, ErrorGuaranteed,
-};
+use rustc_errors::{Applicability, Diagnostic};
 use rustc_hir as hir;
 use rustc_hir::intravisit::Visitor;
 use rustc_hir::Node;
@@ -9,11 +7,12 @@ use rustc_middle::mir::{Mutability, Place, PlaceRef, ProjectionElem};
 use rustc_middle::ty::{self, Ty, TyCtxt};
 use rustc_middle::{
     hir::place::PlaceBase,
-    mir::{self, BindingForm, ClearCrossCrate, Local, LocalDecl, LocalInfo, LocalKind, Location},
+    mir::{self, BindingForm, Local, LocalDecl, LocalInfo, LocalKind, Location},
 };
 use rustc_span::source_map::DesugaringKind;
 use rustc_span::symbol::{kw, Symbol};
 use rustc_span::{sym, BytePos, Span};
+use rustc_target::abi::FieldIdx;
 
 use crate::diagnostics::BorrowedContentSource;
 use crate::MirBorrowckCtxt;
@@ -107,8 +106,8 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                     reason = String::new();
                 } else {
                     item_msg = access_place_desc;
-                    let local_info = &self.body.local_decls[local].local_info;
-                    if let Some(box LocalInfo::StaticRef { def_id, .. }) = *local_info {
+                    let local_info = self.body.local_decls[local].local_info();
+                    if let LocalInfo::StaticRef { def_id, .. } = *local_info {
                         let static_name = &self.infcx.tcx.item_name(def_id);
                         reason = format!(", as `{static_name}` is an immutable static item");
                     } else {
@@ -122,9 +121,7 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                     && !self.upvars.is_empty()
                 {
                     item_msg = access_place_desc;
-                    debug_assert!(
-                        self.body.local_decls[ty::CAPTURE_STRUCT_LOCAL].ty.is_region_ptr()
-                    );
+                    debug_assert!(self.body.local_decls[ty::CAPTURE_STRUCT_LOCAL].ty.is_ref());
                     debug_assert!(is_closure_or_generator(
                         Place::ty_from(
                             the_place_err.local,
@@ -182,6 +179,9 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
         // the verbs used in some diagnostic messages.
         let act;
         let acted_on;
+        let mut suggest = true;
+        let mut mut_error = None;
+        let mut count = 1;
 
         let span = match error_access {
             AccessKind::Mutate => {
@@ -196,15 +196,50 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
 
                 let borrow_spans = self.borrow_spans(span, location);
                 let borrow_span = borrow_spans.args_or_use();
-                err = self.cannot_borrow_path_as_mutable_because(borrow_span, &item_msg, &reason);
-                borrow_spans.var_span_label(
-                    &mut err,
-                    format!(
-                        "mutable borrow occurs due to use of {} in closure",
-                        self.describe_any_place(access_place.as_ref()),
-                    ),
-                    "mutable",
-                );
+                match the_place_err {
+                    PlaceRef { local, projection: [] }
+                        if self.body.local_decls[local].can_be_made_mutable() =>
+                    {
+                        let span = self.body.local_decls[local].source_info.span;
+                        mut_error = Some(span);
+                        if let Some((buffer, c)) = self.get_buffered_mut_error(span) {
+                            // We've encountered a second (or more) attempt to mutably borrow an
+                            // immutable binding, so the likely problem is with the binding
+                            // declaration, not the use. We collect these in a single diagnostic
+                            // and make the binding the primary span of the error.
+                            err = buffer;
+                            count = c + 1;
+                            if count == 2 {
+                                err.replace_span_with(span, false);
+                                err.span_label(span, "not mutable");
+                            }
+                            suggest = false;
+                        } else {
+                            err = self.cannot_borrow_path_as_mutable_because(
+                                borrow_span,
+                                &item_msg,
+                                &reason,
+                            );
+                        }
+                    }
+                    _ => {
+                        err = self.cannot_borrow_path_as_mutable_because(
+                            borrow_span,
+                            &item_msg,
+                            &reason,
+                        );
+                    }
+                }
+                if suggest {
+                    borrow_spans.var_span_label(
+                        &mut err,
+                        format!(
+                            "mutable borrow occurs due to use of {} in closure",
+                            self.describe_any_place(access_place.as_ref()),
+                        ),
+                        "mutable",
+                    );
+                }
                 borrow_span
             }
         };
@@ -221,19 +256,19 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
             PlaceRef {
                 local,
                 projection:
-                    &[
-                        ref proj_base @ ..,
+                    [
+                        proj_base @ ..,
                         ProjectionElem::Deref,
                         ProjectionElem::Field(field, _),
                         ProjectionElem::Deref,
                     ],
             } => {
-                err.span_label(span, format!("cannot {ACT}", ACT = act));
+                err.span_label(span, format!("cannot {act}"));
 
                 if let Some(span) = get_mut_span_in_struct_field(
                     self.infcx.tcx,
                     Place::ty_from(local, proj_base, self.body, self.infcx.tcx).ty,
-                    field,
+                    *field,
                 ) {
                     err.span_suggestion_verbose(
                         span,
@@ -254,7 +289,7 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                     .unwrap_or(false) =>
             {
                 let decl = &self.body.local_decls[local];
-                err.span_label(span, format!("cannot {ACT}", ACT = act));
+                err.span_label(span, format!("cannot {act}"));
                 if let Some(mir::Statement {
                     source_info,
                     kind:
@@ -269,16 +304,16 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                     ..
                 }) = &self.body[location.block].statements.get(location.statement_index)
                 {
-                    match decl.local_info {
-                        Some(box LocalInfo::User(ClearCrossCrate::Set(BindingForm::Var(
-                            mir::VarBindingForm {
-                                binding_mode: ty::BindingMode::BindByValue(Mutability::Not),
-                                opt_ty_info: Some(sp),
-                                opt_match_place: _,
-                                pat_span: _,
-                            },
-                        )))) => {
-                            err.span_note(sp, "the binding is already a mutable borrow");
+                    match *decl.local_info() {
+                        LocalInfo::User(BindingForm::Var(mir::VarBindingForm {
+                            binding_mode: ty::BindingMode::BindByValue(Mutability::Not),
+                            opt_ty_info: Some(sp),
+                            opt_match_place: _,
+                            pat_span: _,
+                        })) => {
+                            if suggest {
+                                err.span_note(sp, "the binding is already a mutable borrow");
+                            }
                         }
                         _ => {
                             err.span_note(
@@ -306,20 +341,23 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                     } else {
                         err.span_help(source_info.span, "try removing `&mut` here");
                     }
-                } else if decl.mutability == Mutability::Not
-                    && !matches!(
-                        decl.local_info,
-                        Some(box LocalInfo::User(ClearCrossCrate::Set(BindingForm::ImplicitSelf(
-                            hir::ImplicitSelfKind::MutRef
-                        ))))
-                    )
-                {
-                    err.span_suggestion_verbose(
-                        decl.source_info.span.shrink_to_lo(),
-                        "consider making the binding mutable",
-                        "mut ",
-                        Applicability::MachineApplicable,
-                    );
+                } else if decl.mutability.is_not() {
+                    if matches!(
+                        decl.local_info(),
+                        LocalInfo::User(BindingForm::ImplicitSelf(hir::ImplicitSelfKind::MutRef))
+                    ) {
+                        err.note(
+                            "as `Self` may be unsized, this call attempts to take `&mut &mut self`",
+                        );
+                        err.note("however, `&mut self` expands to `self: &mut Self`, therefore `self` cannot be borrowed mutably");
+                    } else {
+                        err.span_suggestion_verbose(
+                            decl.source_info.span.shrink_to_lo(),
+                            "consider making the binding mutable",
+                            "mut ",
+                            Applicability::MachineApplicable,
+                        );
+                    };
                 }
             }
 
@@ -335,16 +373,20 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                 let local_decl = &self.body.local_decls[local];
                 assert_eq!(local_decl.mutability, Mutability::Not);
 
-                err.span_label(span, format!("cannot {ACT}", ACT = act));
-                err.span_suggestion(
-                    local_decl.source_info.span,
-                    "consider changing this to be mutable",
-                    format!("mut {}", self.local_names[local].unwrap()),
-                    Applicability::MachineApplicable,
-                );
-                let tcx = self.infcx.tcx;
-                if let ty::Closure(id, _) = *the_place_err.ty(self.body, tcx).ty.kind() {
-                    self.show_mutating_upvar(tcx, id.expect_local(), the_place_err, &mut err);
+                if count < 10 {
+                    err.span_label(span, format!("cannot {act}"));
+                }
+                if suggest {
+                    err.span_suggestion_verbose(
+                        local_decl.source_info.span.shrink_to_lo(),
+                        "consider changing this to be mutable",
+                        "mut ",
+                        Applicability::MachineApplicable,
+                    );
+                    let tcx = self.infcx.tcx;
+                    if let ty::Closure(id, _) = *the_place_err.ty(self.body, tcx).ty.kind() {
+                        self.show_mutating_upvar(tcx, id.expect_local(), the_place_err, &mut err);
+                    }
                 }
             }
 
@@ -359,7 +401,7 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
 
                 let captured_place = &self.upvars[upvar_index.index()].place;
 
-                err.span_label(span, format!("cannot {ACT}", ACT = act));
+                err.span_label(span, format!("cannot {act}"));
 
                 let upvar_hir_id = captured_place.get_root_variable();
 
@@ -391,15 +433,15 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
             // diagnostic: if the span starts with a mutable borrow of
             // a local variable, then just suggest the user remove it.
             PlaceRef { local: _, projection: [] }
-                if {
-                    if let Ok(snippet) = self.infcx.tcx.sess.source_map().span_to_snippet(span) {
-                        snippet.starts_with("&mut ")
-                    } else {
-                        false
-                    }
-                } =>
+                if self
+                    .infcx
+                    .tcx
+                    .sess
+                    .source_map()
+                    .span_to_snippet(span)
+                    .map_or(false, |snippet| snippet.starts_with("&mut ")) =>
             {
-                err.span_label(span, format!("cannot {ACT}", ACT = act));
+                err.span_label(span, format!("cannot {act}"));
                 err.span_suggestion(
                     span,
                     "try removing `&mut` here",
@@ -411,7 +453,7 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
             PlaceRef { local, projection: [ProjectionElem::Deref] }
                 if self.body.local_decls[local].is_ref_for_guard() =>
             {
-                err.span_label(span, format!("cannot {ACT}", ACT = act));
+                err.span_label(span, format!("cannot {act}"));
                 err.note(
                     "variables bound in patterns are immutable until the end of the pattern guard",
                 );
@@ -427,30 +469,23 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
             {
                 let local_decl = &self.body.local_decls[local];
 
-                let (pointer_sigil, pointer_desc) = if local_decl.ty.is_region_ptr() {
-                    ("&", "reference")
-                } else {
-                    ("*const", "pointer")
-                };
+                let (pointer_sigil, pointer_desc) =
+                    if local_decl.ty.is_ref() { ("&", "reference") } else { ("*const", "pointer") };
 
                 match self.local_names[local] {
                     Some(name) if !local_decl.from_compiler_desugaring() => {
-                        let label = match local_decl.local_info.as_deref().unwrap() {
-                            LocalInfo::User(ClearCrossCrate::Set(
-                                mir::BindingForm::ImplicitSelf(_),
-                            )) => {
+                        let label = match *local_decl.local_info() {
+                            LocalInfo::User(mir::BindingForm::ImplicitSelf(_)) => {
                                 let (span, suggestion) =
                                     suggest_ampmut_self(self.infcx.tcx, local_decl);
                                 Some((true, span, suggestion))
                             }
 
-                            LocalInfo::User(ClearCrossCrate::Set(mir::BindingForm::Var(
-                                mir::VarBindingForm {
-                                    binding_mode: ty::BindingMode::BindByValue(_),
-                                    opt_ty_info,
-                                    ..
-                                },
-                            ))) => {
+                            LocalInfo::User(mir::BindingForm::Var(mir::VarBindingForm {
+                                binding_mode: ty::BindingMode::BindByValue(_),
+                                opt_ty_info,
+                                ..
+                            })) => {
                                 // check if the RHS is from desugaring
                                 let opt_assignment_rhs_span =
                                     self.body.find_assignments(local).first().map(|&location| {
@@ -487,16 +522,15 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                                                 self.infcx.tcx,
                                                 local_decl,
                                                 opt_assignment_rhs_span,
-                                                *opt_ty_info,
+                                                opt_ty_info,
                                             )
                                         } else {
-                                            match local_decl.local_info.as_deref() {
-                                                Some(LocalInfo::User(ClearCrossCrate::Set(
-                                                    mir::BindingForm::Var(mir::VarBindingForm {
-                                                        opt_ty_info: None,
-                                                        ..
-                                                    }),
-                                                ))) => {
+                                            match local_decl.local_info() {
+                                                LocalInfo::User(mir::BindingForm::Var(
+                                                    mir::VarBindingForm {
+                                                        opt_ty_info: None, ..
+                                                    },
+                                                )) => {
                                                     let (span, sugg) = suggest_ampmut_self(
                                                         self.infcx.tcx,
                                                         local_decl,
@@ -508,7 +542,7 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                                                     self.infcx.tcx,
                                                     local_decl,
                                                     opt_assignment_rhs_span,
-                                                    *opt_ty_info,
+                                                    opt_ty_info,
                                                 ),
                                             }
                                         };
@@ -517,19 +551,13 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                                 }
                             }
 
-                            LocalInfo::User(ClearCrossCrate::Set(mir::BindingForm::Var(
-                                mir::VarBindingForm {
-                                    binding_mode: ty::BindingMode::BindByReference(_),
-                                    ..
-                                },
-                            ))) => {
+                            LocalInfo::User(mir::BindingForm::Var(mir::VarBindingForm {
+                                binding_mode: ty::BindingMode::BindByReference(_),
+                                ..
+                            })) => {
                                 let pattern_span = local_decl.source_info.span;
                                 suggest_ref_mut(self.infcx.tcx, pattern_span)
                                     .map(|replacement| (true, pattern_span, replacement))
-                            }
-
-                            LocalInfo::User(ClearCrossCrate::Clear) => {
-                                bug!("saw cleared local state")
                             }
 
                             _ => unreachable!(),
@@ -539,7 +567,7 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                             Some((true, err_help_span, suggested_code)) => {
                                 let (is_trait_sig, local_trait) = self.is_error_in_trait(local);
                                 if !is_trait_sig {
-                                    err.span_suggestion(
+                                    err.span_suggestion_verbose(
                                         err_help_span,
                                         &format!(
                                             "consider changing this to be a mutable {pointer_desc}"
@@ -548,7 +576,7 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                                         Applicability::MachineApplicable,
                                     );
                                 } else if let Some(x) = local_trait {
-                                    err.span_suggestion(
+                                    err.span_suggestion_verbose(
                                         x,
                                         &format!(
                                             "consider changing that to be a mutable {pointer_desc}"
@@ -559,36 +587,78 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                                 }
                             }
                             Some((false, err_label_span, message)) => {
-                                err.span_label(
-                                    err_label_span,
-                                    &format!(
-                                        "consider changing this binding's type to be: `{message}`"
-                                    ),
-                                );
+                                struct BindingFinder {
+                                    span: Span,
+                                    hir_id: Option<hir::HirId>,
+                                }
+
+                                impl<'tcx> Visitor<'tcx> for BindingFinder {
+                                    fn visit_stmt(&mut self, s: &'tcx hir::Stmt<'tcx>) {
+                                        if let hir::StmtKind::Local(local) = s.kind {
+                                            if local.pat.span == self.span {
+                                                self.hir_id = Some(local.hir_id);
+                                            }
+                                        }
+                                        hir::intravisit::walk_stmt(self, s);
+                                    }
+                                }
+                                let hir_map = self.infcx.tcx.hir();
+                                let def_id = self.body.source.def_id();
+                                let hir_id = hir_map.local_def_id_to_hir_id(def_id.expect_local());
+                                let node = hir_map.find(hir_id);
+                                let hir_id = if let Some(hir::Node::Item(item)) = node
+                                    && let hir::ItemKind::Fn(.., body_id) = item.kind
+                                {
+                                    let body = hir_map.body(body_id);
+                                    let mut v = BindingFinder {
+                                        span: err_label_span,
+                                        hir_id: None,
+                                    };
+                                    v.visit_body(body);
+                                    v.hir_id
+                                } else {
+                                    None
+                                };
+                                if let Some(hir_id) = hir_id
+                                    && let Some(hir::Node::Local(local)) = hir_map.find(hir_id)
+                                {
+                                    let (changing, span, sugg) = match local.ty {
+                                        Some(ty) => ("changing", ty.span, message),
+                                        None => (
+                                            "specifying",
+                                            local.pat.span.shrink_to_hi(),
+                                            format!(": {message}"),
+                                        ),
+                                    };
+                                    err.span_suggestion_verbose(
+                                        span,
+                                        &format!("consider {changing} this binding's type"),
+                                        sugg,
+                                        Applicability::HasPlaceholders,
+                                    );
+                                } else {
+                                    err.span_label(
+                                        err_label_span,
+                                        &format!(
+                                            "consider changing this binding's type to be: `{message}`"
+                                        ),
+                                    );
+                                }
                             }
                             None => {}
                         }
                         err.span_label(
                             span,
                             format!(
-                                "`{NAME}` is a `{SIGIL}` {DESC}, \
-                                so the data it refers to cannot be {ACTED_ON}",
-                                NAME = name,
-                                SIGIL = pointer_sigil,
-                                DESC = pointer_desc,
-                                ACTED_ON = acted_on
+                                "`{name}` is a `{pointer_sigil}` {pointer_desc}, \
+                                 so the data it refers to cannot be {acted_on}",
                             ),
                         );
                     }
                     _ => {
                         err.span_label(
                             span,
-                            format!(
-                                "cannot {ACT} through `{SIGIL}` {DESC}",
-                                ACT = act,
-                                SIGIL = pointer_sigil,
-                                DESC = pointer_desc
-                            ),
+                            format!("cannot {act} through `{pointer_sigil}` {pointer_desc}"),
                         );
                     }
                 }
@@ -601,19 +671,19 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
             }
 
             PlaceRef { local: _, projection: [.., ProjectionElem::Deref] } => {
-                err.span_label(span, format!("cannot {ACT}", ACT = act));
+                err.span_label(span, format!("cannot {act}"));
 
                 match opt_source {
                     Some(BorrowedContentSource::OverloadedDeref(ty)) => {
                         err.help(&format!(
                             "trait `DerefMut` is required to modify through a dereference, \
-                                but it is not implemented for `{ty}`",
+                             but it is not implemented for `{ty}`",
                         ));
                     }
                     Some(BorrowedContentSource::OverloadedIndex(ty)) => {
                         err.help(&format!(
                             "trait `IndexMut` is required to modify indexed content, \
-                                but it is not implemented for `{ty}`",
+                             but it is not implemented for `{ty}`",
                         ));
                         self.suggest_map_index_mut_alternatives(ty, &mut err, span);
                     }
@@ -622,32 +692,31 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
             }
 
             _ => {
-                err.span_label(span, format!("cannot {ACT}", ACT = act));
+                err.span_label(span, format!("cannot {act}"));
             }
         }
 
-        self.buffer_error(err);
+        if let Some(span) = mut_error {
+            self.buffer_mut_error(span, err, count);
+        } else {
+            self.buffer_error(err);
+        }
     }
 
-    fn suggest_map_index_mut_alternatives(
-        &self,
-        ty: Ty<'_>,
-        err: &mut DiagnosticBuilder<'_, ErrorGuaranteed>,
-        span: Span,
-    ) {
+    fn suggest_map_index_mut_alternatives(&self, ty: Ty<'tcx>, err: &mut Diagnostic, span: Span) {
         let Some(adt) = ty.ty_adt_def() else { return };
         let did = adt.did();
         if self.infcx.tcx.is_diagnostic_item(sym::HashMap, did)
             || self.infcx.tcx.is_diagnostic_item(sym::BTreeMap, did)
         {
-            struct V<'a, 'b, 'tcx, G: EmissionGuarantee> {
+            struct V<'a, 'tcx> {
                 assign_span: Span,
-                err: &'a mut DiagnosticBuilder<'b, G>,
+                err: &'a mut Diagnostic,
                 ty: Ty<'tcx>,
                 suggested: bool,
             }
-            impl<'a, 'b: 'a, 'hir, 'tcx, G: EmissionGuarantee> Visitor<'hir> for V<'a, 'b, 'tcx, G> {
-                fn visit_stmt(&mut self, stmt: &'hir hir::Stmt<'hir>) {
+            impl<'a, 'tcx> Visitor<'tcx> for V<'a, 'tcx> {
+                fn visit_stmt(&mut self, stmt: &'tcx hir::Stmt<'tcx>) {
                     hir::intravisit::walk_stmt(self, stmt);
                     let expr = match stmt.kind {
                         hir::StmtKind::Semi(expr) | hir::StmtKind::Expr(expr) => expr,
@@ -705,7 +774,7 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
                                     ),
                                     (rv.span.shrink_to_hi(), ")".to_string()),
                                 ],
-                            ].into_iter(),
+                            ],
                             Applicability::MachineApplicable,
                         );
                         self.suggested = true;
@@ -740,7 +809,13 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
             let Some(hir::Node::Item(item)) = node else { return; };
             let hir::ItemKind::Fn(.., body_id) = item.kind else { return; };
             let body = self.infcx.tcx.hir().body(body_id);
-            let mut v = V { assign_span: span, err, ty, suggested: false };
+            let mut assign_span = span;
+            // Drop desugaring is done at MIR build so it's not in the HIR
+            if let Some(DesugaringKind::Replace) = span.desugaring_kind() {
+                assign_span.remove_mark();
+            }
+
+            let mut v = V { assign_span, err, ty, suggested: false };
             v.visit_body(body);
             if !v.suggested {
                 err.help(&format!(
@@ -813,10 +888,7 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
         err: &mut Diagnostic,
     ) {
         let tables = tcx.typeck(closure_local_def_id);
-        let closure_hir_id = tcx.hir().local_def_id_to_hir_id(closure_local_def_id);
-        if let Some((span, closure_kind_origin)) =
-            &tables.closure_kind_origins().get(closure_hir_id)
-        {
+        if let Some((span, closure_kind_origin)) = tcx.closure_kind_origin(closure_local_def_id) {
             let reason = if let PlaceBase::Upvar(upvar_id) = closure_kind_origin.base {
                 let upvar = ty::place_to_string_for_capture(tcx, closure_kind_origin);
                 let root_hir_id = upvar_id.var_path.hir_id;
@@ -972,7 +1044,7 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
         let hir = self.infcx.tcx.hir();
         let closure_id = self.mir_hir_id();
         let closure_span = self.infcx.tcx.def_span(self.mir_def_id());
-        let fn_call_id = hir.get_parent_node(closure_id);
+        let fn_call_id = hir.parent_id(closure_id);
         let node = hir.get(fn_call_id);
         let def_id = hir.enclosing_body_owner(fn_call_id);
         let mut look_at_return = true;
@@ -1057,23 +1129,22 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
     }
 }
 
-fn mut_borrow_of_mutable_ref(local_decl: &LocalDecl<'_>, local_name: Option<Symbol>) -> bool {
+pub fn mut_borrow_of_mutable_ref(local_decl: &LocalDecl<'_>, local_name: Option<Symbol>) -> bool {
     debug!("local_info: {:?}, ty.kind(): {:?}", local_decl.local_info, local_decl.ty.kind());
 
-    match local_decl.local_info.as_deref() {
+    match *local_decl.local_info() {
         // Check if mutably borrowing a mutable reference.
-        Some(LocalInfo::User(ClearCrossCrate::Set(mir::BindingForm::Var(
-            mir::VarBindingForm {
-                binding_mode: ty::BindingMode::BindByValue(Mutability::Not), ..
-            },
-        )))) => matches!(local_decl.ty.kind(), ty::Ref(_, _, hir::Mutability::Mut)),
-        Some(LocalInfo::User(ClearCrossCrate::Set(mir::BindingForm::ImplicitSelf(kind)))) => {
+        LocalInfo::User(mir::BindingForm::Var(mir::VarBindingForm {
+            binding_mode: ty::BindingMode::BindByValue(Mutability::Not),
+            ..
+        })) => matches!(local_decl.ty.kind(), ty::Ref(_, _, hir::Mutability::Mut)),
+        LocalInfo::User(mir::BindingForm::ImplicitSelf(kind)) => {
             // Check if the user variable is a `&mut self` and we can therefore
             // suggest removing the `&mut`.
             //
             // Deliberately fall into this case for all implicit self types,
             // so that we don't fall in to the next case with them.
-            *kind == hir::ImplicitSelfKind::MutRef
+            kind == hir::ImplicitSelfKind::MutRef
         }
         _ if Some(kw::SelfLower) == local_name => {
             // Otherwise, check if the name is the `self` keyword - in which case
@@ -1175,7 +1246,7 @@ fn suggest_ampmut<'tcx>(
     {
         let lt_name = &src[1..ws_pos];
         let ty = &src[ws_pos..];
-        return (true, highlight_span, format!("&{} mut{}", lt_name, ty));
+        return (true, highlight_span, format!("&{lt_name} mut{ty}"));
     }
 
     let ty_mut = local_decl.ty.builtin_deref(true).unwrap();
@@ -1183,7 +1254,7 @@ fn suggest_ampmut<'tcx>(
     (
         suggestability,
         highlight_span,
-        if local_decl.ty.is_region_ptr() {
+        if local_decl.ty.is_ref() {
             format!("&mut {}", ty_mut.ty)
         } else {
             format!("*mut {}", ty_mut.ty)
@@ -1205,7 +1276,7 @@ fn is_closure_or_generator(ty: Ty<'_>) -> bool {
 fn get_mut_span_in_struct_field<'tcx>(
     tcx: TyCtxt<'tcx>,
     ty: Ty<'tcx>,
-    field: mir::Field,
+    field: FieldIdx,
 ) -> Option<Span> {
     // Expect our local to be a reference to a struct of some kind.
     if let ty::Ref(_, ty, _) = ty.kind()
@@ -1216,9 +1287,9 @@ fn get_mut_span_in_struct_field<'tcx>(
         // Now we're dealing with the actual struct that we're going to suggest a change to,
         // we can expect a field that is an immutable reference to a type.
         && let hir::Node::Field(field) = node
-        && let hir::TyKind::Rptr(lt, hir::MutTy { mutbl: hir::Mutability::Not, ty }) = field.ty.kind
+        && let hir::TyKind::Ref(lt, hir::MutTy { mutbl: hir::Mutability::Not, ty }) = field.ty.kind
     {
-        return Some(lt.span.between(ty.span));
+        return Some(lt.ident.span.between(ty.span));
     }
 
     None

@@ -1,8 +1,7 @@
 use std::mem;
 
-use rustc_data_structures::fx::{FxHashMap, FxHashSet};
-use rustc_hir::def_id::{CrateNum, DefId};
-use rustc_middle::middle::privacy::EffectiveVisibilities;
+use rustc_data_structures::fx::{FxHashMap, FxHashSet, FxIndexSet};
+use rustc_hir::def_id::{CrateNum, DefId, DefIdMap, DefIdSet};
 use rustc_middle::ty::{self, TyCtxt};
 use rustc_span::Symbol;
 
@@ -15,6 +14,7 @@ use crate::html::format::join_with_double_colon;
 use crate::html::markdown::short_markdown_summary;
 use crate::html::render::search_index::get_function_type_for_search;
 use crate::html::render::IndexItem;
+use crate::visit_lib::RustdocEffectiveVisibilities;
 
 /// This cache is used to store information about the [`clean::Crate`] being
 /// rendered in order to provide more useful documentation. This contains
@@ -33,7 +33,7 @@ pub(crate) struct Cache {
     ///
     /// The values of the map are a list of implementations and documentation
     /// found on that implementation.
-    pub(crate) impls: FxHashMap<DefId, Vec<Impl>>,
+    pub(crate) impls: DefIdMap<Vec<Impl>>,
 
     /// Maintains a mapping of local crate `DefId`s to the fully qualified name
     /// and "short type description" of that node. This is used when generating
@@ -56,7 +56,7 @@ pub(crate) struct Cache {
     /// to the path used if the corresponding type is inlined. By
     /// doing this, we can detect duplicate impls on a trait page, and only display
     /// the impl for the inlined type.
-    pub(crate) exact_paths: FxHashMap<DefId, Vec<Symbol>>,
+    pub(crate) exact_paths: DefIdMap<Vec<Symbol>>,
 
     /// This map contains information about all known traits of this crate.
     /// Implementations of a crate should inherit the documentation of the
@@ -78,7 +78,7 @@ pub(crate) struct Cache {
     // Note that external items for which `doc(hidden)` applies to are shown as
     // non-reachable while local items aren't. This is because we're reusing
     // the effective visibilities from the privacy check pass.
-    pub(crate) effective_visibilities: EffectiveVisibilities<DefId>,
+    pub(crate) effective_visibilities: RustdocEffectiveVisibilities,
 
     /// The version of the crate being documented, if given from the `--crate-version` flag.
     pub(crate) crate_version: Option<String>,
@@ -118,7 +118,7 @@ pub(crate) struct Cache {
     /// All intra-doc links resolved so far.
     ///
     /// Links are indexed by the DefId of the item they document.
-    pub(crate) intra_doc_links: FxHashMap<ItemId, Vec<clean::ItemLink>>,
+    pub(crate) intra_doc_links: FxHashMap<ItemId, FxIndexSet<clean::ItemLink>>,
     /// Cfg that have been hidden via #![doc(cfg_hide(...))]
     pub(crate) hidden_cfg: FxHashSet<clean::cfg::Cfg>,
 }
@@ -127,16 +127,13 @@ pub(crate) struct Cache {
 struct CacheBuilder<'a, 'tcx> {
     cache: &'a mut Cache,
     /// This field is used to prevent duplicated impl blocks.
-    impl_ids: FxHashMap<DefId, FxHashSet<DefId>>,
+    impl_ids: DefIdMap<DefIdSet>,
     tcx: TyCtxt<'tcx>,
 }
 
 impl Cache {
-    pub(crate) fn new(
-        effective_visibilities: EffectiveVisibilities<DefId>,
-        document_private: bool,
-    ) -> Self {
-        Cache { effective_visibilities, document_private, ..Cache::default() }
+    pub(crate) fn new(document_private: bool) -> Self {
+        Cache { document_private, ..Cache::default() }
     }
 
     /// Populates the `Cache` with more data. The returned `Crate` will be missing some data that was
@@ -176,7 +173,7 @@ impl Cache {
 
         let (krate, mut impl_ids) = {
             let mut cache_builder =
-                CacheBuilder { tcx, cache: &mut cx.cache, impl_ids: FxHashMap::default() };
+                CacheBuilder { tcx, cache: &mut cx.cache, impl_ids: Default::default() };
             krate = cache_builder.fold_crate(krate);
             (krate, cache_builder.impl_ids)
         };
@@ -232,20 +229,19 @@ impl<'a, 'tcx> DocFolder for CacheBuilder<'a, 'tcx> {
         }
 
         // Collect all the implementors of traits.
-        if let clean::ImplItem(ref i) = *item.kind {
-            if let Some(trait_) = &i.trait_ {
-                if !i.kind.is_blanket() {
-                    self.cache
-                        .implementors
-                        .entry(trait_.def_id())
-                        .or_default()
-                        .push(Impl { impl_item: item.clone() });
-                }
-            }
+        if let clean::ImplItem(ref i) = *item.kind &&
+            let Some(trait_) = &i.trait_ &&
+            !i.kind.is_blanket()
+        {
+            self.cache
+                .implementors
+                .entry(trait_.def_id())
+                .or_default()
+                .push(Impl { impl_item: item.clone() });
         }
 
         // Index this method for searching later on.
-        if let Some(ref s) = item.name.or_else(|| {
+        if let Some(s) = item.name.or_else(|| {
             if item.is_stripped() {
                 None
             } else if let clean::ImportItem(ref i) = *item.kind &&
@@ -291,6 +287,16 @@ impl<'a, 'tcx> DocFolder for CacheBuilder<'a, 'tcx> {
                     } else {
                         let last = self.cache.parent_stack.last().expect("parent_stack is empty 2");
                         let did = match &*last {
+                            ParentStackItem::Impl {
+                                // impl Trait for &T { fn method(self); }
+                                //
+                                // When generating a function index with the above shape, we want it
+                                // associated with `T`, not with the primitive reference type. It should
+                                // show up as `T::method`, rather than `reference::method`, in the search
+                                // results page.
+                                for_: clean::Type::BorrowedRef { type_, .. },
+                                ..
+                            } => type_.def_id(&self.cache),
                             ParentStackItem::Impl { for_, .. } => for_.def_id(&self.cache),
                             ParentStackItem::Type(item_id) => item_id.as_def_id(),
                         };
@@ -299,7 +305,7 @@ impl<'a, 'tcx> DocFolder for CacheBuilder<'a, 'tcx> {
                             // for where the type was defined. On the other
                             // hand, `paths` always has the right
                             // information if present.
-                            Some(&(ref fqp, _)) => Some(&fqp[..fqp.len() - 1]),
+                            Some((fqp, _)) => Some(&fqp[..fqp.len() - 1]),
                             None => None,
                         };
                         ((did, path), true)
@@ -319,21 +325,30 @@ impl<'a, 'tcx> DocFolder for CacheBuilder<'a, 'tcx> {
                         let desc = item.doc_value().map_or_else(String::new, |x| {
                             short_markdown_summary(x.as_str(), &item.link_names(self.cache))
                         });
-                        self.cache.search_index.push(IndexItem {
-                            ty: item.type_(),
-                            name: s.to_string(),
-                            path: join_with_double_colon(path),
-                            desc,
-                            parent,
-                            parent_idx: None,
-                            search_type: get_function_type_for_search(
-                                &item,
-                                self.tcx,
-                                clean_impl_generics(self.cache.parent_stack.last()).as_ref(),
-                                self.cache,
-                            ),
-                            aliases: item.attrs.get_doc_aliases(),
-                        });
+                        let ty = item.type_();
+                        if ty != ItemType::StructField
+                            || u16::from_str_radix(s.as_str(), 10).is_err()
+                        {
+                            // In case this is a field from a tuple struct, we don't add it into
+                            // the search index because its name is something like "0", which is
+                            // not useful for rustdoc search.
+                            self.cache.search_index.push(IndexItem {
+                                ty,
+                                name: s,
+                                path: join_with_double_colon(path),
+                                desc,
+                                parent,
+                                parent_idx: None,
+                                search_type: get_function_type_for_search(
+                                    &item,
+                                    self.tcx,
+                                    clean_impl_generics(self.cache.parent_stack.last()).as_ref(),
+                                    self.cache,
+                                ),
+                                aliases: item.attrs.get_doc_aliases(),
+                                deprecation: item.deprecation(self.tcx),
+                            });
+                        }
                     }
                 }
                 (Some(parent), None) if is_inherent_impl_item => {
@@ -387,7 +402,7 @@ impl<'a, 'tcx> DocFolder for CacheBuilder<'a, 'tcx> {
                         || self
                             .cache
                             .effective_visibilities
-                            .is_directly_public(item.item_id.expect_def_id())
+                            .is_directly_public(self.tcx, item.item_id.expect_def_id())
                     {
                         self.cache.paths.insert(
                             item.item_id.expect_def_id(),
@@ -449,7 +464,7 @@ impl<'a, 'tcx> DocFolder for CacheBuilder<'a, 'tcx> {
                 | clean::BorrowedRef { type_: box clean::Type::Path { ref path }, .. } => {
                     dids.insert(path.def_id());
                     if let Some(generics) = path.generics() &&
-                        let ty::Adt(adt, _) = self.tcx.type_of(path.def_id()).kind() &&
+                        let ty::Adt(adt, _) = self.tcx.type_of(path.def_id()).subst_identity().kind() &&
                         adt.is_fundamental() {
                         for ty in generics {
                             if let Some(did) = ty.def_id(self.cache) {

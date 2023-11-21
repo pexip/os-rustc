@@ -119,24 +119,21 @@ or `fn(i32) -> i32` (with type aliases fully expanded).
 
 ## `ty::Ty` implementation
 
-[`rustc_middle::ty::Ty`][ty_ty] is actually a type alias to [`&TyS`][tys].
-This type, which is short for "Type Structure", is where the main functionality is located.
-You can ignore `TyS` struct in general; you will basically never access it explicitly.
-We always pass it by reference using the `Ty` alias.
-The only exception is to define inherent methods on types. In particular, `TyS` has a [`kind`][kind]
-field of type [`TyKind`][tykind], which represents the key type information. `TyKind` is a big enum
+[`rustc_middle::ty::Ty`][ty_ty] is actually a wrapper around
+[`Interned<WithCachedTypeInfo<TyKind>>`][tykind].
+You can ignore `Interned` in general; you will basically never access it explicitly.
+We always hide them within `Ty` and skip over it via `Deref` impls or methods.
+`TyKind` is a big enum
 with variants to represent many different Rust types
 (e.g. primitives, references, abstract data types, generics, lifetimes, etc).
-`TyS` also has 2 more fields, `flags` and `outer_exclusive_binder`. They
+`WithCachedTypeInfo` has a few cached values like `flags` and `outer_exclusive_binder`. They
 are convenient hacks for efficiency and summarize information about the type that we may want to
-know, but they don’t come into the picture as much here. Finally, `ty::TyS`s
-are [interned](./memory.md), so that the `ty::Ty` can be a thin pointer-like
+know, but they don’t come into the picture as much here. Finally, [`Interned`](./memory.md) allows
+the `ty::Ty` to be a thin pointer-like
 type. This allows us to do cheap comparisons for equality, along with the other
 benefits of interning.
 
-[tys]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/struct.TyS.html
-[kind]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/struct.TyS.html#structfield.kind
-[tykind]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyKind.html
+[tykind]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_type_ir/sty/enum.TyKind.html
 
 ## Allocating and working with types
 
@@ -151,17 +148,61 @@ These methods all return a `Ty<'tcx>` – note that the lifetime you get back is
 arena that this `tcx` has access to. Types are always canonicalized and interned (so we never
 allocate exactly the same type twice).
 
-> N.B.
-> Because types are interned, it is possible to compare them for equality efficiently using `==`
-> – however, this is almost never what you want to do unless you happen to be hashing and looking
-> for duplicates. This is because often in Rust there are multiple ways to represent the same type,
-> particularly once inference is involved. If you are going to be testing for type equality, you
-> probably need to start looking into the inference code to do it right.
-
 You can also find various common types in the `tcx` itself by accessing its fields:
 `tcx.types.bool`, `tcx.types.char`, etc. (See [`CommonTypes`] for more.)
 
 [`CommonTypes`]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/context/struct.CommonTypes.html
+
+<!-- N.B: This section is linked from the type comparison internal lint. -->
+## Comparing types
+
+Because types are interned, it is possible to compare them for equality efficiently using `==`
+– however, this is almost never what you want to do unless you happen to be hashing and looking
+for duplicates. This is because often in Rust there are multiple ways to represent the same type,
+particularly once inference is involved.
+
+For example, the type `{integer}` (`ty::Infer(ty::IntVar(..))` an integer inference variable,
+the type of an integer literal like `0`) and `u8` (`ty::UInt(..)`) should often be treated as
+equal when testing whether they can be assigned to each other (which is a common operation in
+diagnostics code). `==` on them will return `false` though, since they are different types.
+
+The simplest way to compare two types correctly requires an inference context (`infcx`).
+If you have one, you can use `infcx.can_eq(param_env, ty1, ty2)`
+to check whether the types can be made equal.
+This is typically what you want to check during diagnostics, which is concerned with questions such
+as whether two types can be assigned to each other, not whether they're represented identically in
+the compiler's type-checking layer.
+
+When working with an inference context, you have to be careful to ensure that potential inference
+variables inside the types actually belong to that inference context. If you are in a function
+that has access to an inference context already, this should be the case. Specifically, this is the
+case during HIR type checking or MIR borrow checking.
+
+Another consideration is normalization. Two types may actually be the same, but one is behind an
+associated type. To compare them correctly, you have to normalize the types first. This is
+primarily a concern during HIR type checking and with all types from a `TyCtxt` query
+(for example from `tcx.type_of()`).
+
+When a `FnCtxt` or an `ObligationCtxt` is available during type checking, `.normalize(ty)`
+should be used on them to normalize the type. After type checking, diagnostics code can use
+`tcx.normalize_erasing_regions(ty)`.
+
+There are also cases where using `==` on `Ty` is fine. This is for example the case in late lints
+or after monomorphization, since type checking has been completed, meaning all inference variables
+are resolved and all regions have been erased. In these cases, if you know that inference variables
+or normalization won't be a concern, `#[allow]` or `#[expect]`ing the lint is recommended.
+
+When diagnostics code does not have access to an inference context, it should be threaded through
+the function calls if one is available in some place (like during type checking).
+
+If no inference context is available at all, then one can be created as described in
+[type-inference]. But this is only useful when the involved types (for example, if
+they came from a query like `tcx.type_of()`) are actually substituted with fresh
+inference variables using [`fresh_substs_for_item`]. This can be used to answer questions
+like "can `Vec<T>` for any `T` be unified with `Vec<u32>`?".
+
+[type-inference]: ./type-inference.md#creating-an-inference-context
+[`fresh_substs_for_item`]: https://doc.rust-lang.org/beta/nightly-rustc/rustc_infer/infer/struct.InferCtxt.html#method.fresh_substs_for_item
 
 ## `ty::TyKind` Variants
 
@@ -210,16 +251,16 @@ There are many variants on the `TyKind` enum, which you can see by looking at it
 - [**And many more**...][kindvars]
 
 [wikiadt]: https://en.wikipedia.org/wiki/Algebraic_data_type
-[kindadt]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyKind.html#variant.Adt
-[kindforeign]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyKind.html#variant.Foreign
-[kindstr]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyKind.html#variant.Str
-[kindslice]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyKind.html#variant.Slice
-[kindarray]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyKind.html#variant.Array
-[kindrawptr]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyKind.html#variant.RawPtr
-[kindref]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyKind.html#variant.Ref
-[kindparam]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyKind.html#variant.Param
-[kinderr]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyKind.html#variant.Error
-[kindvars]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyKind.html#variants
+[kindadt]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_type_ir/sty/enum.TyKind.html#variant.Adt
+[kindforeign]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_type_ir/sty/enum.TyKind.html#variant.Foreign
+[kindstr]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_type_ir/sty/enum.TyKind.html#variant.Str
+[kindslice]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_type_ir/sty/enum.TyKind.html#variant.Slice
+[kindarray]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_type_ir/sty/enum.TyKind.html#variant.Array
+[kindrawptr]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_type_ir/sty/enum.TyKind.html#variant.RawPtr
+[kindref]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_type_ir/sty/enum.TyKind.html#variant.Ref
+[kindparam]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_type_ir/sty/enum.TyKind.html#variant.Param
+[kinderr]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_type_ir/sty/enum.TyKind.html#variant.Error
+[kindvars]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_type_ir/sty/enum.TyKind.html#variants
 
 ## Import conventions
 

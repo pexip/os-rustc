@@ -47,7 +47,7 @@ cfg_if! {
         // On x86/x86_64 no OS specific functionality is required.
         #[path = "os/x86.rs"]
         mod os;
-    } else if #[cfg(all(target_os = "linux", feature = "libc"))] {
+    } else if #[cfg(all(any(target_os = "linux", target_os = "android"), feature = "libc"))] {
         #[path = "os/linux/mod.rs"]
         mod os;
     } else if #[cfg(all(target_os = "freebsd", feature = "libc"))] {
@@ -55,6 +55,12 @@ cfg_if! {
         #[path = "os/aarch64.rs"]
         mod aarch64;
         #[path = "os/freebsd/mod.rs"]
+        mod os;
+    } else if #[cfg(all(target_os = "openbsd", target_arch = "aarch64", feature = "libc"))] {
+        #[allow(dead_code)] // we don't use code that calls the mrs instruction.
+        #[path = "os/aarch64.rs"]
+        mod aarch64;
+        #[path = "os/openbsd/aarch64.rs"]
         mod os;
     } else if #[cfg(all(target_os = "windows", target_arch = "aarch64"))] {
         #[path = "os/windows/aarch64.rs"]

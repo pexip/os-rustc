@@ -2,6 +2,7 @@
 
 #![feature(async_closure)]
 #![warn(clippy::redundant_closure_call)]
+#![allow(clippy::redundant_async_block)]
 #![allow(unused)]
 
 async fn something() -> u32 {
@@ -25,4 +26,16 @@ fn main() {
         x * y
     })();
     let d = (async || something().await)();
+
+    macro_rules! m {
+        () => {
+            (|| 0)()
+        };
+    }
+    macro_rules! m2 {
+        () => {
+            (|| m!())()
+        };
+    }
+    m2!();
 }

@@ -3,9 +3,10 @@
 //! This is in a dedicated file so that changes to this file can be reviewed more carefully.
 //! The intention is that this file only contains datatype declarations, no code.
 
-use super::{BasicBlock, Constant, Field, Local, SwitchTargets, UserTypeProjection};
+use super::{BasicBlock, Constant, Local, SwitchTargets, UserTypeProjection};
 
 use crate::mir::coverage::{CodeRegion, CoverageKind};
+use crate::traits::Reveal;
 use crate::ty::adjustment::PointerCast;
 use crate::ty::subst::SubstsRef;
 use crate::ty::{self, List, Ty};
@@ -15,7 +16,8 @@ use rustc_ast::{InlineAsmOptions, InlineAsmTemplatePiece};
 use rustc_hir::def_id::DefId;
 use rustc_hir::{self as hir};
 use rustc_hir::{self, GeneratorKind};
-use rustc_target::abi::VariantIdx;
+use rustc_index::vec::IndexVec;
+use rustc_target::abi::{FieldIdx, VariantIdx};
 
 use rustc_ast::Mutability;
 use rustc_span::def_id::LocalDefId;
@@ -77,7 +79,8 @@ pub enum MirPhase {
     ///    MIR, this is UB.
     ///  - Retags: If `-Zmir-emit-retag` is enabled, analysis MIR has "implicit" retags in the same way
     ///    that Rust itself has them. Where exactly these are is generally subject to change, and so we
-    ///    don't document this here. Runtime MIR has all retags explicit.
+    ///    don't document this here. Runtime MIR has most retags explicit (though implicit retags
+    ///    can still occur at `Rvalue::{Ref,AddrOf}`).
     ///  - Generator bodies: In analysis MIR, locals may actually be behind a pointer that user code has
     ///    access to. This occurs in generator bodies. Such locals do not behave like other locals,
     ///    because they eg may be aliased in surprising ways. Runtime MIR has no such special locals -
@@ -85,8 +88,28 @@ pub enum MirPhase {
     ///
     /// Also note that the lint pass which reports eg `200_u8 + 200_u8` as an error is run as a part
     /// of analysis to runtime MIR lowering. To ensure lints are reported reliably, this means that
-    /// transformations which may supress such errors should not run on analysis MIR.
+    /// transformations which may suppress such errors should not run on analysis MIR.
     Runtime(RuntimePhase),
+}
+
+impl MirPhase {
+    pub fn name(&self) -> &'static str {
+        match *self {
+            MirPhase::Built => "built",
+            MirPhase::Analysis(AnalysisPhase::Initial) => "analysis",
+            MirPhase::Analysis(AnalysisPhase::PostCleanup) => "analysis-post-cleanup",
+            MirPhase::Runtime(RuntimePhase::Initial) => "runtime",
+            MirPhase::Runtime(RuntimePhase::PostCleanup) => "runtime-post-cleanup",
+            MirPhase::Runtime(RuntimePhase::Optimized) => "runtime-optimized",
+        }
+    }
+
+    pub fn reveal(&self) -> Reveal {
+        match *self {
+            MirPhase::Built | MirPhase::Analysis(_) => Reveal::UserFacing,
+            MirPhase::Runtime(_) => Reveal::All,
+        }
+    }
 }
 
 /// See [`MirPhase::Analysis`].
@@ -112,7 +135,6 @@ pub enum AnalysisPhase {
 pub enum RuntimePhase {
     /// In addition to the semantic changes, beginning with this phase, the following variants are
     /// disallowed:
-    /// * [`TerminatorKind::DropAndReplace`]
     /// * [`TerminatorKind::Yield`]
     /// * [`TerminatorKind::GeneratorDrop`]
     /// * [`Rvalue::Aggregate`] for any `AggregateKind` except `Array`
@@ -198,6 +220,11 @@ pub enum BorrowKind {
     /// immutable, but not aliasable. This solves the problem. For
     /// simplicity, we don't give users the way to express this
     /// borrow, it's just used when translating closures.
+    ///
+    // FIXME(#112072): This is wrong. Unique borrows are mutable borrows except
+    // that they do not require their pointee to be marked as a mutable.
+    // They should still be treated as mutable borrows in every other way,
+    // e.g. for variance or overlap checking.
     Unique,
 
     /// Data is mutable and not aliasable.
@@ -299,9 +326,20 @@ pub enum StatementKind<'tcx> {
     /// <https://internals.rust-lang.org/t/stacked-borrows-an-aliasing-model-for-rust/8153/> for
     /// more details.
     ///
-    /// For code that is not specific to stacked borrows, you should consider retags to read
-    /// and modify the place in an opaque way.
+    /// For code that is not specific to stacked borrows, you should consider retags to read and
+    /// modify the place in an opaque way.
+    ///
+    /// Only `RetagKind::Default` and `RetagKind::FnEntry` are permitted.
     Retag(RetagKind, Box<Place<'tcx>>),
+
+    /// This statement exists to preserve a trace of a scrutinee matched against a wildcard binding.
+    /// This is especially useful for `let _ = PLACE;` bindings that desugar to a single
+    /// `PlaceMention(PLACE)`.
+    ///
+    /// When executed at runtime this is a nop.
+    ///
+    /// Disallowed after drop elaboration.
+    PlaceMention(Box<Place<'tcx>>),
 
     /// Encodes a user's type ascription. These need to be preserved
     /// intact so that NLL can respect them. For example:
@@ -331,6 +369,12 @@ pub enum StatementKind<'tcx> {
     /// Denotes a call to an intrinsic that does not require an unwind path and always returns.
     /// This avoids adding a new block and a terminator for simple intrinsics.
     Intrinsic(Box<NonDivergingIntrinsic<'tcx>>),
+
+    /// Instructs the const eval interpreter to increment a counter; this counter is used to track
+    /// how many steps the interpreter has taken. It is used to prevent the user from writing const
+    /// code that runs for too long or infinitely. Other than in the const eval interpreter, this
+    /// is a no-op.
+    ConstEvalCounter,
 
     /// No-op. Useful for deleting instructions without affecting statement indices.
     Nop,
@@ -387,7 +431,7 @@ impl std::fmt::Display for NonDivergingIntrinsic<'_> {
 #[derive(Copy, Clone, TyEncodable, TyDecodable, Debug, PartialEq, Eq, Hash, HashStable)]
 #[rustc_pass_by_value]
 pub enum RetagKind {
-    /// The initial retag when entering a function.
+    /// The initial retag of arguments when entering a function.
     FnEntry,
     /// Retag preparing for a two-phase borrow.
     TwoPhase,
@@ -476,19 +520,29 @@ pub struct CopyNonOverlapping<'tcx> {
 ///
 /// A note on unwinding: Panics may occur during the execution of some terminators. Depending on the
 /// `-C panic` flag, this may either cause the program to abort or the call stack to unwind. Such
-/// terminators have a `cleanup: Option<BasicBlock>` field on them. If stack unwinding occurs, then
-/// once the current function is reached, execution continues at the given basic block, if any. If
-/// `cleanup` is `None` then no cleanup is performed, and the stack continues unwinding. This is
-/// equivalent to the execution of a `Resume` terminator.
+/// terminators have a `unwind: UnwindAction` field on them. If stack unwinding occurs, then
+/// once the current function is reached, an action will be taken based on the `unwind` field.
+/// If the action is `Cleanup`, then the execution continues at the given basic block. If the
+/// action is `Continue` then no cleanup is performed, and the stack continues unwinding.
 ///
-/// The basic block pointed to by a `cleanup` field must have its `cleanup` flag set. `cleanup`
-/// basic blocks have a couple restrictions:
-///  1. All `cleanup` fields in them must be `None`.
-///  2. `Return` terminators are not allowed in them. `Abort` and `Unwind` terminators are.
+/// The basic block pointed to by a `Cleanup` unwind action must have its `cleanup` flag set.
+/// `cleanup` basic blocks have a couple restrictions:
+///  1. All `unwind` fields in them must be `UnwindAction::Terminate` or `UnwindAction::Unreachable`.
+///  2. `Return` terminators are not allowed in them. `Terminate` and `Resume` terminators are.
 ///  3. All other basic blocks (in the current body) that are reachable from `cleanup` basic blocks
 ///     must also be `cleanup`. This is a part of the type system and checked statically, so it is
 ///     still an error to have such an edge in the CFG even if it's known that it won't be taken at
 ///     runtime.
+///  4. The control flow between cleanup blocks must look like an upside down tree. Roughly
+///     speaking, this means that control flow that looks like a V is allowed, while control flow
+///     that looks like a W is not. This is necessary to ensure that landing pad information can be
+///     correctly codegened on MSVC. More precisely:
+///
+///     Begin with the standard control flow graph `G`. Modify `G` as follows: for any two cleanup
+///     vertices `u` and `v` such that `u` dominates `v`, contract `u` and `v` into a single vertex,
+///     deleting self edges and duplicate edges in the process. Now remove all vertices from `G`
+///     that are not cleanup vertices or are not reachable. The resulting graph must be an inverted
+///     tree, that is each vertex may have at most one successor and there may be no cycles.
 #[derive(Clone, TyEncodable, TyDecodable, Hash, HashStable, PartialEq, TypeFoldable, TypeVisitable)]
 pub enum TerminatorKind<'tcx> {
     /// Block has one successor; we continue execution there.
@@ -505,12 +559,6 @@ pub enum TerminatorKind<'tcx> {
     SwitchInt {
         /// The discriminant value being tested.
         discr: Operand<'tcx>,
-
-        /// The type of value being tested.
-        /// This is always the same as the type of `discr`.
-        /// FIXME: remove this redundant information. Currently, it is relied on by pretty-printing.
-        switch_ty: Ty<'tcx>,
-
         targets: SwitchTargets,
     },
 
@@ -522,11 +570,11 @@ pub enum TerminatorKind<'tcx> {
     /// deaggregation runs.
     Resume,
 
-    /// Indicates that the landing pad is finished and that the process should abort.
+    /// Indicates that the landing pad is finished and that the process should terminate.
     ///
     /// Used to prevent unwinding for foreign items or with `-C unwind=abort`. Only permitted in
     /// cleanup blocks.
-    Abort,
+    Terminate,
 
     /// Returns from the function.
     ///
@@ -547,14 +595,13 @@ pub enum TerminatorKind<'tcx> {
     Unreachable,
 
     /// The behavior of this statement differs significantly before and after drop elaboration.
-    /// After drop elaboration, `Drop` executes the drop glue for the specified place, after which
-    /// it continues execution/unwinds at the given basic blocks. It is possible that executing drop
-    /// glue is special - this would be part of Rust's memory model. (**FIXME**: due we have an
-    /// issue tracking if drop glue has any interesting semantics in addition to those of a function
-    /// call?)
     ///
-    /// `Drop` before drop elaboration is a *conditional* execution of the drop glue. Specifically, the
-    /// `Drop` will be executed if...
+    /// After drop elaboration: `Drop` terminators are a complete nop for types that have no drop
+    /// glue. For other types, `Drop` terminators behave exactly like a call to
+    /// `core::mem::drop_in_place` with a pointer to the given place.
+    ///
+    /// `Drop` before drop elaboration is a *conditional* execution of the drop glue. Specifically,
+    /// the `Drop` will be executed if...
     ///
     /// **Needs clarification**: End of that sentence. This in effect should document the exact
     /// behavior of drop elaboration. The following sounds vaguely right, but I'm not quite sure:
@@ -562,44 +609,7 @@ pub enum TerminatorKind<'tcx> {
     /// > The drop glue is executed if, among all statements executed within this `Body`, an assignment to
     /// > the place or one of its "parents" occurred more recently than a move out of it. This does not
     /// > consider indirect assignments.
-    Drop { place: Place<'tcx>, target: BasicBlock, unwind: Option<BasicBlock> },
-
-    /// Drops the place and assigns a new value to it.
-    ///
-    /// This first performs the exact same operation as the pre drop-elaboration `Drop` terminator;
-    /// it then additionally assigns the `value` to the `place` as if by an assignment statement.
-    /// This assignment occurs both in the unwind and the regular code paths. The semantics are best
-    /// explained by the elaboration:
-    ///
-    /// ```ignore (MIR)
-    /// BB0 {
-    ///   DropAndReplace(P <- V, goto BB1, unwind BB2)
-    /// }
-    /// ```
-    ///
-    /// becomes
-    ///
-    /// ```ignore (MIR)
-    /// BB0 {
-    ///   Drop(P, goto BB1, unwind BB2)
-    /// }
-    /// BB1 {
-    ///   // P is now uninitialized
-    ///   P <- V
-    /// }
-    /// BB2 {
-    ///   // P is now uninitialized -- its dtor panicked
-    ///   P <- V
-    /// }
-    /// ```
-    ///
-    /// Disallowed after drop elaboration.
-    DropAndReplace {
-        place: Place<'tcx>,
-        value: Operand<'tcx>,
-        target: BasicBlock,
-        unwind: Option<BasicBlock>,
-    },
+    Drop { place: Place<'tcx>, target: BasicBlock, unwind: UnwindAction },
 
     /// Roughly speaking, evaluates the `func` operand and the arguments, and starts execution of
     /// the referred to function. The operand types must match the argument types of the function.
@@ -623,8 +633,8 @@ pub enum TerminatorKind<'tcx> {
         destination: Place<'tcx>,
         /// Where to go after this call returns. If none, the call necessarily diverges.
         target: Option<BasicBlock>,
-        /// Cleanups to be done if the call unwinds.
-        cleanup: Option<BasicBlock>,
+        /// Action to be taken if the call unwinds.
+        unwind: UnwindAction,
         /// `true` if this is from a call in HIR rather than from an overloaded
         /// operator. True for overloaded function call.
         from_hir_call: bool,
@@ -639,12 +649,17 @@ pub enum TerminatorKind<'tcx> {
     /// as parameters, and `None` for the destination. Keep in mind that the `cleanup` path is not
     /// necessarily executed even in the case of a panic, for example in `-C panic=abort`. If the
     /// assertion does not fail, execution continues at the specified basic block.
+    ///
+    /// When overflow checking is disabled and this is run-time MIR (as opposed to compile-time MIR
+    /// that is used for CTFE), the following variants of this terminator behave as `goto target`:
+    /// - `OverflowNeg(..)`,
+    /// - `Overflow(op, ..)` if op is add, sub, mul, shl, shr, but NOT div or rem.
     Assert {
         cond: Operand<'tcx>,
         expected: bool,
         msg: AssertMessage<'tcx>,
         target: BasicBlock,
-        cleanup: Option<BasicBlock>,
+        unwind: UnwindAction,
     },
 
     /// Marks a suspend point.
@@ -710,9 +725,8 @@ pub enum TerminatorKind<'tcx> {
         /// in practice, but in order to avoid fragility we want to always
         /// consider it in borrowck. We don't want to accept programs which
         /// pass borrowck only when `panic=abort` or some assertions are disabled
-        /// due to release vs. debug mode builds. This needs to be an `Option` because
-        /// of the `remove_noop_landing_pads` and `abort_unwinding_calls` passes.
-        unwind: Option<BasicBlock>,
+        /// due to release vs. debug mode builds.
+        unwind: UnwindAction,
     },
 
     /// Block ends with an inline assembly block. This is a terminator since
@@ -735,10 +749,29 @@ pub enum TerminatorKind<'tcx> {
         /// diverging (InlineAsmOptions::NORETURN).
         destination: Option<BasicBlock>,
 
-        /// Cleanup to be done if the inline assembly unwinds. This is present
+        /// Action to be taken if the inline assembly unwinds. This is present
         /// if and only if InlineAsmOptions::MAY_UNWIND is set.
-        cleanup: Option<BasicBlock>,
+        unwind: UnwindAction,
     },
+}
+
+/// Action to be taken when a stack unwind happens.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, TyEncodable, TyDecodable, Hash, HashStable)]
+#[derive(TypeFoldable, TypeVisitable)]
+pub enum UnwindAction {
+    /// No action is to be taken. Continue unwinding.
+    ///
+    /// This is similar to `Cleanup(bb)` where `bb` does nothing but `Resume`, but they are not
+    /// equivalent, as presence of `Cleanup(_)` will make a frame non-POF.
+    Continue,
+    /// Triggers undefined behavior if unwind happens.
+    Unreachable,
+    /// Terminates the execution if unwind happens.
+    ///
+    /// Depending on the platform and situation this may cause a non-unwindable panic or abort.
+    Terminate,
+    /// Cleanups to be done.
+    Cleanup(BasicBlock),
 }
 
 /// Information about an assertion failure.
@@ -751,6 +784,7 @@ pub enum AssertKind<O> {
     RemainderByZero(O),
     ResumedAfterReturn(GeneratorKind),
     ResumedAfterPanic(GeneratorKind),
+    MisalignedPointerDereference { required: O, found: O },
 }
 
 #[derive(Clone, Debug, PartialEq, TyEncodable, TyDecodable, Hash, HashStable)]
@@ -879,7 +913,15 @@ pub struct Place<'tcx> {
 #[derive(TyEncodable, TyDecodable, HashStable, TypeFoldable, TypeVisitable)]
 pub enum ProjectionElem<V, T> {
     Deref,
-    Field(Field, T),
+
+    /// A field (e.g., `f` in `_1.f`) is one variant of [`ProjectionElem`]. Conceptually,
+    /// rustc can identify that a field projection refers to either two different regions of memory
+    /// or the same one between the base and the 'projection element'.
+    /// Read more about projections in the [rustc-dev-guide][mir-datatypes]
+    ///
+    /// [mir-datatypes]: https://rustc-dev-guide.rust-lang.org/mir/index.html#mir-data-types
+    Field(FieldIdx, T),
+
     /// Index into a slice/array.
     ///
     /// Note that this does not also dereference, and so it does not exactly correspond to slice
@@ -1071,16 +1113,8 @@ pub enum Rvalue<'tcx> {
 
     /// Same as `BinaryOp`, but yields `(T, bool)` with a `bool` indicating an error condition.
     ///
-    /// When overflow checking is disabled and we are generating run-time code, the error condition
-    /// is false. Otherwise, and always during CTFE, the error condition is determined as described
-    /// below.
-    ///
     /// For addition, subtraction, and multiplication on integers the error condition is set when
-    /// the infinite precision result would be unequal to the actual result.
-    ///
-    /// For shift operations on integers the error condition is set when the value of right-hand
-    /// side is greater than or equal to the number of bits in the type of the left-hand side, or
-    /// when the value of right-hand side is negative.
+    /// the infinite precision result would not be equal to the actual result.
     ///
     /// Other combinations of types and operators are unsupported.
     CheckedBinaryOp(BinOp, Box<(Operand<'tcx>, Operand<'tcx>)>),
@@ -1115,7 +1149,7 @@ pub enum Rvalue<'tcx> {
     ///
     /// Disallowed after deaggregation for all aggregate kinds except `Array` and `Generator`. After
     /// generator lowering, `Generator` aggregate kinds are disallowed too.
-    Aggregate(Box<AggregateKind<'tcx>>, Vec<Operand<'tcx>>),
+    Aggregate(Box<AggregateKind<'tcx>>, IndexVec<FieldIdx, Operand<'tcx>>),
 
     /// Transmutes a `*mut u8` into shallow-initialized `Box<T>`.
     ///
@@ -1155,6 +1189,13 @@ pub enum CastKind {
     IntToFloat,
     PtrToPtr,
     FnPtrToPtr,
+    /// Reinterpret the bits of the input as a different type.
+    ///
+    /// MIR is well-formed if the input and output types have different sizes,
+    /// but running a transmute between differently-sized types is UB.
+    ///
+    /// Allowed only in [`MirPhase::Runtime`]; Earlier it's a [`TerminatorKind::Call`].
+    Transmute,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, TyEncodable, TyDecodable, Hash, HashStable)]
@@ -1165,16 +1206,14 @@ pub enum AggregateKind<'tcx> {
     Tuple,
 
     /// The second field is the variant index. It's equal to 0 for struct
-    /// and union expressions. The fourth field is
+    /// and union expressions. The last field is the
     /// active field number and is present only for union expressions
     /// -- e.g., for a union expression `SomeUnion { c: .. }`, the
     /// active field index would identity the field `c`
-    Adt(DefId, VariantIdx, SubstsRef<'tcx>, Option<UserTypeAnnotationIndex>, Option<usize>),
+    Adt(DefId, VariantIdx, SubstsRef<'tcx>, Option<UserTypeAnnotationIndex>, Option<FieldIdx>),
 
-    // Note: We can use LocalDefId since closures and generators a deaggregated
-    // before codegen.
-    Closure(LocalDefId, SubstsRef<'tcx>),
-    Generator(LocalDefId, SubstsRef<'tcx>, hir::Movability),
+    Closure(DefId, SubstsRef<'tcx>),
+    Generator(DefId, SubstsRef<'tcx>, hir::Movability),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, TyEncodable, TyDecodable, Hash, HashStable)]
@@ -1185,7 +1224,8 @@ pub enum NullOp {
     AlignOf,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, TyEncodable, TyDecodable, Hash, HashStable)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(HashStable, TyEncodable, TyDecodable, TypeFoldable, TypeVisitable)]
 pub enum UnOp {
     /// The `!` operator for logical inversion
     Not,
@@ -1193,7 +1233,8 @@ pub enum UnOp {
     Neg,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Eq, TyEncodable, TyDecodable, Hash, HashStable)]
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Ord, Eq, Hash)]
+#[derive(TyEncodable, TyDecodable, HashStable, TypeFoldable, TypeVisitable)]
 pub enum BinOp {
     /// The `+` operator (addition)
     Add,
@@ -1246,7 +1287,7 @@ pub enum BinOp {
 mod size_asserts {
     use super::*;
     // tidy-alphabetical-start
-    static_assert_size!(AggregateKind<'_>, 40);
+    static_assert_size!(AggregateKind<'_>, 32);
     static_assert_size!(Operand<'_>, 24);
     static_assert_size!(Place<'_>, 16);
     static_assert_size!(PlaceElem<'_>, 24);

@@ -8,7 +8,7 @@ use crate::interpret::{
 use crate::interpret::{MPlaceTy, Value};
 use rustc_middle::ty::{self, ScalarInt, Ty, TyCtxt};
 use rustc_span::source_map::DUMMY_SP;
-use rustc_target::abi::{Align, VariantIdx};
+use rustc_target::abi::{Align, FieldIdx, VariantIdx, FIRST_VARIANT};
 
 #[instrument(skip(ecx), level = "debug")]
 fn branches<'tcx>(
@@ -142,17 +142,16 @@ pub(crate) fn const_to_valtree_inner<'tcx>(
         | ty::Foreign(..)
         | ty::Infer(ty::FreshIntTy(_))
         | ty::Infer(ty::FreshFloatTy(_))
-        | ty::Projection(..)
+        // FIXME(oli-obk): we could look behind opaque types
+        | ty::Alias(..)
         | ty::Param(_)
         | ty::Bound(..)
         | ty::Placeholder(..)
-        // FIXME(oli-obk): we could look behind opaque types
-        | ty::Opaque(..)
         | ty::Infer(_)
         // FIXME(oli-obk): we can probably encode closures just like structs
         | ty::Closure(..)
         | ty::Generator(..)
-        | ty::GeneratorWitness(..) => Err(ValTreeCreationError::NonSupportedType),
+        | ty::GeneratorWitness(..) |ty::GeneratorWitnessMIR(..)=> Err(ValTreeCreationError::NonSupportedType),
     }
 }
 
@@ -194,7 +193,7 @@ fn get_info_on_unsized_field<'tcx>(
 
     // Have to adjust type for ty::Str
     let unsized_inner_ty = match unsized_inner_ty.kind() {
-        ty::Str => tcx.mk_ty(ty::Uint(ty::UintTy::U8)),
+        ty::Str => tcx.types.u8,
         _ => unsized_inner_ty,
     };
 
@@ -217,7 +216,7 @@ fn create_pointee_place<'tcx>(
 
         let (unsized_inner_ty, num_elems) = get_info_on_unsized_field(ty, valtree, tcx);
         let unsized_inner_ty = match unsized_inner_ty.kind() {
-            ty::Str => tcx.mk_ty(ty::Uint(ty::UintTy::U8)),
+            ty::Str => tcx.types.u8,
             _ => unsized_inner_ty,
         };
         let unsized_inner_ty_size =
@@ -240,7 +239,7 @@ fn create_pointee_place<'tcx>(
         MPlaceTy::from_aligned_ptr_with_meta(
             ptr.into(),
             layout,
-            MemPlaceMeta::Meta(Scalar::from_machine_usize(num_elems as u64, &tcx)),
+            MemPlaceMeta::Meta(Scalar::from_target_usize(num_elems as u64, &tcx)),
         )
     } else {
         create_mplace_from_layout(ecx, ty)
@@ -307,15 +306,15 @@ pub fn valtree_to_const_value<'tcx>(
         | ty::Foreign(..)
         | ty::Infer(ty::FreshIntTy(_))
         | ty::Infer(ty::FreshFloatTy(_))
-        | ty::Projection(..)
+        | ty::Alias(..)
         | ty::Param(_)
         | ty::Bound(..)
         | ty::Placeholder(..)
-        | ty::Opaque(..)
         | ty::Infer(_)
         | ty::Closure(..)
         | ty::Generator(..)
         | ty::GeneratorWitness(..)
+        | ty::GeneratorWitnessMIR(..)
         | ty::FnPtr(_)
         | ty::RawPtr(_)
         | ty::Str
@@ -356,7 +355,7 @@ fn valtree_into_mplace<'tcx>(
             let imm = match inner_ty.kind() {
                 ty::Slice(_) | ty::Str => {
                     let len = valtree.unwrap_branch().len();
-                    let len_scalar = Scalar::from_machine_usize(len as u64, &tcx);
+                    let len_scalar = Scalar::from_target_usize(len as u64, &tcx);
 
                     Immediate::ScalarPair(
                         Scalar::from_maybe_pointer((*pointee_place).ptr, &tcx),
@@ -413,7 +412,8 @@ fn valtree_into_mplace<'tcx>(
 
                         let inner_ty = match ty.kind() {
                             ty::Adt(def, substs) => {
-                                def.variant(VariantIdx::from_u32(0)).fields[i].ty(tcx, substs)
+                                let i = FieldIdx::from_usize(i);
+                                def.variant(FIRST_VARIANT).fields[i].ty(tcx, substs)
                             }
                             ty::Tuple(inner_tys) => inner_tys[i],
                             _ => bug!("unexpected unsized type {:?}", ty),
@@ -427,7 +427,7 @@ fn valtree_into_mplace<'tcx>(
                         place
                             .offset_with_meta(
                                 offset,
-                                MemPlaceMeta::Meta(Scalar::from_machine_usize(
+                                MemPlaceMeta::Meta(Scalar::from_target_usize(
                                     num_elems as u64,
                                     &tcx,
                                 )),

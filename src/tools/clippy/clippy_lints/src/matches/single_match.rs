@@ -67,8 +67,10 @@ fn report_single_pattern(
     els: Option<&Expr<'_>>,
 ) {
     let lint = if els.is_some() { SINGLE_MATCH_ELSE } else { SINGLE_MATCH };
+    let ctxt = expr.span.ctxt();
+    let mut app = Applicability::HasPlaceholders;
     let els_str = els.map_or(String::new(), |els| {
-        format!(" else {}", expr_block(cx, els, None, "..", Some(expr.span)))
+        format!(" else {}", expr_block(cx, els, ctxt, "..", Some(expr.span), &mut app))
     });
 
     let (pat, pat_ref_count) = peel_hir_pat_refs(arms[0].pat);
@@ -103,7 +105,7 @@ fn report_single_pattern(
                 // PartialEq for different reference counts may not exist.
                 "&".repeat(ref_count_diff),
                 snippet(cx, arms[0].pat.span, ".."),
-                expr_block(cx, arms[0].body, None, "..", Some(expr.span)),
+                expr_block(cx, arms[0].body, ctxt, "..", Some(expr.span), &mut app),
             );
             (msg, sugg)
         } else {
@@ -112,21 +114,13 @@ fn report_single_pattern(
                 "if let {} = {} {}{els_str}",
                 snippet(cx, arms[0].pat.span, ".."),
                 snippet(cx, ex.span, ".."),
-                expr_block(cx, arms[0].body, None, "..", Some(expr.span)),
+                expr_block(cx, arms[0].body, ctxt, "..", Some(expr.span), &mut app),
             );
             (msg, sugg)
         }
     };
 
-    span_lint_and_sugg(
-        cx,
-        lint,
-        expr.span,
-        msg,
-        "try this",
-        sugg,
-        Applicability::HasPlaceholders,
-    );
+    span_lint_and_sugg(cx, lint, expr.span, msg, "try this", sugg, app);
 }
 
 fn check_opt_like<'a>(
@@ -153,7 +147,7 @@ fn pat_in_candidate_enum<'a>(cx: &LateContext<'a>, ty: Ty<'a>, pat: &Pat<'_>) ->
 }
 
 /// Returns `true` if the given type is an enum we know won't be expanded in the future
-fn in_candidate_enum<'a>(cx: &LateContext<'a>, ty: Ty<'_>) -> bool {
+fn in_candidate_enum(cx: &LateContext<'_>, ty: Ty<'_>) -> bool {
     // list of candidate `Enum`s we know will never get any more members
     let candidates = [sym::Cow, sym::Option, sym::Result];
 

@@ -355,6 +355,140 @@ s! {
         pub flags: ::__u32,
         pub nr: ::__s32,
     }
+
+    // linux/input.h
+    pub struct input_event {
+        pub time: ::timeval,
+        pub type_: ::__u16,
+        pub code: ::__u16,
+        pub value: ::__s32,
+    }
+
+    pub struct input_id {
+        pub bustype: ::__u16,
+        pub vendor: ::__u16,
+        pub product: ::__u16,
+        pub version: ::__u16,
+    }
+
+    pub struct input_absinfo {
+        pub value: ::__s32,
+        pub minimum: ::__s32,
+        pub maximum: ::__s32,
+        pub fuzz: ::__s32,
+        pub flat: ::__s32,
+        pub resolution: ::__s32,
+    }
+
+    pub struct input_keymap_entry {
+        pub flags: ::__u8,
+        pub len: ::__u8,
+        pub index: ::__u16,
+        pub keycode: ::__u32,
+        pub scancode: [::__u8; 32],
+    }
+
+    pub struct input_mask {
+        pub type_: ::__u32,
+        pub codes_size: ::__u32,
+        pub codes_ptr: ::__u64,
+    }
+
+    pub struct ff_replay {
+        pub length: ::__u16,
+        pub delay: ::__u16,
+    }
+
+    pub struct ff_trigger {
+        pub button: ::__u16,
+        pub interval: ::__u16,
+    }
+
+    pub struct ff_envelope {
+        pub attack_length: ::__u16,
+        pub attack_level: ::__u16,
+        pub fade_length: ::__u16,
+        pub fade_level: ::__u16,
+    }
+
+    pub struct ff_constant_effect {
+        pub level: ::__s16,
+        pub envelope: ff_envelope,
+    }
+
+    pub struct ff_ramp_effect {
+        pub start_level: ::__s16,
+        pub end_level: ::__s16,
+        pub envelope: ff_envelope,
+    }
+
+    pub struct ff_condition_effect {
+        pub right_saturation: ::__u16,
+        pub left_saturation: ::__u16,
+
+        pub right_coeff: ::__s16,
+        pub left_coeff: ::__s16,
+
+        pub deadband: ::__u16,
+        pub center: ::__s16,
+    }
+
+    pub struct ff_periodic_effect {
+        pub waveform: ::__u16,
+        pub period: ::__u16,
+        pub magnitude: ::__s16,
+        pub offset: ::__s16,
+        pub phase: ::__u16,
+
+        pub envelope: ff_envelope,
+
+        pub custom_len: ::__u32,
+        pub custom_data: *mut ::__s16,
+    }
+
+    pub struct ff_rumble_effect {
+        pub strong_magnitude: ::__u16,
+        pub weak_magnitude: ::__u16,
+    }
+
+    pub struct ff_effect {
+        pub type_: ::__u16,
+        pub id: ::__s16,
+        pub direction: ::__u16,
+        pub trigger: ff_trigger,
+        pub replay: ff_replay,
+        // FIXME this is actually a union
+        #[cfg(target_pointer_width = "64")]
+        pub u: [u64; 4],
+        #[cfg(target_pointer_width = "32")]
+        pub u: [u32; 7],
+    }
+
+    // linux/uinput.h
+    pub struct uinput_ff_upload {
+        pub request_id: ::__u32,
+        pub retval: ::__s32,
+        pub effect: ff_effect,
+        pub old: ff_effect,
+    }
+
+    pub struct uinput_ff_erase {
+        pub request_id: ::__u32,
+        pub retval: ::__s32,
+        pub effect_id: ::__u32,
+    }
+
+    pub struct uinput_abs_setup {
+        pub code: ::__u16,
+        pub absinfo: input_absinfo,
+    }
+
+    pub struct option {
+        pub name: *const ::c_char,
+        pub has_arg: ::c_int,
+        pub flag: *mut ::c_int,
+        pub val: ::c_int,
+    }
 }
 
 s_no_extra_traits! {
@@ -415,6 +549,22 @@ s_no_extra_traits! {
         pub salg_feat: u32,
         pub salg_mask: u32,
         pub salg_name: [::c_uchar; 64],
+    }
+
+    pub struct uinput_setup {
+        pub id: input_id,
+        pub name: [::c_char; UINPUT_MAX_NAME_SIZE],
+        pub ff_effects_max: ::__u32,
+    }
+
+    pub struct uinput_user_dev {
+        pub name: [::c_char; UINPUT_MAX_NAME_SIZE],
+        pub id: input_id,
+        pub ff_effects_max: ::__u32,
+        pub absmax: [::__s32; ABS_CNT],
+        pub absmin: [::__s32; ABS_CNT],
+        pub absfuzz: [::__s32; ABS_CNT],
+        pub absflat: [::__s32; ABS_CNT],
     }
 
     /// WARNING: The `PartialEq`, `Eq` and `Hash` implementations of this
@@ -712,6 +862,72 @@ cfg_if! {
                 self.salg_feat.hash(state);
                 self.salg_mask.hash(state);
                 self.salg_name.hash(state);
+            }
+        }
+
+        impl PartialEq for uinput_setup {
+            fn eq(&self, other: &uinput_setup) -> bool {
+                self.id == other.id
+                    && self.name[..] == other.name[..]
+                    && self.ff_effects_max == other.ff_effects_max
+           }
+        }
+        impl Eq for uinput_setup {}
+
+        impl ::fmt::Debug for uinput_setup {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("uinput_setup")
+                    .field("id", &self.id)
+                    .field("name", &&self.name[..])
+                    .field("ff_effects_max", &self.ff_effects_max)
+                    .finish()
+            }
+        }
+
+        impl ::hash::Hash for uinput_setup {
+            fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
+                self.id.hash(state);
+                self.name.hash(state);
+                self.ff_effects_max.hash(state);
+            }
+        }
+
+        impl PartialEq for uinput_user_dev {
+            fn eq(&self, other: &uinput_user_dev) -> bool {
+                 self.name[..] == other.name[..]
+                    && self.id == other.id
+                    && self.ff_effects_max == other.ff_effects_max
+                    && self.absmax[..] == other.absmax[..]
+                    && self.absmin[..] == other.absmin[..]
+                    && self.absfuzz[..] == other.absfuzz[..]
+                    && self.absflat[..] == other.absflat[..]
+           }
+        }
+        impl Eq for uinput_user_dev {}
+
+        impl ::fmt::Debug for uinput_user_dev {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("uinput_setup")
+                    .field("name", &&self.name[..])
+                    .field("id", &self.id)
+                    .field("ff_effects_max", &self.ff_effects_max)
+                    .field("absmax", &&self.absmax[..])
+                    .field("absmin", &&self.absmin[..])
+                    .field("absfuzz", &&self.absfuzz[..])
+                    .field("absflat", &&self.absflat[..])
+                    .finish()
+            }
+        }
+
+        impl ::hash::Hash for uinput_user_dev {
+            fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
+                self.name.hash(state);
+                self.id.hash(state);
+                self.ff_effects_max.hash(state);
+                self.absmax.hash(state);
+                self.absmin.hash(state);
+                self.absfuzz.hash(state);
+                self.absflat.hash(state);
             }
         }
 
@@ -1905,6 +2121,10 @@ pub const PT_HIOS: u32 = 0x6fffffff;
 pub const PT_LOPROC: u32 = 0x70000000;
 pub const PT_HIPROC: u32 = 0x7fffffff;
 
+// uapi/linux/mount.h
+pub const OPEN_TREE_CLONE: ::c_uint = 0x01;
+pub const OPEN_TREE_CLOEXEC: ::c_uint = O_CLOEXEC as ::c_uint;
+
 // linux/netfilter.h
 pub const NF_DROP: ::c_int = 0;
 pub const NF_ACCEPT: ::c_int = 1;
@@ -2173,9 +2393,52 @@ pub const NFT_TRACETYPE_RULE: ::c_int = 3;
 pub const NFT_NG_INCREMENTAL: ::c_int = 0;
 pub const NFT_NG_RANDOM: ::c_int = 1;
 
+// linux/input.h
+pub const FF_MAX: ::__u16 = 0x7f;
+pub const FF_CNT: usize = FF_MAX as usize + 1;
+
+// linux/input-event-codes.h
+pub const INPUT_PROP_MAX: ::__u16 = 0x1f;
+pub const INPUT_PROP_CNT: usize = INPUT_PROP_MAX as usize + 1;
+pub const EV_MAX: ::__u16 = 0x1f;
+pub const EV_CNT: usize = EV_MAX as usize + 1;
+pub const SYN_MAX: ::__u16 = 0xf;
+pub const SYN_CNT: usize = SYN_MAX as usize + 1;
+pub const KEY_MAX: ::__u16 = 0x2ff;
+pub const KEY_CNT: usize = KEY_MAX as usize + 1;
+pub const REL_MAX: ::__u16 = 0x0f;
+pub const REL_CNT: usize = REL_MAX as usize + 1;
+pub const ABS_MAX: ::__u16 = 0x3f;
+pub const ABS_CNT: usize = ABS_MAX as usize + 1;
+pub const SW_MAX: ::__u16 = 0x0f;
+pub const SW_CNT: usize = SW_MAX as usize + 1;
+pub const MSC_MAX: ::__u16 = 0x07;
+pub const MSC_CNT: usize = MSC_MAX as usize + 1;
+pub const LED_MAX: ::__u16 = 0x0f;
+pub const LED_CNT: usize = LED_MAX as usize + 1;
+pub const REP_MAX: ::__u16 = 0x01;
+pub const REP_CNT: usize = REP_MAX as usize + 1;
+pub const SND_MAX: ::__u16 = 0x07;
+pub const SND_CNT: usize = SND_MAX as usize + 1;
+
+// linux/uinput.h
+pub const UINPUT_VERSION: ::c_uint = 5;
+pub const UINPUT_MAX_NAME_SIZE: usize = 80;
+
+// bionic/libc/kernel/uapi/linux/if_tun.h
 pub const IFF_TUN: ::c_int = 0x0001;
 pub const IFF_TAP: ::c_int = 0x0002;
+pub const IFF_NAPI: ::c_int = 0x0010;
+pub const IFF_NAPI_FRAGS: ::c_int = 0x0020;
 pub const IFF_NO_PI: ::c_int = 0x1000;
+pub const IFF_ONE_QUEUE: ::c_int = 0x2000;
+pub const IFF_VNET_HDR: ::c_int = 0x4000;
+pub const IFF_TUN_EXCL: ::c_int = 0x8000;
+pub const IFF_MULTI_QUEUE: ::c_int = 0x0100;
+pub const IFF_ATTACH_QUEUE: ::c_int = 0x0200;
+pub const IFF_DETACH_QUEUE: ::c_int = 0x0400;
+pub const IFF_PERSIST: ::c_int = 0x0800;
+pub const IFF_NOFILTER: ::c_int = 0x1000;
 
 // start android/platform/bionic/libc/kernel/uapi/linux/if_ether.h
 // from https://android.googlesource.com/
@@ -2367,10 +2630,10 @@ pub const IN_Q_OVERFLOW: u32 = 0x0000_4000;
 pub const IN_IGNORED: u32 = 0x0000_8000;
 pub const IN_ONLYDIR: u32 = 0x0100_0000;
 pub const IN_DONT_FOLLOW: u32 = 0x0200_0000;
-// pub const IN_EXCL_UNLINK:   u32 = 0x0400_0000;
+pub const IN_EXCL_UNLINK: u32 = 0x0400_0000;
 
-// pub const IN_MASK_CREATE:   u32 = 0x1000_0000;
-// pub const IN_MASK_ADD:      u32 = 0x2000_0000;
+pub const IN_MASK_CREATE: u32 = 0x1000_0000;
+pub const IN_MASK_ADD: u32 = 0x2000_0000;
 pub const IN_ISDIR: u32 = 0x4000_0000;
 pub const IN_ONESHOT: u32 = 0x8000_0000;
 
@@ -2469,6 +2732,18 @@ pub const SCHED_RESET_ON_FORK: ::c_int = 0x40000000;
 
 pub const CLONE_PIDFD: ::c_int = 0x1000;
 
+// linux/membarrier.h
+pub const MEMBARRIER_CMD_QUERY: ::c_int = 0;
+pub const MEMBARRIER_CMD_GLOBAL: ::c_int = 1 << 0;
+pub const MEMBARRIER_CMD_GLOBAL_EXPEDITED: ::c_int = 1 << 1;
+pub const MEMBARRIER_CMD_REGISTER_GLOBAL_EXPEDITED: ::c_int = 1 << 2;
+pub const MEMBARRIER_CMD_PRIVATE_EXPEDITED: ::c_int = 1 << 3;
+pub const MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED: ::c_int = 1 << 4;
+pub const MEMBARRIER_CMD_PRIVATE_EXPEDITED_SYNC_CORE: ::c_int = 1 << 5;
+pub const MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED_SYNC_CORE: ::c_int = 1 << 6;
+pub const MEMBARRIER_CMD_PRIVATE_EXPEDITED_RSEQ: ::c_int = 1 << 7;
+pub const MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED_RSEQ: ::c_int = 1 << 8;
+
 // linux/mempolicy.h
 pub const MPOL_DEFAULT: ::c_int = 0;
 pub const MPOL_PREFERRED: ::c_int = 1;
@@ -2490,6 +2765,12 @@ pub const PF_NFC: ::c_int = AF_NFC;
 pub const PF_VSOCK: ::c_int = AF_VSOCK;
 
 pub const SOMAXCONN: ::c_int = 128;
+
+// sys/prctl.h
+pub const PR_SET_PDEATHSIG: ::c_int = 1;
+pub const PR_GET_PDEATHSIG: ::c_int = 2;
+pub const PR_GET_SECUREBITS: ::c_int = 27;
+pub const PR_SET_SECUREBITS: ::c_int = 28;
 
 // sys/system_properties.h
 pub const PROP_VALUE_MAX: ::c_int = 92;
@@ -3198,6 +3479,10 @@ extern "C" {
 
     pub fn gettid() -> ::pid_t;
 
+    pub fn getrandom(buf: *mut ::c_void, buflen: ::size_t, flags: ::c_uint) -> ::ssize_t;
+
+    pub fn pthread_setname_np(thread: ::pthread_t, name: *const ::c_char) -> ::c_int;
+
     pub fn __system_property_set(__name: *const ::c_char, __value: *const ::c_char) -> ::c_int;
     pub fn __system_property_get(__name: *const ::c_char, __value: *mut ::c_char) -> ::c_int;
     pub fn __system_property_find(__name: *const ::c_char) -> *const prop_info;
@@ -3227,6 +3512,18 @@ extern "C" {
     pub fn reallocarray(ptr: *mut ::c_void, nmemb: ::size_t, size: ::size_t) -> *mut ::c_void;
 
     pub fn pthread_getcpuclockid(thread: ::pthread_t, clk_id: *mut ::clockid_t) -> ::c_int;
+
+    pub fn dirname(path: *const ::c_char) -> *mut ::c_char;
+    pub fn basename(path: *const ::c_char) -> *mut ::c_char;
+    pub fn getopt_long(
+        argc: ::c_int,
+        argv: *const *mut c_char,
+        optstring: *const c_char,
+        longopts: *const option,
+        longindex: *mut ::c_int,
+    ) -> ::c_int;
+
+    pub fn syncfs(fd: ::c_int) -> ::c_int;
 }
 
 cfg_if! {

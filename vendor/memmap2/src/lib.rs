@@ -482,7 +482,7 @@ impl MmapOptions {
             ));
         }
 
-        MmapInner::map_anon(len, self.stack).map(|inner| MmapMut { inner })
+        MmapInner::map_anon(len, self.stack, self.populate).map(|inner| MmapMut { inner })
     }
 
     /// Creates a raw memory map.
@@ -627,7 +627,19 @@ impl Mmap {
     /// See [madvise()](https://man7.org/linux/man-pages/man2/madvise.2.html) map page.
     #[cfg(unix)]
     pub fn advise(&self, advice: Advice) -> Result<()> {
-        self.inner.advise(advice)
+        self.inner.advise(advice, 0, self.inner.len())
+    }
+
+    /// Advise OS how this range of memory map will be accessed.
+    ///
+    /// The offset and length must be in the bounds of the memory map.
+    ///
+    /// Only supported on Unix.
+    ///
+    /// See [madvise()](https://man7.org/linux/man-pages/man2/madvise.2.html) map page.
+    #[cfg(unix)]
+    pub fn advise_range(&self, advice: Advice, offset: usize, len: usize) -> Result<()> {
+        self.inner.advise(advice, offset, len)
     }
 
     /// Lock the whole memory map into RAM. Only supported on Unix.
@@ -800,6 +812,42 @@ impl MmapRaw {
     pub fn flush_async_range(&self, offset: usize, len: usize) -> Result<()> {
         self.inner.flush_async(offset, len)
     }
+
+    /// Advise OS how this memory map will be accessed. Only supported on Unix.
+    ///
+    /// See [madvise()](https://man7.org/linux/man-pages/man2/madvise.2.html) map page.
+    #[cfg(unix)]
+    pub fn advise(&self, advice: Advice) -> Result<()> {
+        self.inner.advise(advice, 0, self.inner.len())
+    }
+
+    /// Advise OS how this range of memory map will be accessed.
+    ///
+    /// The offset and length must be in the bounds of the memory map.
+    ///
+    /// Only supported on Unix.
+    ///
+    /// See [madvise()](https://man7.org/linux/man-pages/man2/madvise.2.html) map page.
+    #[cfg(unix)]
+    pub fn advise_range(&self, advice: Advice, offset: usize, len: usize) -> Result<()> {
+        self.inner.advise(advice, offset, len)
+    }
+
+    /// Lock the whole memory map into RAM. Only supported on Unix.
+    ///
+    /// See [mlock()](https://man7.org/linux/man-pages/man2/mlock.2.html) map page.
+    #[cfg(unix)]
+    pub fn lock(&mut self) -> Result<()> {
+        self.inner.lock()
+    }
+
+    /// Unlock the whole memory map. Only supported on Unix.
+    ///
+    /// See [munlock()](https://man7.org/linux/man-pages/man2/munlock.2.html) map page.
+    #[cfg(unix)]
+    pub fn unlock(&mut self) -> Result<()> {
+        self.inner.unlock()
+    }
 }
 
 impl fmt::Debug for MmapRaw {
@@ -808,6 +856,18 @@ impl fmt::Debug for MmapRaw {
             .field("ptr", &self.as_ptr())
             .field("len", &self.len())
             .finish()
+    }
+}
+
+impl From<Mmap> for MmapRaw {
+    fn from(value: Mmap) -> Self {
+        Self { inner: value.inner }
+    }
+}
+
+impl From<MmapMut> for MmapRaw {
+    fn from(value: MmapMut) -> Self {
+        Self { inner: value.inner }
     }
 }
 
@@ -1006,6 +1066,12 @@ impl MmapMut {
     ///
     /// If the memory map is file-backed, the file must have been opened with execute permissions.
     ///
+    /// On systems with separate instructions and data caches (a category that includes many ARM
+    /// chips), a platform-specific call may be needed to ensure that the changes are visible to the
+    /// execution unit (e.g. when using this function to implement a JIT compiler).  For more
+    /// details, see [this ARM write-up](https://community.arm.com/arm-community-blogs/b/architectures-and-processors-blog/posts/caches-and-self-modifying-code)
+    /// or the `man` page for [`sys_icache_invalidate`](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/sys_icache_invalidate.3.html).
+    ///
     /// # Errors
     ///
     /// This method returns an error when the underlying system call fails, which can happen for a
@@ -1020,7 +1086,19 @@ impl MmapMut {
     /// See [madvise()](https://man7.org/linux/man-pages/man2/madvise.2.html) map page.
     #[cfg(unix)]
     pub fn advise(&self, advice: Advice) -> Result<()> {
-        self.inner.advise(advice)
+        self.inner.advise(advice, 0, self.inner.len())
+    }
+
+    /// Advise OS how this range of memory map will be accessed.
+    ///
+    /// The offset and length must be in the bounds of the memory map.
+    ///
+    /// Only supported on Unix.
+    ///
+    /// See [madvise()](https://man7.org/linux/man-pages/man2/madvise.2.html) map page.
+    #[cfg(unix)]
+    pub fn advise_range(&self, advice: Advice, offset: usize, len: usize) -> Result<()> {
+        self.inner.advise(advice, offset, len)
     }
 
     /// Lock the whole memory map into RAM. Only supported on Unix.
@@ -1088,7 +1166,7 @@ mod test {
 
     #[cfg(unix)]
     use crate::advice::Advice;
-    use std::fs::{self, OpenOptions};
+    use std::fs::OpenOptions;
     use std::io::{Read, Write};
     #[cfg(unix)]
     use std::os::unix::io::AsRawFd;
@@ -1603,6 +1681,9 @@ mod test {
         // check that the mmap is empty
         assert_eq!(&zeros[..], &mmap[..]);
 
+        mmap.advise_range(Advice::Sequential, 0, mmap.len())
+            .expect("mmap advising should be supported on unix");
+
         // write values into the mmap
         (&mut mmap[..]).write_all(&incr[..]).unwrap();
 
@@ -1622,7 +1703,7 @@ mod test {
     /// Returns true if a non-zero amount of memory is locked.
     #[cfg(target_os = "linux")]
     fn is_locked() -> bool {
-        let status = &fs::read_to_string("/proc/self/status")
+        let status = &std::fs::read_to_string("/proc/self/status")
             .expect("/proc/self/status should be available");
         for line in status.lines() {
             if line.starts_with("VmLck:") {

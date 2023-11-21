@@ -1,13 +1,4 @@
 #!/bin/bash
-# Copyright 2014 The Rust Project Developers. See the COPYRIGHT
-# file at the top-level directory of this distribution and at
-# http://rust-lang.org/COPYRIGHT.
-#
-# Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-# http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-# <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-# option. This file may not be copied, modified, or distributed
-# except according to those terms.
 
 # No undefined variables
 set -u
@@ -921,9 +912,27 @@ fi
 
 if [ -n "$CFG_WITHOUT" ]; then
     without_components="$(echo "$CFG_WITHOUT" | sed "s/,/ /g")"
-    for without_component in $without_components; do
-	components="$(echo "$components" | sed "s/$without_component//" | sed "s/$without_component//")"
+
+    # This does **not** check that all components in without_components are
+    # actually present in the list of available components.
+    #
+    # Currently that's considered good as it makes it easier to be compatible
+    # with multiple Rust versions (which may change the exact list of
+    # components) when writing install scripts.
+    new_comp=""
+    for component in $components; do
+        found=false
+        for my_component in $without_components; do
+            if [ "$component" = "$my_component" ]; then
+                found=true
+            fi
+        done
+        if [ "$found" = false ]; then
+            # If we didn't find the component in without, then add it to new list.
+            new_comp="$new_comp $component"
+        fi
     done
+    components="$new_comp"
 fi
 
 if [ -z "$components" ]; then

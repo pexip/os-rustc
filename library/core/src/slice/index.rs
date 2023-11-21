@@ -2,6 +2,7 @@
 
 use crate::intrinsics::assert_unsafe_precondition;
 use crate::intrinsics::const_eval_select;
+use crate::intrinsics::unchecked_sub;
 use crate::ops;
 use crate::ptr;
 
@@ -31,9 +32,8 @@ where
     }
 }
 
-#[cfg_attr(not(feature = "panic_immediate_abort"), inline(never))]
+#[cfg_attr(not(feature = "panic_immediate_abort"), inline(never), cold)]
 #[cfg_attr(feature = "panic_immediate_abort", inline)]
-#[cold]
 #[track_caller]
 #[rustc_const_unstable(feature = "const_slice_index", issue = "none")]
 const fn slice_start_index_len_fail(index: usize, len: usize) -> ! {
@@ -48,19 +48,20 @@ const fn slice_start_index_len_fail(index: usize, len: usize) -> ! {
 }
 
 // FIXME const-hack
+#[inline]
 #[track_caller]
 fn slice_start_index_len_fail_rt(index: usize, len: usize) -> ! {
     panic!("range start index {index} out of range for slice of length {len}");
 }
 
+#[inline]
 #[track_caller]
 const fn slice_start_index_len_fail_ct(_: usize, _: usize) -> ! {
     panic!("slice start index is out of range for slice");
 }
 
-#[cfg_attr(not(feature = "panic_immediate_abort"), inline(never))]
+#[cfg_attr(not(feature = "panic_immediate_abort"), inline(never), cold)]
 #[cfg_attr(feature = "panic_immediate_abort", inline)]
-#[cold]
 #[track_caller]
 #[rustc_const_unstable(feature = "const_slice_index", issue = "none")]
 const fn slice_end_index_len_fail(index: usize, len: usize) -> ! {
@@ -71,19 +72,20 @@ const fn slice_end_index_len_fail(index: usize, len: usize) -> ! {
 }
 
 // FIXME const-hack
+#[inline]
 #[track_caller]
 fn slice_end_index_len_fail_rt(index: usize, len: usize) -> ! {
     panic!("range end index {index} out of range for slice of length {len}");
 }
 
+#[inline]
 #[track_caller]
 const fn slice_end_index_len_fail_ct(_: usize, _: usize) -> ! {
     panic!("slice end index is out of range for slice");
 }
 
-#[cfg_attr(not(feature = "panic_immediate_abort"), inline(never))]
+#[cfg_attr(not(feature = "panic_immediate_abort"), inline(never), cold)]
 #[cfg_attr(feature = "panic_immediate_abort", inline)]
-#[cold]
 #[track_caller]
 #[rustc_const_unstable(feature = "const_slice_index", issue = "none")]
 const fn slice_index_order_fail(index: usize, end: usize) -> ! {
@@ -92,27 +94,27 @@ const fn slice_index_order_fail(index: usize, end: usize) -> ! {
 }
 
 // FIXME const-hack
+#[inline]
 #[track_caller]
 fn slice_index_order_fail_rt(index: usize, end: usize) -> ! {
     panic!("slice index starts at {index} but ends at {end}");
 }
 
+#[inline]
 #[track_caller]
 const fn slice_index_order_fail_ct(_: usize, _: usize) -> ! {
     panic!("slice index start is larger than end");
 }
 
-#[cfg_attr(not(feature = "panic_immediate_abort"), inline(never))]
+#[cfg_attr(not(feature = "panic_immediate_abort"), inline(never), cold)]
 #[cfg_attr(feature = "panic_immediate_abort", inline)]
-#[cold]
 #[track_caller]
 const fn slice_start_index_overflow_fail() -> ! {
     panic!("attempted to index slice from after maximum usize");
 }
 
-#[cfg_attr(not(feature = "panic_immediate_abort"), inline(never))]
+#[cfg_attr(not(feature = "panic_immediate_abort"), inline(never), cold)]
 #[cfg_attr(feature = "panic_immediate_abort", inline)]
-#[cold]
 #[track_caller]
 const fn slice_end_index_overflow_fail() -> ! {
     panic!("attempted to index slice up to maximum usize");
@@ -370,25 +372,25 @@ unsafe impl<T> const SliceIndex<[T]> for ops::Range<usize> {
 
     #[inline]
     unsafe fn get_unchecked(self, slice: *const [T]) -> *const [T] {
-        let this = ops::Range { start: self.start, end: self.end };
+        let this = ops::Range { ..self };
         // SAFETY: the caller guarantees that `slice` is not dangling, so it
         // cannot be longer than `isize::MAX`. They also guarantee that
         // `self` is in bounds of `slice` so `self` cannot overflow an `isize`,
-        // so the call to `add` is safe.
-
+        // so the call to `add` is safe and the length calculation cannot overflow.
         unsafe {
             assert_unsafe_precondition!(
                 "slice::get_unchecked requires that the range is within the slice",
                 [T](this: ops::Range<usize>, slice: *const [T]) =>
                 this.end >= this.start && this.end <= slice.len()
             );
-            ptr::slice_from_raw_parts(slice.as_ptr().add(self.start), self.end - self.start)
+            let new_len = unchecked_sub(self.end, self.start);
+            ptr::slice_from_raw_parts(slice.as_ptr().add(self.start), new_len)
         }
     }
 
     #[inline]
     unsafe fn get_unchecked_mut(self, slice: *mut [T]) -> *mut [T] {
-        let this = ops::Range { start: self.start, end: self.end };
+        let this = ops::Range { ..self };
         // SAFETY: see comments for `get_unchecked` above.
         unsafe {
             assert_unsafe_precondition!(
@@ -396,7 +398,8 @@ unsafe impl<T> const SliceIndex<[T]> for ops::Range<usize> {
                 [T](this: ops::Range<usize>, slice: *mut [T]) =>
                 this.end >= this.start && this.end <= slice.len()
             );
-            ptr::slice_from_raw_parts_mut(slice.as_mut_ptr().add(self.start), self.end - self.start)
+            let new_len = unchecked_sub(self.end, self.start);
+            ptr::slice_from_raw_parts_mut(slice.as_mut_ptr().add(self.start), new_len)
         }
     }
 

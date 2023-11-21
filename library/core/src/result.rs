@@ -209,11 +209,10 @@
 //!
 //! *It's much nicer!*
 //!
-//! Ending the expression with [`?`] will result in the unwrapped
-//! success ([`Ok`]) value, unless the result is [`Err`], in which case
-//! [`Err`] is returned early from the enclosing function.
+//! Ending the expression with [`?`] will result in the [`Ok`]'s unwrapped value, unless the result
+//! is [`Err`], in which case [`Err`] is returned early from the enclosing function.
 //!
-//! [`?`] can only be used in functions that return [`Result`] because of the
+//! [`?`] can be used in functions that return [`Result`] because of the
 //! early return of [`Err`] that it provides.
 //!
 //! [`expect`]: Result::expect
@@ -459,7 +458,7 @@
 //! [`Result`] of a collection of each contained value of the original
 //! [`Result`] values, or [`Err`] if any of the elements was [`Err`].
 //!
-//! [impl-FromIterator]: Result#impl-FromIterator%3CResult%3CA%2C%20E%3E%3E-for-Result%3CV%2C%20E%3E
+//! [impl-FromIterator]: Result#impl-FromIterator%3CResult%3CA,+E%3E%3E-for-Result%3CV,+E%3E
 //!
 //! ```
 //! let v = [Ok(2), Ok(4), Err("err!"), Ok(8)];
@@ -475,8 +474,8 @@
 //! to provide the [`product`][Iterator::product] and
 //! [`sum`][Iterator::sum] methods.
 //!
-//! [impl-Product]: Result#impl-Product%3CResult%3CU%2C%20E%3E%3E-for-Result%3CT%2C%20E%3E
-//! [impl-Sum]: Result#impl-Sum%3CResult%3CU%2C%20E%3E%3E-for-Result%3CT%2C%20E%3E
+//! [impl-Product]: Result#impl-Product%3CResult%3CU,+E%3E%3E-for-Result%3CT,+E%3E
+//! [impl-Sum]: Result#impl-Sum%3CResult%3CU,+E%3E%3E-for-Result%3CT,+E%3E
 //!
 //! ```
 //! let v = [Err("error!"), Ok(1), Ok(2), Ok(3), Err("foo")];
@@ -526,8 +525,6 @@ impl<T, E> Result<T, E> {
     ///
     /// # Examples
     ///
-    /// Basic usage:
-    ///
     /// ```
     /// let x: Result<i32, &str> = Ok(-3);
     /// assert_eq!(x.is_ok(), true);
@@ -548,8 +545,6 @@ impl<T, E> Result<T, E> {
     /// # Examples
     ///
     /// ```
-    /// #![feature(is_some_and)]
-    ///
     /// let x: Result<u32, &str> = Ok(2);
     /// assert_eq!(x.is_ok_and(|x| x > 1), true);
     ///
@@ -561,7 +556,7 @@ impl<T, E> Result<T, E> {
     /// ```
     #[must_use]
     #[inline]
-    #[unstable(feature = "is_some_and", issue = "93050")]
+    #[stable(feature = "is_some_and", since = "1.70.0")]
     pub fn is_ok_and(self, f: impl FnOnce(T) -> bool) -> bool {
         match self {
             Err(_) => false,
@@ -572,8 +567,6 @@ impl<T, E> Result<T, E> {
     /// Returns `true` if the result is [`Err`].
     ///
     /// # Examples
-    ///
-    /// Basic usage:
     ///
     /// ```
     /// let x: Result<i32, &str> = Ok(-3);
@@ -595,7 +588,6 @@ impl<T, E> Result<T, E> {
     /// # Examples
     ///
     /// ```
-    /// #![feature(is_some_and)]
     /// use std::io::{Error, ErrorKind};
     ///
     /// let x: Result<u32, Error> = Err(Error::new(ErrorKind::NotFound, "!"));
@@ -609,7 +601,7 @@ impl<T, E> Result<T, E> {
     /// ```
     #[must_use]
     #[inline]
-    #[unstable(feature = "is_some_and", issue = "93050")]
+    #[stable(feature = "is_some_and", since = "1.70.0")]
     pub fn is_err_and(self, f: impl FnOnce(E) -> bool) -> bool {
         match self {
             Ok(_) => false,
@@ -627,8 +619,6 @@ impl<T, E> Result<T, E> {
     /// and discarding the error, if any.
     ///
     /// # Examples
-    ///
-    /// Basic usage:
     ///
     /// ```
     /// let x: Result<u32, &str> = Ok(2);
@@ -658,8 +648,6 @@ impl<T, E> Result<T, E> {
     /// and discarding the success value, if any.
     ///
     /// # Examples
-    ///
-    /// Basic usage:
     ///
     /// ```
     /// let x: Result<u32, &str> = Ok(2);
@@ -694,8 +682,6 @@ impl<T, E> Result<T, E> {
     ///
     /// # Examples
     ///
-    /// Basic usage:
-    ///
     /// ```
     /// let x: Result<u32, &str> = Ok(2);
     /// assert_eq!(x.as_ref(), Ok(&2));
@@ -716,8 +702,6 @@ impl<T, E> Result<T, E> {
     /// Converts from `&mut Result<T, E>` to `Result<&mut T, &mut E>`.
     ///
     /// # Examples
-    ///
-    /// Basic usage:
     ///
     /// ```
     /// fn mutate(r: &mut Result<i32, i32>) {
@@ -813,8 +797,6 @@ impl<T, E> Result<T, E> {
     ///
     /// # Examples
     ///
-    /// Basic usage:
-    ///
     /// ```
     /// let k = 21;
     ///
@@ -841,8 +823,6 @@ impl<T, E> Result<T, E> {
     ///
     ///
     /// # Examples
-    ///
-    /// Basic usage:
     ///
     /// ```
     /// fn stringify(x: u32) -> String { format!("error code: {x}") }
@@ -925,6 +905,7 @@ impl<T, E> Result<T, E> {
     /// let y: Result<&str, &u32> = Err(&42);
     /// assert_eq!(x.as_deref(), y);
     /// ```
+    #[inline]
     #[stable(feature = "inner_deref", since = "1.47.0")]
     pub fn as_deref(&self) -> Result<&T::Target, &E>
     where
@@ -951,6 +932,7 @@ impl<T, E> Result<T, E> {
     /// let y: Result<&mut str, &mut u32> = Err(&mut i);
     /// assert_eq!(x.as_deref_mut().map(|x| { x.make_ascii_uppercase(); x }), y);
     /// ```
+    #[inline]
     #[stable(feature = "inner_deref", since = "1.47.0")]
     pub fn as_deref_mut(&mut self) -> Result<&mut T::Target, &mut E>
     where
@@ -968,8 +950,6 @@ impl<T, E> Result<T, E> {
     /// The iterator yields one value if the result is [`Result::Ok`], otherwise none.
     ///
     /// # Examples
-    ///
-    /// Basic usage:
     ///
     /// ```
     /// let x: Result<u32, &str> = Ok(7);
@@ -989,8 +969,6 @@ impl<T, E> Result<T, E> {
     /// The iterator yields one value if the result is [`Result::Ok`], otherwise none.
     ///
     /// # Examples
-    ///
-    /// Basic usage:
     ///
     /// ```
     /// let mut x: Result<u32, &str> = Ok(7);
@@ -1031,8 +1009,6 @@ impl<T, E> Result<T, E> {
     ///
     ///
     /// # Examples
-    ///
-    /// Basic usage:
     ///
     /// ```should_panic
     /// let x: Result<u32, &str> = Err("emergency failure");
@@ -1161,8 +1137,6 @@ impl<T, E> Result<T, E> {
     ///
     /// # Examples
     ///
-    /// Basic usage:
-    ///
     /// ```should_panic
     /// let x: Result<u32, &str> = Ok(10);
     /// x.expect_err("Testing expect_err"); // panics with `Testing expect_err: 10`
@@ -1223,8 +1197,6 @@ impl<T, E> Result<T, E> {
     ///
     /// # Examples
     ///
-    /// Basic usage:
-    ///
     /// ```
     /// # #![feature(never_type)]
     /// # #![feature(unwrap_infallible)]
@@ -1259,8 +1231,6 @@ impl<T, E> Result<T, E> {
     /// [`unwrap_err`]: Result::unwrap_err
     ///
     /// # Examples
-    ///
-    /// Basic usage:
     ///
     /// ```
     /// # #![feature(never_type)]
@@ -1298,8 +1268,6 @@ impl<T, E> Result<T, E> {
     /// [`and_then`]: Result::and_then
     ///
     /// # Examples
-    ///
-    /// Basic usage:
     ///
     /// ```
     /// let x: Result<u32, &str> = Ok(2);
@@ -1384,8 +1352,6 @@ impl<T, E> Result<T, E> {
     ///
     /// # Examples
     ///
-    /// Basic usage:
-    ///
     /// ```
     /// let x: Result<u32, &str> = Ok(2);
     /// let y: Result<u32, &str> = Err("late error");
@@ -1427,8 +1393,6 @@ impl<T, E> Result<T, E> {
     ///
     /// # Examples
     ///
-    /// Basic usage:
-    ///
     /// ```
     /// fn sq(x: u32) -> Result<u32, u32> { Ok(x * x) }
     /// fn err(x: u32) -> Result<u32, u32> { Err(x) }
@@ -1456,8 +1420,6 @@ impl<T, E> Result<T, E> {
     /// [`unwrap_or_else`]: Result::unwrap_or_else
     ///
     /// # Examples
-    ///
-    /// Basic usage:
     ///
     /// ```
     /// let default = 2;
@@ -1487,8 +1449,6 @@ impl<T, E> Result<T, E> {
     ///
     ///
     /// # Examples
-    ///
-    /// Basic usage:
     ///
     /// ```
     /// fn count(x: &str) -> usize { x.len() }
@@ -1566,68 +1526,6 @@ impl<T, E> Result<T, E> {
             // SAFETY: the safety contract must be upheld by the caller.
             Ok(_) => unsafe { hint::unreachable_unchecked() },
             Err(e) => e,
-        }
-    }
-
-    /////////////////////////////////////////////////////////////////////////
-    // Misc or niche
-    /////////////////////////////////////////////////////////////////////////
-
-    /// Returns `true` if the result is an [`Ok`] value containing the given value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// #![feature(option_result_contains)]
-    ///
-    /// let x: Result<u32, &str> = Ok(2);
-    /// assert_eq!(x.contains(&2), true);
-    ///
-    /// let x: Result<u32, &str> = Ok(3);
-    /// assert_eq!(x.contains(&2), false);
-    ///
-    /// let x: Result<u32, &str> = Err("Some error message");
-    /// assert_eq!(x.contains(&2), false);
-    /// ```
-    #[must_use]
-    #[inline]
-    #[unstable(feature = "option_result_contains", issue = "62358")]
-    pub fn contains<U>(&self, x: &U) -> bool
-    where
-        U: PartialEq<T>,
-    {
-        match self {
-            Ok(y) => x == y,
-            Err(_) => false,
-        }
-    }
-
-    /// Returns `true` if the result is an [`Err`] value containing the given value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// #![feature(result_contains_err)]
-    ///
-    /// let x: Result<u32, &str> = Ok(2);
-    /// assert_eq!(x.contains_err(&"Some error message"), false);
-    ///
-    /// let x: Result<u32, &str> = Err("Some error message");
-    /// assert_eq!(x.contains_err(&"Some error message"), true);
-    ///
-    /// let x: Result<u32, &str> = Err("Some other error message");
-    /// assert_eq!(x.contains_err(&"Some error message"), false);
-    /// ```
-    #[must_use]
-    #[inline]
-    #[unstable(feature = "result_contains_err", issue = "62358")]
-    pub fn contains_err<F>(&self, f: &F) -> bool
-    where
-        F: PartialEq<E>,
-    {
-        match self {
-            Ok(_) => false,
-            Err(e) => f == e,
         }
     }
 }
@@ -1753,8 +1651,6 @@ impl<T, E> Result<Result<T, E>, E> {
     ///
     /// # Examples
     ///
-    /// Basic usage:
-    ///
     /// ```
     /// #![feature(result_flattening)]
     /// let x: Result<Result<&'static str, u32>, u32> = Ok(Ok("hello"));
@@ -1842,8 +1738,6 @@ impl<T, E> IntoIterator for Result<T, E> {
     /// The iterator yields one value if the result is [`Result::Ok`], otherwise none.
     ///
     /// # Examples
-    ///
-    /// Basic usage:
     ///
     /// ```
     /// let x: Result<u32, &str> = Ok(5);

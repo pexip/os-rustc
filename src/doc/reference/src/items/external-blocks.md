@@ -90,6 +90,7 @@ There are also some platform-specific ABI strings:
   `__fastcall` and GCC and clang's `__attribute__((fastcall))`
 * `extern "vectorcall"` -- The `vectorcall` ABI -- corresponds to MSVC's
   `__vectorcall` and clang's `__attribute__((vectorcall))`
+* `extern "efiapi"` -- The ABI used for [UEFI] functions.
 
 ## Variadic functions
 
@@ -201,6 +202,22 @@ The default for this modifier is `-whole-archive`.
 More implementation details about this modifier can be found in
 [`whole-archive` documentation for rustc].
 
+### Linking modifiers: `verbatim`
+
+This modifier is compatible with all linking kinds.
+
+`+verbatim` means that rustc itself won't add any target-specified library prefixes or suffixes
+(like `lib` or `.a`) to the library name, and will try its best to ask for the same thing from the
+linker.
+
+`-verbatim` means that rustc will either add a target-specific prefix and suffix to the library
+name before passing it to linker, or won't prevent linker from implicitly adding it.
+
+The default for this modifier is `-verbatim`.
+
+More implementation details about this modifier can be found in
+[`verbatim` documentation for rustc].
+
 #### `dylib` versus `raw-dylib`
 
 On Windows, linking against a dynamic library requires that an import library
@@ -272,6 +289,7 @@ Attributes on extern function parameters follow the same rules and
 restrictions as [regular function parameters].
 
 [IDENTIFIER]: ../identifiers.md
+[UEFI]: https://uefi.org/specifications
 [WebAssembly module]: https://webassembly.github.io/spec/core/syntax/modules.html
 [functions]: functions.md
 [statics]: static-items.md
@@ -288,4 +306,5 @@ restrictions as [regular function parameters].
 [regular function parameters]: functions.md#attributes-on-function-parameters
 [`bundle` documentation for rustc]: ../../rustc/command-line-arguments.html#linking-modifiers-bundle
 [`whole-archive` documentation for rustc]: ../../rustc/command-line-arguments.html#linking-modifiers-whole-archive
+[`verbatim` documentation for rustc]: ../../rustc/command-line-arguments.html#linking-modifiers-verbatim
 [`dylib` versus `raw-dylib`]: #dylib-versus-raw-dylib

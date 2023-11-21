@@ -19,6 +19,8 @@
 #![feature(negative_impls)]
 #![feature(min_specialization)]
 #![feature(rustc_attrs)]
+#![feature(let_chains)]
+#![feature(round_char_boundary)]
 #![deny(rustc::untranslatable_diagnostic)]
 #![deny(rustc::diagnostic_outside_of_impl)]
 
@@ -46,7 +48,7 @@ pub use hygiene::{ExpnData, ExpnHash, ExpnId, LocalExpnId, SyntaxContext};
 use rustc_data_structures::stable_hasher::HashingControls;
 pub mod def_id;
 use def_id::{CrateNum, DefId, DefPathHash, LocalDefId, LOCAL_CRATE};
-pub mod lev_distance;
+pub mod edit_distance;
 mod span_encoding;
 pub use span_encoding::{Span, DUMMY_SP};
 
@@ -78,14 +80,22 @@ use sha2::Sha256;
 #[cfg(test)]
 mod tests;
 
-// Per-session global variables: this struct is stored in thread-local storage
-// in such a way that it is accessible without any kind of handle to all
-// threads within the compilation session, but is not accessible outside the
-// session.
+/// Per-session global variables: this struct is stored in thread-local storage
+/// in such a way that it is accessible without any kind of handle to all
+/// threads within the compilation session, but is not accessible outside the
+/// session.
 pub struct SessionGlobals {
     symbol_interner: symbol::Interner,
     span_interner: Lock<span_encoding::SpanInterner>,
     hygiene_data: Lock<hygiene::HygieneData>,
+
+    /// A reference to the source map in the `Session`. It's an `Option`
+    /// because it can't be initialized until `Session` is created, which
+    /// happens after `SessionGlobals`. `set_source_map` does the
+    /// initialization.
+    ///
+    /// This field should only be used in places where the `Session` is truly
+    /// not available, such as `<Span as Debug>::fmt`.
     source_map: Lock<Option<Lrc<SourceMap>>>,
 }
 
@@ -217,9 +227,7 @@ impl RealFileName {
     pub fn local_path(&self) -> Option<&Path> {
         match self {
             RealFileName::LocalPath(p) => Some(p),
-            RealFileName::Remapped { local_path: p, virtual_name: _ } => {
-                p.as_ref().map(PathBuf::as_path)
-            }
+            RealFileName::Remapped { local_path, virtual_name: _ } => local_path.as_deref(),
         }
     }
 
@@ -240,7 +248,7 @@ impl RealFileName {
     pub fn remapped_path_if_available(&self) -> &Path {
         match self {
             RealFileName::LocalPath(p)
-            | RealFileName::Remapped { local_path: _, virtual_name: p } => &p,
+            | RealFileName::Remapped { local_path: _, virtual_name: p } => p,
         }
     }
 
@@ -261,6 +269,10 @@ impl RealFileName {
             FileNameDisplayPreference::Remapped => {
                 self.remapped_path_if_available().to_string_lossy()
             }
+            FileNameDisplayPreference::Short => self
+                .local_path_if_available()
+                .file_name()
+                .map_or_else(|| "".into(), |f| f.to_string_lossy()),
         }
     }
 }
@@ -304,6 +316,9 @@ pub enum FileNameDisplayPreference {
     /// Display the path before the application of rewrite rules provided via `--remap-path-prefix`.
     /// This is appropriate for use in user-facing output (such as diagnostics).
     Local,
+    /// Display only the filename, as a way to reduce the verbosity of the output.
+    /// This is appropriate for use in user-facing output (such as diagnostics).
+    Short,
 }
 
 pub struct FileNameDisplay<'a> {
@@ -324,7 +339,7 @@ impl fmt::Display for FileNameDisplay<'_> {
             ProcMacroSourceCode(_) => write!(fmt, "<proc-macro source code>"),
             CfgSpec(_) => write!(fmt, "<cfgspec>"),
             CliCrateAttr(_) => write!(fmt, "<crate attribute>"),
-            Custom(ref s) => write!(fmt, "<{}>", s),
+            Custom(ref s) => write!(fmt, "<{s}>"),
             DocTest(ref path, _) => write!(fmt, "{}", path.display()),
             InlineAsm(_) => write!(fmt, "<inline asm>"),
         }
@@ -361,8 +376,8 @@ impl FileName {
         FileNameDisplay { inner: self, display_pref: FileNameDisplayPreference::Remapped }
     }
 
-    // This may include transient local filesystem information.
-    // Must not be embedded in build outputs.
+    /// This may include transient local filesystem information.
+    /// Must not be embedded in build outputs.
     pub fn prefer_local(&self) -> FileNameDisplay<'_> {
         FileNameDisplay { inner: self, display_pref: FileNameDisplayPreference::Local }
     }
@@ -493,6 +508,10 @@ impl SpanData {
     pub fn is_dummy(self) -> bool {
         self.lo.0 == 0 && self.hi.0 == 0
     }
+    #[inline]
+    pub fn is_visible(self, sm: &SourceMap) -> bool {
+        !self.is_dummy() && sm.is_span_accessible(self.span())
+    }
     /// Returns `true` if `self` fully encloses `other`.
     pub fn contains(self, other: Self) -> bool {
         self.lo <= other.lo && other.hi <= self.hi
@@ -556,6 +575,11 @@ impl Span {
     #[inline]
     pub fn is_dummy(self) -> bool {
         self.data_untracked().is_dummy()
+    }
+
+    #[inline]
+    pub fn is_visible(self, sm: &SourceMap) -> bool {
+        self.data_untracked().is_visible(sm)
     }
 
     /// Returns `true` if this span comes from any kind of macro, desugaring or inlining.
@@ -691,23 +715,23 @@ impl Span {
     }
 
     #[inline]
-    pub fn rust_2015(self) -> bool {
-        self.edition() == edition::Edition::Edition2015
+    pub fn is_rust_2015(self) -> bool {
+        self.edition().is_rust_2015()
     }
 
     #[inline]
     pub fn rust_2018(self) -> bool {
-        self.edition() >= edition::Edition::Edition2018
+        self.edition().rust_2018()
     }
 
     #[inline]
     pub fn rust_2021(self) -> bool {
-        self.edition() >= edition::Edition::Edition2021
+        self.edition().rust_2021()
     }
 
     #[inline]
     pub fn rust_2024(self) -> bool {
-        self.edition() >= edition::Edition::Edition2024
+        self.edition().rust_2024()
     }
 
     /// Returns the source callee.
@@ -753,7 +777,7 @@ impl Span {
 
     /// Checks if a span is "internal" to a macro in which `unsafe`
     /// can be used without triggering the `unsafe_code` lint.
-    //  (that is, a macro marked with `#[allow_internal_unsafe]`).
+    /// (that is, a macro marked with `#[allow_internal_unsafe]`).
     pub fn allows_unsafe(self) -> bool {
         self.ctxt().outer_expn_data().allow_internal_unsafe
     }
@@ -780,7 +804,22 @@ impl Span {
         })
     }
 
+    /// Splits a span into two composite spans around a certain position.
+    pub fn split_at(self, pos: u32) -> (Span, Span) {
+        let len = self.hi().0 - self.lo().0;
+        debug_assert!(pos <= len);
+
+        let split_pos = BytePos(self.lo().0 + pos);
+        (
+            Span::new(self.lo(), split_pos, self.ctxt(), self.parent()),
+            Span::new(split_pos, self.hi(), self.ctxt(), self.parent()),
+        )
+    }
+
     /// Returns a `Span` that would enclose both `self` and `end`.
+    ///
+    /// Note that this can also be used to extend the span "backwards":
+    /// `start.to(end)` and `end.to(start)` return the same `Span`.
     ///
     /// ```text
     ///     ____             ___
@@ -983,16 +1022,9 @@ impl<D: Decoder> Decodable<D> for Span {
     }
 }
 
-/// Calls the provided closure, using the provided `SourceMap` to format
-/// any spans that are debug-printed during the closure's execution.
-///
-/// Normally, the global `TyCtxt` is used to retrieve the `SourceMap`
-/// (see `rustc_interface::callbacks::span_debug1`). However, some parts
-/// of the compiler (e.g. `rustc_parse`) may debug-print `Span`s before
-/// a `TyCtxt` is available. In this case, we fall back to
-/// the `SourceMap` provided to this function. If that is not available,
-/// we fall back to printing the raw `Span` field values.
-pub fn with_source_map<T, F: FnOnce() -> T>(source_map: Lrc<SourceMap>, f: F) -> T {
+/// Insert `source_map` into the session globals for the duration of the
+/// closure's execution.
+pub fn set_source_map<T, F: FnOnce() -> T>(source_map: Lrc<SourceMap>, f: F) -> T {
     with_session_globals(|session_globals| {
         *session_globals.source_map.borrow_mut() = Some(source_map);
     });
@@ -1011,6 +1043,8 @@ pub fn with_source_map<T, F: FnOnce() -> T>(source_map: Lrc<SourceMap>, f: F) ->
 
 impl fmt::Debug for Span {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Use the global `SourceMap` to print the span. If that's not
+        // available, fall back to printing the raw values.
         with_session_globals(|session_globals| {
             if let Some(source_map) = &*session_globals.source_map.borrow() {
                 write!(f, "{} ({:?})", source_map.span_to_diagnostic_string(*self), self.ctxt())
@@ -1057,7 +1091,7 @@ impl NonNarrowChar {
             0 => NonNarrowChar::ZeroWidth(pos),
             2 => NonNarrowChar::Wide(pos),
             4 => NonNarrowChar::Tab(pos),
-            _ => panic!("width {} given for non-narrow character", width),
+            _ => panic!("width {width} given for non-narrow character"),
         }
     }
 
@@ -1285,7 +1319,6 @@ pub struct SourceFileDiffs {
 }
 
 /// A single source in the [`SourceMap`].
-#[derive(Clone)]
 pub struct SourceFile {
     /// The name of the file that the source came from. Source that doesn't
     /// originate from files has names between angle brackets by convention
@@ -1314,6 +1347,25 @@ pub struct SourceFile {
     pub name_hash: u128,
     /// Indicates which crate this `SourceFile` was imported from.
     pub cnum: CrateNum,
+}
+
+impl Clone for SourceFile {
+    fn clone(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            src: self.src.clone(),
+            src_hash: self.src_hash,
+            external_src: Lock::new(self.external_src.borrow().clone()),
+            start_pos: self.start_pos,
+            end_pos: self.end_pos,
+            lines: Lock::new(self.lines.borrow().clone()),
+            multibyte_chars: self.multibyte_chars.clone(),
+            non_narrow_chars: self.non_narrow_chars.clone(),
+            normalized_pos: self.normalized_pos.clone(),
+            name_hash: self.name_hash,
+            cnum: self.cnum,
+        }
+    }
 }
 
 impl<S: Encoder> Encodable<S> for SourceFile {
@@ -1374,7 +1426,7 @@ impl<S: Encoder> Encodable<S> for SourceFile {
                     4 => {
                         raw_diffs = Vec::with_capacity(bytes_per_diff * num_diffs);
                         for diff in diff_iter {
-                            raw_diffs.extend_from_slice(&(diff.0 as u32).to_le_bytes());
+                            raw_diffs.extend_from_slice(&(diff.0).to_le_bytes());
                         }
                     }
                     _ => unreachable!(),
@@ -2000,13 +2052,13 @@ pub type FileLinesResult = Result<FileLines, SpanLinesError>;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum SpanLinesError {
-    DistinctSources(DistinctSources),
+    DistinctSources(Box<DistinctSources>),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum SpanSnippetError {
     IllFormedSpan(Span),
-    DistinctSources(DistinctSources),
+    DistinctSources(Box<DistinctSources>),
     MalformedForSourcemap(MalformedSourceMapPositions),
     SourceNotAvailable { filename: FileName },
 }
@@ -2129,5 +2181,19 @@ where
         let len = (span.hi - span.lo).0;
         Hash::hash(&col_line, hasher);
         Hash::hash(&len, hasher);
+    }
+}
+
+/// Useful type to use with `Result<>` indicate that an error has already
+/// been reported to the user, so no need to continue checking.
+#[derive(Clone, Copy, Debug, Encodable, Decodable, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(HashStable_Generic)]
+pub struct ErrorGuaranteed(());
+
+impl ErrorGuaranteed {
+    /// To be used only if you really know what you are doing... ideally, we would find a way to
+    /// eliminate all calls to this method.
+    pub fn unchecked_claim_error_was_emitted() -> Self {
+        ErrorGuaranteed(())
     }
 }

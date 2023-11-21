@@ -1,4 +1,4 @@
-use hir::db::AstDatabase;
+use hir::db::ExpandDatabase;
 use ide_db::{assists::Assist, base_db::AnchoredPathBuf, source_change::FileSystemEdit};
 use itertools::Itertools;
 use syntax::AstNode;
@@ -16,7 +16,7 @@ pub(crate) fn unresolved_module(
         "unresolved-module",
         match &*d.candidates {
             [] => "unresolved module".to_string(),
-            [candidate] => format!("unresolved module, can't find module file: {}", candidate),
+            [candidate] => format!("unresolved module, can't find module file: {candidate}"),
             [candidates @ .., last] => {
                 format!(
                     "unresolved module, can't find module file: {}, or {}",

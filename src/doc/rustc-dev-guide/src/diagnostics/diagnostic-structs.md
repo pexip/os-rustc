@@ -23,13 +23,15 @@ pub struct FieldAlreadyDeclared {
     #[primary_span]
     #[label]
     pub span: Span,
-    #[label(hir_analysis_previous_decl_label)]
+    #[label(previous_decl_label)]
     pub prev_span: Span,
 }
 ```
 
-`Diagnostic` can only be applied to structs. Every `Diagnostic`
-has to have one attribute, `#[diag(...)]`, applied to the struct itself.
+`Diagnostic` can only be applied to structs and enums. 
+Attributes that are placed on the type for structs are placed on each 
+variants for enums (or vice versa). Each `Diagnostic` has to have one
+attribute, `#[diag(...)]`, applied to the struct or each enum variant.
 
 If an error has an error code (e.g. "E0624"), then that can be specified using
 the `code` sub-attribute. Specifying a `code` isn't mandatory, but if you are
@@ -80,7 +82,7 @@ these attributes can also take a value that is the attribute name to look for
 
 Other types have special behavior when used in a `Diagnostic` derive:
 
-- Any attribute applied to an `Option<T>` and will only emit a
+- Any attribute applied to an `Option<T>` will only emit a
   subdiagnostic if the option is `Some(..)`.
 - Any attribute applied to a `Vec<T>` will be repeated for each element of the
   vector.
@@ -198,9 +200,9 @@ following attributes:
     - See [translation documentation](./translation.md).
     - Defaults to `rustc_errors::fluent::_subdiag::suggestion` (or
     - `.suggestion` in Fluent).
-  - `code = "..."` (_Mandatory_)
-    - Value is a format string indicating the code to be suggested as a
-      replacement.
+  - `code = "..."`/`code("...", ...)` (_Mandatory_)
+    - One or multiple format strings indicating the code to be suggested as a
+      replacement. Multiple values signify multiple possible replacements.
   - `applicability = "..."` (_Optional_)
     - String which must be one of `machine-applicable`, `maybe-incorrect`,
       `has-placeholders` or `unspecified`.
@@ -243,7 +245,7 @@ pub enum ExpectedReturnTypeLabel<'tcx> {
 }
 ```
 
-Unlike `Diagnostic`, `Subdiagnostic` can be applied to structs or
+Like `Diagnostic`, `Subdiagnostic` can be applied to structs or
 enums. Attributes that are placed on the type for structs are placed on each
 variants for enums (or vice versa). Each `Subdiagnostic` should have one
 attribute applied to the struct or each variant, one of:
@@ -357,9 +359,9 @@ diagnostic struct.
     - See [translation documentation](./translation.md).
     - Defaults to `rustc_errors::fluent::_subdiag::suggestion` (or
     - `.suggestion` in Fluent).
-  - `code = "..."` (_Mandatory_)
-    - Value is a format string indicating the code to be suggested as a
-      replacement.
+  - `code = "..."`/`code("...", ...)` (_Mandatory_)
+    - One or multiple format strings indicating the code to be suggested as a
+      replacement. Multiple values signify multiple possible replacements.
   - `applicability = "..."` (_Optional_)
     - _Mutually exclusive with `#[applicability]` on a field._
     - Value is the applicability of the suggestion.

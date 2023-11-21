@@ -6,7 +6,6 @@ Rust MIR: a lowered representation of Rust.
 
 #![feature(assert_matches)]
 #![feature(box_patterns)]
-#![feature(control_flow_enum)]
 #![feature(decl_macro)]
 #![feature(exact_size_is_empty)]
 #![feature(let_chains)]
@@ -20,7 +19,7 @@ Rust MIR: a lowered representation of Rust.
 #![feature(trusted_step)]
 #![feature(try_blocks)]
 #![feature(yeet_expr)]
-#![feature(is_some_and)]
+#![feature(if_let_guard)]
 #![recursion_limit = "256"]
 
 #[macro_use]
@@ -34,9 +33,12 @@ pub mod interpret;
 pub mod transform;
 pub mod util;
 
+use rustc_errors::{DiagnosticMessage, SubdiagnosticMessage};
+use rustc_macros::fluent_messages;
 use rustc_middle::ty;
 use rustc_middle::ty::query::Providers;
-use rustc_target::abi::InitKind;
+
+fluent_messages! { "../messages.ftl" }
 
 pub fn provide(providers: &mut Providers) {
     const_eval::provide(providers);
@@ -58,7 +60,7 @@ pub fn provide(providers: &mut Providers) {
         let (param_env, value) = param_env_and_value.into_parts();
         const_eval::deref_mir_constant(tcx, param_env, value)
     };
-    providers.permits_uninit_init =
-        |tcx, ty| util::might_permit_raw_init(tcx, ty, InitKind::UninitMitigated0x01Fill);
-    providers.permits_zero_init = |tcx, ty| util::might_permit_raw_init(tcx, ty, InitKind::Zero);
+    providers.check_validity_requirement = |tcx, (init_kind, param_env_and_ty)| {
+        util::check_validity_requirement(tcx, init_kind, param_env_and_ty)
+    };
 }

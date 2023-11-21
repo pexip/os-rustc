@@ -21,7 +21,7 @@ Formatting is checked by the `tidy` script. It runs automatically when you do
 
 If you want to use format-on-save in your editor, the pinned version of
 `rustfmt` is built under `build/<target>/stage0/bin/rustfmt`. You'll have to
-pass the <!-- date-check: April 2022 --> `--edition=2021` argument yourself when calling
+pass the <!-- date-check: nov 2022 --> `--edition=2021` argument yourself when calling
 `rustfmt` directly.
 
 [fmt]: https://github.com/rust-dev-tools/fmt-rfcs
@@ -29,7 +29,10 @@ pass the <!-- date-check: April 2022 --> `--edition=2021` argument yourself when
 
 <a name="copyright"></a>
 
+<!-- REUSE-IgnoreStart -->
+<!-- Prevent REUSE from interpreting the heading as a copyright notice -->
 ### Copyright notice
+<!-- REUSE-IgnoreEnd -->
 
 In the past, files began with a copyright and license notice. Please **omit**
 this notice for new files licensed under the standard terms (dual

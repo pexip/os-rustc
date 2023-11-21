@@ -1,7 +1,6 @@
-# Bootstrapping the Compiler
+# Bootstrapping the compiler
 
 <!-- toc -->
-
 
 [*Bootstrapping*][boot] is the process of using a compiler to compile itself.
 More accurately, it means using an older compiler to compile a newer version
@@ -16,7 +15,19 @@ version.
 This is exactly how `x.py` works: it downloads the current beta release of
 rustc, then uses it to compile the new compiler.
 
+Note that this documentation mostly covers user-facing information. See
+[bootstrap/README.md][bootstrap-internals] to read about bootstrap internals.
+
+[bootstrap-internals]: https://github.com/rust-lang/rust/blob/master/src/bootstrap/README.md
+
 ## Stages of bootstrapping
+
+### Overview
+
+- Stage 0: the pre-compiled compiler
+- Stage 1: from current code, by an earlier compiler
+- Stage 2: the truly current compiler
+- Stage 3: the same-result test
 
 Compiling `rustc` is done in stages. Here's a diagram, adapted from Joshua Nelson's
 [talk on bootstrapping][rustconf22-talk] at RustConf 2022, with detailed explanations below.
@@ -28,7 +39,7 @@ stage0 compiler, and
 <span style="background-color: lightgreen; color: black">green</span> nodes are built with the
 stage1 compiler.
 
-[rustconf22-talk]: https://rustconf.com/schedule#bootstrapping-the-once-and-future-compiler
+[rustconf22-talk]: https://www.youtube.com/watch?v=oUIjG-y4zaA
 
 ```mermaid
 graph TD
@@ -47,7 +58,7 @@ graph TD
     classDef with-s1c fill: lightgreen;
 ```
 
-### Stage 0
+### Stage 0: the pre-compiled compiler
 
 The stage0 compiler is usually the current _beta_ `rustc` compiler
 and its associated dynamic libraries,
@@ -61,11 +72,11 @@ a compiler (with its set of dependencies)
 and its 'target' or 'object' libraries (`std` and `rustc`).
 Both are staged, but in a staggered manner.
 
-### Stage 1
+### Stage 1: from current code, by an earlier compiler
 
 The rustc source code is then compiled with the stage0 compiler to produce the stage1 compiler.
 
-### Stage 2
+### Stage 2: the truly current compiler
 
 We then rebuild our stage1 compiler with itself to produce the stage2 compiler.
 
@@ -86,9 +97,9 @@ because one must first build the new compiler with an older compiler
 and then use that to build the new compiler with itself.
 For development, you usually only want the `stage1` compiler,
 which you can build with `./x.py build library`.
-See [Building the Compiler](./how-to-build-and-run.html#building-the-compiler).
+See [Building the compiler](./how-to-build-and-run.html#building-the-compiler).
 
-### Stage 3
+### Stage 3: the same-result test
 
 Stage 3 is optional. To sanity check our new compiler, we
 can build the libraries with the stage2 compiler. The result ought
@@ -135,31 +146,6 @@ bootstrapping the compiler.
 [intrinsics]: ../appendix/glossary.md#intrinsic
 [ocaml-compiler]: https://github.com/rust-lang/rust/tree/ef75860a0a72f79f97216f8aaa5b388d98da6480/src/boot
 
-## Contributing to bootstrap
-
-When you use the bootstrap system, you'll call it through `x.py`.
-However, most of the code lives in `src/bootstrap`.
-`bootstrap` has a difficult problem: it is written in Rust, but yet it is run
-before the Rust compiler is built! To work around this, there are two
-components of bootstrap: the main one written in rust, and `bootstrap.py`.
-`bootstrap.py` is what gets run by `x.py`. It takes care of downloading the
-`stage0` compiler, which will then build the bootstrap binary written in
-Rust.
-
-Because there are two separate codebases behind `x.py`, they need to
-be kept in sync. In particular, both `bootstrap.py` and the bootstrap binary
-parse `config.toml` and read the same command line arguments. `bootstrap.py`
-keeps these in sync by setting various environment variables, and the
-programs sometimes have to add arguments that are explicitly ignored, to be
-read by the other.
-
-### Adding a setting to config.toml
-
-This section is a work in progress. In the meantime, you can see an example
-contribution [here][bootstrap-build].
-
-[bootstrap-build]: https://github.com/rust-lang/rust/pull/71994
-
 ## Understanding stages of bootstrap
 
 ### Overview
@@ -193,14 +179,14 @@ Build artifacts include, but are not limited to:
     without building `rustc` from source ('build with stage 0, then test the
   artifacts'). If you're working on the standard library, this is normally the
   test command you want.
-- `./x.py test src/test/ui` means to build the stage 1 compiler and run
+- `./x.py test tests/ui` means to build the stage 1 compiler and run
   `compiletest` on it. If you're working on the compiler, this is normally the
   test command you want.
 
 #### Examples of what *not* to do
 
-- `./x.py test --stage 0 src/test/ui` is not useful: it runs tests on the
-  _beta_ compiler and doesn't build `rustc` from source. Use `test src/test/ui`
+- `./x.py test --stage 0 tests/ui` is not useful: it runs tests on the
+  _beta_ compiler and doesn't build `rustc` from source. Use `test tests/ui`
   instead, which builds stage 1 from source.
 - `./x.py test --stage 0 compiler/rustc` builds the compiler but runs no tests:
   it's running `cargo test -p rustc`, but cargo doesn't understand Rust's
@@ -270,6 +256,10 @@ So the stage2 compiler has to recompile `std` for the target.
 
 ### Why does only libstd use `cfg(bootstrap)`?
 
+NOTE: for docs on `cfg(bootstrap)` itself, see [Complications of Bootstrapping][complications].
+
+[complications]: #complications-of-bootstrapping
+
 The `rustc` generated by the stage0 compiler is linked to the freshly-built
 `std`, which means that for the most part only `std` needs to be cfg-gated,
 so that `rustc` can use features added to std immediately after their addition,
@@ -279,7 +269,7 @@ Note this is different from any other Rust program: stage1 `rustc`
 is built by the _beta_ compiler, but using the _master_ version of libstd!
 
 The only time `rustc` uses `cfg(bootstrap)` is when it adds internal lints
-that use diagnostic items. This happens very rarely.
+that use diagnostic items, or when it uses unstable library features that were recently changed.
 
 ### What is a 'sysroot'?
 
@@ -386,7 +376,7 @@ recompiling all dependencies.
 `CARGOFLAGS` will pass arguments to cargo itself (e.g. `--timings`). `CARGOFLAGS_BOOTSTRAP` and
 `CARGOFLAGS_NOT_BOOTSTRAP` work analogously to `RUSTFLAGS_BOOTSTRAP`.
 
-`--test-args` will pass arguments through to the test runner. For `src/test/ui`, this is
+`--test-args` will pass arguments through to the test runner. For `tests/ui`, this is
 compiletest; for unit tests and doctests this is the `libtest` runner. Most test runner accept
 `--help`, which you can use to find out the options accepted by the runner.
 
@@ -407,44 +397,51 @@ usually means something is quite wrong -- or you're trying to compile e.g.
 the unlikely case that you actually need to invoke rustc in such a situation,
 you can tell the bootstrap shim to print all env variables by adding `-vvv` to your `x.py` command.
 
-### Directories and artifacts generated by `bootstrap`
+Finally, bootstrap makes use of the [cc-rs crate] which has [its own
+method][env-vars] of configuring C compilers and C flags via environment
+variables.
 
-This is an incomplete reference for the outputs generated by bootstrap:
+[cc-rs crate]: https://github.com/rust-lang/cc-rs
+[env-vars]: https://github.com/rust-lang/cc-rs#external-configuration-via-environment-variables
 
-| Stage 0 Action                                            | Output                                       |
-|-----------------------------------------------------------|----------------------------------------------|
-| `beta` extracted                                          | `build/HOST/stage0`                          |
-| `stage0` builds `bootstrap`                               | `build/bootstrap`                            |
-| `stage0` builds `test`/`std`                              | `build/HOST/stage0-std/TARGET`               |
-| copy `stage0-std` (HOST only)                             | `build/HOST/stage0-sysroot/lib/rustlib/HOST` |
-| `stage0` builds `rustc` with `stage0-sysroot`             | `build/HOST/stage0-rustc/HOST`               |
-| copy `stage0-rustc` (except executable)                   | `build/HOST/stage0-sysroot/lib/rustlib/HOST` |
-| build `llvm`                                              | `build/HOST/llvm`                            |
-| `stage0` builds `codegen` with `stage0-sysroot`           | `build/HOST/stage0-codegen/HOST`             |
-| `stage0` builds `rustdoc`, `clippy`, `miri`, with `stage0-sysroot` | `build/HOST/stage0-tools/HOST`      |
+## Clarification of build command's stdout
 
-`--stage=0` stops here.
+In this part, we will investigate the build command's stdout in an action
+(similar, but more detailed and complete documentation compare to topic above).
+When you execute `x.py build --dry-run` command, the build output will be something
+like the following:
 
-| Stage 1 Action                                      | Output                                |
-|-----------------------------------------------------|---------------------------------------|
-| copy (uplift) `stage0-rustc` executable to `stage1` | `build/HOST/stage1/bin`               |
-| copy (uplift) `stage0-codegen` to `stage1`          | `build/HOST/stage1/lib`               |
-| copy (uplift) `stage0-sysroot` to `stage1`          | `build/HOST/stage1/lib`               |
-| `stage1` builds `test`/`std`                        | `build/HOST/stage1-std/TARGET`        |
-| copy `stage1-std` (HOST only)                       | `build/HOST/stage1/lib/rustlib/HOST`  |
-| `stage1` builds `rustc`                             | `build/HOST/stage1-rustc/HOST`        |
-| copy `stage1-rustc` (except executable)             | `build/HOST/stage1/lib/rustlib/HOST`  |
-| `stage1` builds `codegen`                           | `build/HOST/stage1-codegen/HOST`      |
+```text
+Building stage0 library artifacts (x86_64-unknown-linux-gnu -> x86_64-unknown-linux-gnu)
+Copying stage0 library from stage0 (x86_64-unknown-linux-gnu -> x86_64-unknown-linux-gnu / x86_64-unknown-linux-gnu)
+Building stage0 compiler artifacts (x86_64-unknown-linux-gnu -> x86_64-unknown-linux-gnu)
+Copying stage0 rustc from stage0 (x86_64-unknown-linux-gnu -> x86_64-unknown-linux-gnu / x86_64-unknown-linux-gnu)
+Assembling stage1 compiler (x86_64-unknown-linux-gnu)
+Building stage1 library artifacts (x86_64-unknown-linux-gnu -> x86_64-unknown-linux-gnu)
+Copying stage1 library from stage1 (x86_64-unknown-linux-gnu -> x86_64-unknown-linux-gnu / x86_64-unknown-linux-gnu)
+Building stage1 tool rust-analyzer-proc-macro-srv (x86_64-unknown-linux-gnu)
+Building rustdoc for stage1 (x86_64-unknown-linux-gnu)
+```
 
-`--stage=1` stops here.
+### Building stage0 {std,compiler} artifacts
 
-| Stage 2 Action                                         | Output                                                          |
-|--------------------------------------------------------|-----------------------------------------------------------------|
-| copy (uplift) `stage1-rustc` executable                | `build/HOST/stage2/bin`                                         |
-| copy (uplift) `stage1-sysroot`                         | `build/HOST/stage2/lib and build/HOST/stage2/lib/rustlib/HOST`  |
-| `stage2` builds `test`/`std` (not HOST targets)        | `build/HOST/stage2-std/TARGET`                                  |
-| copy `stage2-std` (not HOST targets)                   | `build/HOST/stage2/lib/rustlib/TARGET`                          |
-| `stage2` builds `rustdoc`, `clippy`, `miri`            | `build/HOST/stage2-tools/HOST`                                  |
-| copy `rustdoc`                                         | `build/HOST/stage2/bin`                                         |
+These steps use the provided (downloaded, usually) compiler to compile the
+local Rust source into libraries we can use.
 
-`--stage=2` stops here.
+### Copying stage0 {std,rustc}
+
+This copies the library and compiler artifacts from Cargo into
+`stage0-sysroot/lib/rustlib/{target-triple}/lib`
+
+### Assembling stage1 compiler
+
+This copies the libraries we built in "building stage0 ... artifacts" into
+the stage1 compiler's lib directory. These are the host libraries that the
+compiler itself uses to run. These aren't actually used by artifacts the new
+compiler generates. This step also copies the rustc and rustdoc binaries we
+generated into `build/$HOST/stage/bin`.
+
+The stage1/bin/rustc is a fully functional compiler, but it doesn't yet have
+any libraries to link built binaries or libraries to. The next 3 steps will
+provide those libraries for it; they are mostly equivalent to constructing
+the stage1/bin compiler so we don't go through them individually.
