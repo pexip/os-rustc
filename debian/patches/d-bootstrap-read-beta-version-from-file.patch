@@ -9,7 +9,7 @@ Subject: d-bootstrap-read-beta-version-from-file
 
 --- a/src/bootstrap/lib.rs
 +++ b/src/bootstrap/lib.rs
-@@ -1283,14 +1283,15 @@
+@@ -1296,14 +1296,15 @@
              return s;
          }
  

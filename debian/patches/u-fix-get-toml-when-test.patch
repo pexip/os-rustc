@@ -8,28 +8,29 @@ Last-Update: 2023-03-29
 This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
 --- a/src/bootstrap/config.rs
 +++ b/src/bootstrap/config.rs
-@@ -896,9 +896,9 @@
+@@ -823,9 +823,9 @@
+     }
  
-         config.stage0_metadata = t!(serde_json::from_slice::<Stage0Metadata>(&stage0_json));
- 
+     pub fn parse(args: &[String]) -> Config {
 -        #[cfg(test)]
 +        /*#[cfg(test)]
-         let get_toml = |_| TomlConfig::default();
+         let get_toml = |_: &_| TomlConfig::default();
 -        #[cfg(not(test))]
 +        #[cfg(not(test))]*/
          let get_toml = |file: &Path| {
              let contents =
                  t!(fs::read_to_string(file), format!("config file {} not found", file.display()));
-@@ -907,7 +907,22 @@
+@@ -834,7 +834,23 @@
              match toml::from_str(&contents)
                  .and_then(|table: toml::Value| TomlConfig::deserialize(table))
              {
 -                Ok(table) => table,
-+                /// Debian: We use previous version as a custom rustc, which unfortunately won't be
-+                /// picked up because config.toml isn't read when cfg!(test). Making tests use the
-+                /// entirety of our config.toml isn't feasible either as it panicks on GitRepo::Llvm
-+                /// (d-bootstrap-custom-debuginfo-path.patch), so only give paths of initial rustc
-+                /// and cargo.
++                // Debian: We use previous version as a custom rustc, which
++                // unfortunately won't be picked up because config.toml isn't
++                // read when cfg!(test). Making tests use the entirety of our
++                // config.toml isn't feasible either as it panicks on
++                // GitRepo::Llvm (d-bootstrap-custom-debuginfo-path.patch), so
++                // only give paths of initial rustc and cargo.
 +                Ok(table) => if !cfg!(test) || table.build.is_none() {
 +                    table
 +                } else {

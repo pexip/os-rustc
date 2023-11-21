@@ -2,7 +2,6 @@ use rustc_apfloat::ieee::{Double, Single};
 use rustc_apfloat::Float;
 use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
 use rustc_target::abi::Size;
-use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::num::NonZeroU8;
 
@@ -233,16 +232,28 @@ impl ScalarInt {
     }
 
     #[inline]
-    pub fn try_to_machine_usize<'tcx>(&self, tcx: TyCtxt<'tcx>) -> Result<u64, Size> {
+    pub fn try_to_target_usize(&self, tcx: TyCtxt<'_>) -> Result<u64, Size> {
         Ok(self.to_bits(tcx.data_layout.pointer_size)? as u64)
     }
 
     /// Tries to convert the `ScalarInt` to an unsigned integer of the given size.
-    /// Fails if the size of the `ScalarInt` is unequal to `size` and returns the
+    /// Fails if the size of the `ScalarInt` is not equal to `size` and returns the
     /// `ScalarInt`s size in that case.
     #[inline]
     pub fn try_to_uint(self, size: Size) -> Result<u128, Size> {
         self.to_bits(size)
+    }
+
+    // Tries to convert the `ScalarInt` to `bool`. Fails if the `size` of the `ScalarInt`
+    // in not equal to `Size { raw: 1 }` or if the value is not 0 or 1 and returns the `size`
+    // value of the `ScalarInt` in that case.
+    #[inline]
+    pub fn try_to_bool(self) -> Result<bool, Size> {
+        match self.try_to_u8()? {
+            0 => Ok(false),
+            1 => Ok(true),
+            _ => Err(self.size()),
+        }
     }
 
     // Tries to convert the `ScalarInt` to `u8`. Fails if the `size` of the `ScalarInt`
@@ -286,7 +297,7 @@ impl ScalarInt {
     }
 
     /// Tries to convert the `ScalarInt` to a signed integer of the given size.
-    /// Fails if the size of the `ScalarInt` is unequal to `size` and returns the
+    /// Fails if the size of the `ScalarInt` is not equal to `size` and returns the
     /// `ScalarInt`s size in that case.
     #[inline]
     pub fn try_to_int(self, size: Size) -> Result<i128, Size> {
@@ -295,38 +306,38 @@ impl ScalarInt {
     }
 
     /// Tries to convert the `ScalarInt` to i8.
-    /// Fails if the size of the `ScalarInt` is unequal to `Size { raw: 1 }`
+    /// Fails if the size of the `ScalarInt` is not equal to `Size { raw: 1 }`
     /// and returns the `ScalarInt`s size in that case.
     pub fn try_to_i8(self) -> Result<i8, Size> {
         self.try_to_int(Size::from_bits(8)).map(|v| i8::try_from(v).unwrap())
     }
 
     /// Tries to convert the `ScalarInt` to i16.
-    /// Fails if the size of the `ScalarInt` is unequal to `Size { raw: 2 }`
+    /// Fails if the size of the `ScalarInt` is not equal to `Size { raw: 2 }`
     /// and returns the `ScalarInt`s size in that case.
     pub fn try_to_i16(self) -> Result<i16, Size> {
         self.try_to_int(Size::from_bits(16)).map(|v| i16::try_from(v).unwrap())
     }
 
     /// Tries to convert the `ScalarInt` to i32.
-    /// Fails if the size of the `ScalarInt` is unequal to `Size { raw: 4 }`
+    /// Fails if the size of the `ScalarInt` is not equal to `Size { raw: 4 }`
     /// and returns the `ScalarInt`s size in that case.
     pub fn try_to_i32(self) -> Result<i32, Size> {
         self.try_to_int(Size::from_bits(32)).map(|v| i32::try_from(v).unwrap())
     }
 
     /// Tries to convert the `ScalarInt` to i64.
-    /// Fails if the size of the `ScalarInt` is unequal to `Size { raw: 8 }`
+    /// Fails if the size of the `ScalarInt` is not equal to `Size { raw: 8 }`
     /// and returns the `ScalarInt`s size in that case.
     pub fn try_to_i64(self) -> Result<i64, Size> {
         self.try_to_int(Size::from_bits(64)).map(|v| i64::try_from(v).unwrap())
     }
 
     /// Tries to convert the `ScalarInt` to i128.
-    /// Fails if the size of the `ScalarInt` is unequal to `Size { raw: 16 }`
+    /// Fails if the size of the `ScalarInt` is not equal to `Size { raw: 16 }`
     /// and returns the `ScalarInt`s size in that case.
     pub fn try_to_i128(self) -> Result<i128, Size> {
-        self.try_to_int(Size::from_bits(128)).map(|v| i128::try_from(v).unwrap())
+        self.try_to_int(Size::from_bits(128))
     }
 }
 

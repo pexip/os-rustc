@@ -32,7 +32,8 @@ RUN yum upgrade -y && \
       wget \
       xz \
       zlib-devel.i686 \
-      zlib-devel.x86_64
+      zlib-devel.x86_64 \
+      && yum clean all
 
 RUN mkdir -p /rustroot/bin && ln -s /usr/bin/cmake3 /rustroot/bin/cmake
 
@@ -53,8 +54,8 @@ COPY host-x86_64/dist-x86_64-linux/build-clang.sh /tmp/
 RUN ./build-clang.sh
 ENV CC=clang CXX=clang++
 
-# rustc-perf version from 2022-07-22
-ENV PERF_COMMIT 3c253134664fdcba862c539d37f0de18557a9a4c
+# rustc-perf version from 2023-03-15
+ENV PERF_COMMIT 9dfaa35193154b690922347ee1141a06ec87a199
 RUN curl -LS -o perf.zip https://github.com/rust-lang/rustc-perf/archive/$PERF_COMMIT.zip && \
     unzip perf.zip && \
     mv rustc-perf-$PERF_COMMIT rustc-perf && \
@@ -80,7 +81,7 @@ ENV RUST_CONFIGURE_ARGS \
       --set rust.jemalloc \
       --set rust.use-lld=true \
       --set rust.lto=thin
-ENV SCRIPT ../src/ci/pgo.sh python3 ../x.py dist \
+ENV SCRIPT python3 ../src/ci/stage-build.py python3 ../x.py dist \
     --host $HOSTS --target $HOSTS \
     --include-default-paths \
     build-manifest bootstrap

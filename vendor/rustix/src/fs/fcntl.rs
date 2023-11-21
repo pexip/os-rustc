@@ -3,38 +3,23 @@
 //! a type-safe API, rustix makes them all separate functions so that they
 //! can have dedicated static type signatures.
 
-use crate::imp;
-use crate::io::{self, OwnedFd};
-use imp::fd::{AsFd, RawFd};
-use imp::fs::types::{FdFlags, OFlags};
+#[cfg(not(any(
+    target_os = "emscripten",
+    target_os = "fuchsia",
+    target_os = "redox",
+    target_os = "wasi"
+)))]
+use crate::fs::FlockOperation;
+use crate::{backend, io};
+use backend::fd::AsFd;
+use backend::fs::types::OFlags;
 
-/// `fcntl(fd, F_GETFD)`—Returns a file descriptor's flags.
-///
-/// # References
-///  - [POSIX]
-///  - [Linux]
-///
-/// [POSIX]: https://pubs.opengroup.org/onlinepubs/9699919799/functions/fcntl.html
-/// [Linux]: https://man7.org/linux/man-pages/man2/fcntl.2.html
-#[inline]
-#[doc(alias = "F_GETFD")]
-pub fn fcntl_getfd<Fd: AsFd>(fd: Fd) -> io::Result<FdFlags> {
-    imp::fs::syscalls::fcntl_getfd(fd.as_fd())
-}
-
-/// `fcntl(fd, F_SETFD, flags)`—Sets a file descriptor's flags.
-///
-/// # References
-///  - [POSIX]
-///  - [Linux]
-///
-/// [POSIX]: https://pubs.opengroup.org/onlinepubs/9699919799/functions/fcntl.html
-/// [Linux]: https://man7.org/linux/man-pages/man2/fcntl.2.html
-#[inline]
-#[doc(alias = "F_SETFD")]
-pub fn fcntl_setfd<Fd: AsFd>(fd: Fd, flags: FdFlags) -> io::Result<()> {
-    imp::fs::syscalls::fcntl_setfd(fd.as_fd(), flags)
-}
+// These `fcntl` functions like in the `io` module because they're not specific
+// to files, directories, or memfd objects. We re-export them here in the `fs`
+// module because the other the `fcntl` functions are here.
+#[cfg(not(target_os = "wasi"))]
+pub use crate::io::fcntl_dupfd_cloexec;
+pub use crate::io::{fcntl_getfd, fcntl_setfd};
 
 /// `fcntl(fd, F_GETFL)`—Returns a file descriptor's access mode and status.
 ///
@@ -47,7 +32,7 @@ pub fn fcntl_setfd<Fd: AsFd>(fd: Fd, flags: FdFlags) -> io::Result<()> {
 #[inline]
 #[doc(alias = "F_GETFL")]
 pub fn fcntl_getfl<Fd: AsFd>(fd: Fd) -> io::Result<OFlags> {
-    imp::fs::syscalls::fcntl_getfl(fd.as_fd())
+    backend::fs::syscalls::fcntl_getfl(fd.as_fd())
 }
 
 /// `fcntl(fd, F_SETFL, flags)`—Sets a file descriptor's status.
@@ -61,7 +46,7 @@ pub fn fcntl_getfl<Fd: AsFd>(fd: Fd) -> io::Result<OFlags> {
 #[inline]
 #[doc(alias = "F_SETFL")]
 pub fn fcntl_setfl<Fd: AsFd>(fd: Fd, flags: OFlags) -> io::Result<()> {
-    imp::fs::syscalls::fcntl_setfl(fd.as_fd(), flags)
+    backend::fs::syscalls::fcntl_setfl(fd.as_fd(), flags)
 }
 
 /// `fcntl(fd, F_GET_SEALS)`
@@ -79,7 +64,7 @@ pub fn fcntl_setfl<Fd: AsFd>(fd: Fd, flags: OFlags) -> io::Result<()> {
 #[inline]
 #[doc(alias = "F_GET_SEALS")]
 pub fn fcntl_get_seals<Fd: AsFd>(fd: Fd) -> io::Result<SealFlags> {
-    imp::fs::syscalls::fcntl_get_seals(fd.as_fd())
+    backend::fs::syscalls::fcntl_get_seals(fd.as_fd())
 }
 
 #[cfg(any(
@@ -88,7 +73,7 @@ pub fn fcntl_get_seals<Fd: AsFd>(fd: Fd) -> io::Result<SealFlags> {
     target_os = "fuchsia",
     target_os = "linux",
 ))]
-pub use imp::fs::types::SealFlags;
+pub use backend::fs::types::SealFlags;
 
 /// `fcntl(fd, F_ADD_SEALS)`
 ///
@@ -105,17 +90,18 @@ pub use imp::fs::types::SealFlags;
 #[inline]
 #[doc(alias = "F_ADD_SEALS")]
 pub fn fcntl_add_seals<Fd: AsFd>(fd: Fd, seals: SealFlags) -> io::Result<()> {
-    imp::fs::syscalls::fcntl_add_seals(fd.as_fd(), seals)
+    backend::fs::syscalls::fcntl_add_seals(fd.as_fd(), seals)
 }
 
-/// `fcntl(fd, F_DUPFD_CLOEXEC)`—Creates a new `OwnedFd` instance, with value
-/// at least `min`, that has `O_CLOEXEC` set and that shares the same
-/// underlying [file description] as `fd`.
+/// `fcntl(fd, F_SETLK)`—Acquire or release an `fcntl`-style lock.
 ///
-/// POSIX guarantees that `F_DUPFD_CLOEXEC` will use the lowest unused file
-/// descriptor which is at least `min`, however it is not safe in general to
-/// rely on this, as file descriptors may be unexpectedly allocated on other
-/// threads or in libraries.
+/// This function doesn't currently have an offset or len; it currently always
+/// sets the `l_len` field to 0, which is a special case that means the entire
+/// file should be locked.
+///
+/// Unlike `flock`-style locks, `fcntl`-style locks are process-associated,
+/// meaning that they don't guard against being acquired by two threads in
+/// the same process.
 ///
 /// # References
 ///  - [POSIX]
@@ -123,9 +109,15 @@ pub fn fcntl_add_seals<Fd: AsFd>(fd: Fd, seals: SealFlags) -> io::Result<()> {
 ///
 /// [POSIX]: https://pubs.opengroup.org/onlinepubs/9699919799/functions/fcntl.html
 /// [Linux]: https://man7.org/linux/man-pages/man2/fcntl.2.html
-#[cfg(not(target_os = "wasi"))]
+#[cfg(not(any(
+    target_os = "emscripten",
+    target_os = "fuchsia",
+    target_os = "redox",
+    target_os = "wasi"
+)))]
 #[inline]
-#[doc(alias = "F_DUPFD_CLOEXEC")]
-pub fn fcntl_dupfd_cloexec<Fd: AsFd>(fd: Fd, min: RawFd) -> io::Result<OwnedFd> {
-    imp::fs::syscalls::fcntl_dupfd_cloexec(fd.as_fd(), min)
+#[doc(alias = "F_SETLK")]
+#[doc(alias = "F_SETLKW")]
+pub fn fcntl_lock<Fd: AsFd>(fd: Fd, operation: FlockOperation) -> io::Result<()> {
+    backend::fs::syscalls::fcntl_lock(fd.as_fd(), operation)
 }

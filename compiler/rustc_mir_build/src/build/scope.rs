@@ -53,7 +53,7 @@ loop {
 ```
 
 When processing the `let x`, we will add one drop to the scope for
-`x`.  The break will then insert a drop for `x`. When we process `let
+`x`. The break will then insert a drop for `x`. When we process `let
 y`, we will add another drop (in fact, to a subscope, but let's ignore
 that for now); any later drops would also drop `y`.
 
@@ -85,12 +85,13 @@ use std::mem;
 
 use crate::build::{BlockAnd, BlockAndExtension, BlockFrame, Builder, CFG};
 use rustc_data_structures::fx::FxHashMap;
-use rustc_index::vec::IndexVec;
+use rustc_hir::HirId;
+use rustc_index::vec::{IndexSlice, IndexVec};
 use rustc_middle::middle::region;
 use rustc_middle::mir::*;
 use rustc_middle::thir::{Expr, LintLevel};
 
-use rustc_span::{Span, DUMMY_SP};
+use rustc_span::{DesugaringKind, Span, DUMMY_SP};
 
 #[derive(Debug)]
 pub struct Scopes<'tcx> {
@@ -184,7 +185,7 @@ pub(crate) enum BreakableTarget {
 }
 
 rustc_index::newtype_index! {
-    struct DropIdx { .. }
+    struct DropIdx {}
 }
 
 const ROOT_NODE: DropIdx = DropIdx::from_u32(0);
@@ -359,7 +360,7 @@ impl DropTree {
     fn link_blocks<'tcx>(
         &self,
         cfg: &mut CFG<'tcx>,
-        blocks: &IndexVec<DropIdx, Option<BasicBlock>>,
+        blocks: &IndexSlice<DropIdx, Option<BasicBlock>>,
     ) {
         for (drop_idx, drop_data) in self.drops.iter_enumerated().rev() {
             let Some(block) = blocks[drop_idx] else { continue };
@@ -368,7 +369,7 @@ impl DropTree {
                     let terminator = TerminatorKind::Drop {
                         target: blocks[drop_data.1].unwrap(),
                         // The caller will handle this if needed.
-                        unwind: None,
+                        unwind: UnwindAction::Terminate,
                         place: drop_data.0.local.into(),
                     };
                     cfg.terminate(block, drop_data.0.source_info, terminator);
@@ -443,8 +444,9 @@ impl<'tcx> Scopes<'tcx> {
 impl<'a, 'tcx> Builder<'a, 'tcx> {
     // Adding and removing scopes
     // ==========================
-    //  Start a breakable scope, which tracks where `continue`, `break` and
-    //  `return` should branch to.
+
+    ///  Start a breakable scope, which tracks where `continue`, `break` and
+    ///  `return` should branch to.
     pub(crate) fn in_breakable_scope<F>(
         &mut self,
         loop_block: Option<BasicBlock>,
@@ -566,25 +568,10 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
         F: FnOnce(&mut Builder<'a, 'tcx>) -> BlockAnd<R>,
     {
         let source_scope = self.source_scope;
-        let tcx = self.tcx;
         if let LintLevel::Explicit(current_hir_id) = lint_level {
-            // Use `maybe_lint_level_root_bounded` with `root_lint_level` as a bound
-            // to avoid adding Hir dependencies on our parents.
-            // We estimate the true lint roots here to avoid creating a lot of source scopes.
-
-            let parent_root = tcx.maybe_lint_level_root_bounded(
-                self.source_scopes[source_scope].local_data.as_ref().assert_crate_local().lint_root,
-                self.hir_id,
-            );
-            let current_root = tcx.maybe_lint_level_root_bounded(current_hir_id, self.hir_id);
-
-            if parent_root != current_root {
-                self.source_scope = self.new_source_scope(
-                    region_scope.1.span,
-                    LintLevel::Explicit(current_root),
-                    None,
-                );
-            }
+            let parent_id =
+                self.source_scopes[source_scope].local_data.as_ref().assert_crate_local().lint_root;
+            self.maybe_new_source_scope(region_scope.1.span, None, current_hir_id, parent_id);
         }
         self.push_scope(region_scope);
         let mut block;
@@ -757,6 +744,40 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
         ))
     }
 
+    /// Possibly creates a new source scope if `current_root` and `parent_root`
+    /// are different, or if -Zmaximal-hir-to-mir-coverage is enabled.
+    pub(crate) fn maybe_new_source_scope(
+        &mut self,
+        span: Span,
+        safety: Option<Safety>,
+        current_id: HirId,
+        parent_id: HirId,
+    ) {
+        let (current_root, parent_root) =
+            if self.tcx.sess.opts.unstable_opts.maximal_hir_to_mir_coverage {
+                // Some consumers of rustc need to map MIR locations back to HIR nodes. Currently the
+                // the only part of rustc that tracks MIR -> HIR is the `SourceScopeLocalData::lint_root`
+                // field that tracks lint levels for MIR locations. Normally the number of source scopes
+                // is limited to the set of nodes with lint annotations. The -Zmaximal-hir-to-mir-coverage
+                // flag changes this behavior to maximize the number of source scopes, increasing the
+                // granularity of the MIR->HIR mapping.
+                (current_id, parent_id)
+            } else {
+                // Use `maybe_lint_level_root_bounded` with `self.hir_id` as a bound
+                // to avoid adding Hir dependencies on our parents.
+                // We estimate the true lint roots here to avoid creating a lot of source scopes.
+                (
+                    self.tcx.maybe_lint_level_root_bounded(current_id, self.hir_id),
+                    self.tcx.maybe_lint_level_root_bounded(parent_id, self.hir_id),
+                )
+            };
+
+        if current_root != parent_root {
+            let lint_level = LintLevel::Explicit(current_root);
+            self.source_scope = self.new_source_scope(span, lint_level, safety);
+        }
+    }
+
     /// Creates a new source scope, nested in the current one.
     pub(crate) fn new_source_scope(
         &mut self,
@@ -799,6 +820,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
 
     // Finding scopes
     // ==============
+
     /// Returns the scope that we should use as the lifetime of an
     /// operand. Basically, an operand must live until it is consumed.
     /// This is similar to, but not quite the same as, the temporary
@@ -824,6 +846,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
 
     // Scheduling drops
     // ================
+
     pub(crate) fn schedule_drop_storage_and_value(
         &mut self,
         span: Span,
@@ -996,6 +1019,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
 
     // Other
     // =====
+
     /// Returns the [DropIdx] for the innermost drop if the function unwound at
     /// this point. The `DropIdx` will be created if it doesn't already exist.
     fn diverge_cleanup(&mut self) -> DropIdx {
@@ -1048,7 +1072,6 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
                 TerminatorKind::Assert { .. }
                     | TerminatorKind::Call { .. }
                     | TerminatorKind::Drop { .. }
-                    | TerminatorKind::DropAndReplace { .. }
                     | TerminatorKind::FalseUnwind { .. }
                     | TerminatorKind::InlineAsm { .. }
             ),
@@ -1094,24 +1117,39 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
     }
 
     /// Utility function for *non*-scope code to build their own drops
+    /// Force a drop at this point in the MIR by creating a new block.
     pub(crate) fn build_drop_and_replace(
         &mut self,
         block: BasicBlock,
         span: Span,
         place: Place<'tcx>,
-        value: Operand<'tcx>,
+        value: Rvalue<'tcx>,
     ) -> BlockAnd<()> {
+        let span = self.tcx.with_stable_hashing_context(|hcx| {
+            span.mark_with_reason(None, DesugaringKind::Replace, self.tcx.sess.edition(), hcx)
+        });
         let source_info = self.source_info(span);
-        let next_target = self.cfg.start_new_block();
+
+        // create the new block for the assignment
+        let assign = self.cfg.start_new_block();
+        self.cfg.push_assign(assign, source_info, place, value.clone());
+
+        // create the new block for the assignment in the case of unwinding
+        let assign_unwind = self.cfg.start_new_cleanup_block();
+        self.cfg.push_assign(assign_unwind, source_info, place, value.clone());
 
         self.cfg.terminate(
             block,
             source_info,
-            TerminatorKind::DropAndReplace { place, value, target: next_target, unwind: None },
+            TerminatorKind::Drop {
+                place,
+                target: assign,
+                unwind: UnwindAction::Cleanup(assign_unwind),
+            },
         );
         self.diverge_from(block);
 
-        next_target.unit()
+        assign.unit()
     }
 
     /// Creates an `Assert` terminator and return the success block.
@@ -1131,7 +1169,13 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
         self.cfg.terminate(
             block,
             source_info,
-            TerminatorKind::Assert { cond, expected, msg, target: success_block, cleanup: None },
+            TerminatorKind::Assert {
+                cond,
+                expected,
+                msg,
+                target: success_block,
+                unwind: UnwindAction::Continue,
+            },
         );
         self.diverge_from(block);
 
@@ -1210,7 +1254,11 @@ fn build_scope_drops<'tcx>(
                 cfg.terminate(
                     block,
                     source_info,
-                    TerminatorKind::Drop { place: local.into(), target: next, unwind: None },
+                    TerminatorKind::Drop {
+                        place: local.into(),
+                        target: next,
+                        unwind: UnwindAction::Continue,
+                    },
                 );
                 block = next;
             }
@@ -1389,18 +1437,24 @@ impl<'tcx> DropTreeBuilder<'tcx> for Unwind {
     fn add_entry(cfg: &mut CFG<'tcx>, from: BasicBlock, to: BasicBlock) {
         let term = &mut cfg.block_data_mut(from).terminator_mut();
         match &mut term.kind {
-            TerminatorKind::Drop { unwind, .. }
-            | TerminatorKind::DropAndReplace { unwind, .. }
-            | TerminatorKind::FalseUnwind { unwind, .. }
-            | TerminatorKind::Call { cleanup: unwind, .. }
-            | TerminatorKind::Assert { cleanup: unwind, .. }
-            | TerminatorKind::InlineAsm { cleanup: unwind, .. } => {
-                *unwind = Some(to);
+            TerminatorKind::Drop { unwind, .. } => {
+                if let UnwindAction::Cleanup(unwind) = *unwind {
+                    let source_info = term.source_info;
+                    cfg.terminate(unwind, source_info, TerminatorKind::Goto { target: to });
+                } else {
+                    *unwind = UnwindAction::Cleanup(to);
+                }
+            }
+            TerminatorKind::FalseUnwind { unwind, .. }
+            | TerminatorKind::Call { unwind, .. }
+            | TerminatorKind::Assert { unwind, .. }
+            | TerminatorKind::InlineAsm { unwind, .. } => {
+                *unwind = UnwindAction::Cleanup(to);
             }
             TerminatorKind::Goto { .. }
             | TerminatorKind::SwitchInt { .. }
             | TerminatorKind::Resume
-            | TerminatorKind::Abort
+            | TerminatorKind::Terminate
             | TerminatorKind::Return
             | TerminatorKind::Unreachable
             | TerminatorKind::Yield { .. }

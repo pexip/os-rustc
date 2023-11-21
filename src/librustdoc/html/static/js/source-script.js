@@ -15,8 +15,13 @@ const NAME_OFFSET = 0;
 const DIRS_OFFSET = 1;
 const FILES_OFFSET = 2;
 
+// WARNING: RUSTDOC_MOBILE_BREAKPOINT MEDIA QUERY
+// If you update this line, then you also need to update the media query with the same
+// warning in rustdoc.css
+const RUSTDOC_MOBILE_BREAKPOINT = 700;
+
 function closeSidebarIfMobile() {
-    if (window.innerWidth < window.RUSTDOC_MOBILE_BREAKPOINT) {
+    if (window.innerWidth < RUSTDOC_MOBILE_BREAKPOINT) {
         updateLocalStorage("source-sidebar-show", "false");
     }
 }
@@ -69,12 +74,10 @@ function createDirEntry(elem, parent, fullPath, hasFoundFile) {
 function toggleSidebar() {
     const child = this.parentNode.children[0];
     if (child.innerText === ">") {
-        window.rustdocMobileScrollLock();
         addClass(document.documentElement, "source-sidebar-expanded");
         child.innerText = "<";
         updateLocalStorage("source-sidebar-show", "true");
     } else {
-        window.rustdocMobileScrollUnlock();
         removeClass(document.documentElement, "source-sidebar-expanded");
         child.innerText = ">";
         updateLocalStorage("source-sidebar-show", "false");
@@ -83,7 +86,7 @@ function toggleSidebar() {
 
 function createSidebarToggle() {
     const sidebarToggle = document.createElement("div");
-    sidebarToggle.id = "sidebar-toggle";
+    sidebarToggle.id = "src-sidebar-toggle";
 
     const inner = document.createElement("button");
 
@@ -117,8 +120,7 @@ function createSourceSidebar() {
     sidebar.appendChild(title);
     Object.keys(sourcesIndex).forEach(key => {
         sourcesIndex[key][NAME_OFFSET] = key;
-        hasFoundFile = createDirEntry(sourcesIndex[key], sidebar, "",
-            hasFoundFile);
+        hasFoundFile = createDirEntry(sourcesIndex[key], sidebar, "", hasFoundFile);
     });
 
     container.appendChild(sidebar);
@@ -157,7 +159,7 @@ function highlightSourceLines(match) {
         x.scrollIntoView();
     }
     onEachLazy(document.getElementsByClassName("src-line-numbers"), e => {
-        onEachLazy(e.getElementsByTagName("span"), i_e => {
+        onEachLazy(e.getElementsByTagName("a"), i_e => {
             removeClass(i_e, "line-highlighted");
         });
     });
@@ -188,8 +190,13 @@ const handleSourceHighlight = (function() {
 
     return ev => {
         let cur_line_id = parseInt(ev.target.id, 10);
-        // It can happen when clicking not on a line number span.
-        if (isNaN(cur_line_id)) {
+        // This event handler is attached to the entire line number column, but it should only
+        // be run if one of the anchors is clicked. It also shouldn't do anything if the anchor
+        // is clicked with a modifier key (to open a new browser tab).
+        if (isNaN(cur_line_id) ||
+            ev.ctrlKey ||
+            ev.altKey ||
+            ev.metaKey) {
             return;
         }
         ev.preventDefault();

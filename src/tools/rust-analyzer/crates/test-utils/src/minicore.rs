@@ -20,6 +20,7 @@
 //!     derive:
 //!     drop:
 //!     eq: sized
+//!     error: fmt
 //!     fmt: result
 //!     fn:
 //!     from: sized
@@ -27,17 +28,23 @@
 //!     generator: pin
 //!     hash:
 //!     index: sized
+//!     infallible:
 //!     iterator: option
 //!     iterators: iterator, fn
+//!     non_zero:
 //!     option:
 //!     ord: eq, option
 //!     pin:
 //!     range:
 //!     result:
+//!     send: sized
 //!     sized:
 //!     slice:
-//!     try:
+//!     sync: sized
+//!     try: infallible
 //!     unsize: sized
+
+#![rustc_coherence_is_core]
 
 pub mod marker {
     // region:sized
@@ -46,6 +53,24 @@ pub mod marker {
     #[rustc_specialization_trait]
     pub trait Sized {}
     // endregion:sized
+
+    // region:send
+    pub unsafe auto trait Send {}
+
+    impl<T: ?Sized> !Send for *const T {}
+    impl<T: ?Sized> !Send for *mut T {}
+    // region:sync
+    unsafe impl<T: Sync + ?Sized> Send for &T {}
+    unsafe impl<T: Send + ?Sized> Send for &mut T {}
+    // endregion:sync
+    // endregion:send
+
+    // region:sync
+    pub unsafe auto trait Sync {}
+
+    impl<T: ?Sized> !Sync for *const T {}
+    impl<T: ?Sized> !Sync for *mut T {}
+    // endregion:sync
 
     // region:unsize
     #[lang = "unsize"]
@@ -83,6 +108,11 @@ pub mod marker {
         impl<T: ?Sized> Copy for &T {}
     }
     // endregion:copy
+
+    // region:fn
+    #[lang = "tuple_trait"]
+    pub trait Tuple {}
+    // endregion:fn
 }
 
 // region:default
@@ -91,7 +121,7 @@ pub mod default {
         fn default() -> Self;
     }
     // region:derive
-    #[rustc_builtin_macro]
+    #[rustc_builtin_macro(Default, attributes(default))]
     pub macro Default($item:item) {}
     // endregion:derive
 }
@@ -150,6 +180,9 @@ pub mod convert {
         fn as_ref(&self) -> &T;
     }
     // endregion:as_ref
+    // region:infallible
+    pub enum Infallibe {}
+    // endregion:infallible
 }
 
 pub mod ops {
@@ -247,6 +280,24 @@ pub mod ops {
             }
         }
 
+        impl<T, I, const N: usize> Index<I> for [T; N]
+        where
+            I: SliceIndex<[T]>,
+        {
+            type Output = I::Output;
+            fn index(&self, index: I) -> &I::Output {
+                loop {}
+            }
+        }
+        impl<T, I, const N: usize> IndexMut<I> for [T; N]
+        where
+            I: SliceIndex<[T]>,
+        {
+            fn index_mut(&mut self, index: I) -> &mut I::Output {
+                loop {}
+            }
+        }
+
         pub unsafe trait SliceIndex<T: ?Sized> {
             type Output: ?Sized;
         }
@@ -303,19 +354,26 @@ pub mod ops {
 
     // region:fn
     mod function {
+        use crate::marker::Tuple;
+
         #[lang = "fn"]
         #[fundamental]
-        pub trait Fn<Args>: FnMut<Args> {}
+        pub trait Fn<Args: Tuple>: FnMut<Args> {
+            extern "rust-call" fn call(&self, args: Args) -> Self::Output;
+        }
 
         #[lang = "fn_mut"]
         #[fundamental]
-        pub trait FnMut<Args>: FnOnce<Args> {}
+        pub trait FnMut<Args: Tuple>: FnOnce<Args> {
+            extern "rust-call" fn call_mut(&mut self, args: Args) -> Self::Output;
+        }
 
         #[lang = "fn_once"]
         #[fundamental]
-        pub trait FnOnce<Args> {
+        pub trait FnOnce<Args: Tuple> {
             #[lang = "fn_once_output"]
             type Output;
+            extern "rust-call" fn call_once(self, args: Args) -> Self::Output;
         }
     }
     pub use self::function::{Fn, FnMut, FnOnce};
@@ -330,7 +388,7 @@ pub mod ops {
             #[lang = "from_residual"]
             fn from_residual(residual: R) -> Self;
         }
-        #[lang = "try"]
+        #[lang = "Try"]
         pub trait Try: FromResidual<Self::Residual> {
             type Output;
             type Residual;
@@ -359,6 +417,12 @@ pub mod ops {
     pub trait Add<Rhs = Self> {
         type Output;
         fn add(self, rhs: Rhs) -> Self::Output;
+    }
+
+    #[lang = "add_assign"]
+    #[const_trait]
+    pub trait AddAssign<Rhs = Self> {
+        fn add_assign(&mut self, rhs: Rhs);
     }
     // endregion:add
 
@@ -438,6 +502,9 @@ pub mod fmt {
     pub trait Debug {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result;
     }
+    pub trait Display {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result;
+    }
 }
 // endregion:fmt
 
@@ -445,6 +512,7 @@ pub mod fmt {
 pub mod slice {
     #[lang = "slice"]
     impl<T> [T] {
+        #[lang = "slice_len_fn"]
         pub fn len(&self) -> usize {
             loop {}
         }
@@ -468,6 +536,40 @@ pub mod option {
                 None => panic!("called `Option::unwrap()` on a `None` value"),
             }
         }
+
+        pub fn and<U>(self, optb: Option<U>) -> Option<U> {
+            loop {}
+        }
+        pub fn unwrap_or(self, default: T) -> T {
+            loop {}
+        }
+        // region:fn
+        pub fn and_then<U, F>(self, f: F) -> Option<U>
+        where
+            F: FnOnce(T) -> Option<U>,
+        {
+            loop {}
+        }
+        pub fn unwrap_or_else<F>(self, f: F) -> T
+        where
+            F: FnOnce() -> T,
+        {
+            loop {}
+        }
+        pub fn map_or<U, F>(self, default: U, f: F) -> U
+        where
+            F: FnOnce(T) -> U,
+        {
+            loop {}
+        }
+        pub fn map_or_else<U, D, F>(self, default: D, f: F) -> U
+        where
+            D: FnOnce() -> U,
+            F: FnOnce(T) -> U,
+        {
+            loop {}
+        }
+        // endregion:fn
     }
 }
 // endregion:option
@@ -662,6 +764,20 @@ pub mod iter {
                     self
                 }
             }
+            pub struct IntoIter<T, const N: usize>([T; N]);
+            impl<T, const N: usize> IntoIterator for [T; N] {
+                type Item = T;
+                type IntoIter = IntoIter<T, N>;
+                fn into_iter(self) -> I {
+                    IntoIter(self)
+                }
+            }
+            impl<T, const N: usize> Iterator for IntoIter<T, N> {
+                type Item = T;
+                fn next(&mut self) -> Option<T> {
+                    loop {}
+                }
+            }
         }
         pub use self::collect::IntoIterator;
     }
@@ -680,6 +796,15 @@ mod macros {
 }
 // endregion:derive
 
+// region:non_zero
+pub mod num {
+    #[repr(transparent)]
+    #[rustc_layout_scalar_valid_range_start(1)]
+    #[rustc_nonnull_optimization_guaranteed]
+    pub struct NonZeroU8(u8);
+}
+// endregion:non_zero
+
 // region:bool_impl
 #[lang = "bool"]
 impl bool {
@@ -693,6 +818,17 @@ impl bool {
 }
 // endregion:bool_impl
 
+// region:error
+pub mod error {
+    #[rustc_has_incoherent_inherent_impls]
+    pub trait Error: crate::fmt::Debug + crate::fmt::Display {
+        fn source(&self) -> Option<&(dyn Error + 'static)> {
+            None
+        }
+    }
+}
+// endregion:error
+
 pub mod prelude {
     pub mod v1 {
         pub use crate::{
@@ -705,7 +841,9 @@ pub mod prelude {
             iter::{IntoIterator, Iterator},     // :iterator
             macros::builtin::derive,            // :derive
             marker::Copy,                       // :copy
+            marker::Send,                       // :send
             marker::Sized,                      // :sized
+            marker::Sync,                       // :sync
             mem::drop,                          // :drop
             ops::Drop,                          // :drop
             ops::{Fn, FnMut, FnOnce},           // :fn

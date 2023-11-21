@@ -3,10 +3,14 @@
 use crate::MirPass;
 use rustc_hir::Mutability;
 use rustc_middle::mir::{
-    BinOp, Body, Constant, ConstantKind, LocalDecls, Operand, Place, ProjectionElem, Rvalue,
-    SourceInfo, Statement, StatementKind, Terminator, TerminatorKind, UnOp,
+    BinOp, Body, CastKind, Constant, ConstantKind, LocalDecls, Operand, Place, ProjectionElem,
+    Rvalue, SourceInfo, Statement, StatementKind, SwitchTargets, Terminator, TerminatorKind, UnOp,
 };
-use rustc_middle::ty::{self, TyCtxt};
+use rustc_middle::ty::layout::ValidityRequirement;
+use rustc_middle::ty::util::IntTypeExt;
+use rustc_middle::ty::{self, ParamEnv, SubstsRef, Ty, TyCtxt};
+use rustc_span::symbol::Symbol;
+use rustc_target::abi::FieldIdx;
 
 pub struct InstCombine;
 
@@ -16,7 +20,11 @@ impl<'tcx> MirPass<'tcx> for InstCombine {
     }
 
     fn run_pass(&self, tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
-        let ctx = InstCombineContext { tcx, local_decls: &body.local_decls };
+        let ctx = InstCombineContext {
+            tcx,
+            local_decls: &body.local_decls,
+            param_env: tcx.param_env_reveal_all_normalized(body.source.def_id()),
+        };
         for block in body.basic_blocks.as_mut() {
             for statement in block.statements.iter_mut() {
                 match statement.kind {
@@ -24,6 +32,7 @@ impl<'tcx> MirPass<'tcx> for InstCombine {
                         ctx.combine_bool_cmp(&statement.source_info, rvalue);
                         ctx.combine_ref_deref(&statement.source_info, rvalue);
                         ctx.combine_len(&statement.source_info, rvalue);
+                        ctx.combine_cast(&statement.source_info, rvalue);
                     }
                     _ => {}
                 }
@@ -33,6 +42,11 @@ impl<'tcx> MirPass<'tcx> for InstCombine {
                 &mut block.terminator.as_mut().unwrap(),
                 &mut block.statements,
             );
+            ctx.combine_intrinsic_assert(
+                &mut block.terminator.as_mut().unwrap(),
+                &mut block.statements,
+            );
+            ctx.combine_duplicate_switch_targets(&mut block.terminator.as_mut().unwrap());
         }
     }
 }
@@ -40,6 +54,7 @@ impl<'tcx> MirPass<'tcx> for InstCombine {
 struct InstCombineContext<'tcx, 'a> {
     tcx: TyCtxt<'tcx>,
     local_decls: &'a LocalDecls<'tcx>,
+    param_env: ParamEnv<'tcx>,
 }
 
 impl<'tcx> InstCombineContext<'tcx, '_> {
@@ -99,11 +114,7 @@ impl<'tcx> InstCombineContext<'tcx, '_> {
     fn combine_ref_deref(&self, source_info: &SourceInfo, rvalue: &mut Rvalue<'tcx>) {
         if let Rvalue::Ref(_, _, place) = rvalue {
             if let Some((base, ProjectionElem::Deref)) = place.as_ref().last_projection() {
-                if let ty::Ref(_, _, Mutability::Not) =
-                    base.ty(self.local_decls, self.tcx).ty.kind()
-                {
-                    // The dereferenced place must have type `&_`, so that we don't copy `&mut _`.
-                } else {
+                if rvalue.ty(self.local_decls, self.tcx) != base.ty(self.local_decls, self.tcx).ty {
                     return;
                 }
 
@@ -113,7 +124,7 @@ impl<'tcx> InstCombineContext<'tcx, '_> {
 
                 *rvalue = Rvalue::Use(Operand::Copy(Place {
                     local: base.local,
-                    projection: self.tcx.intern_place_elems(base.projection),
+                    projection: self.tcx.mk_place_elems(base.projection),
                 }));
             }
         }
@@ -131,6 +142,58 @@ impl<'tcx> InstCombineContext<'tcx, '_> {
                 let literal = ConstantKind::from_const(len, self.tcx);
                 let constant = Constant { span: source_info.span, literal, user_ty: None };
                 *rvalue = Rvalue::Use(Operand::Constant(Box::new(constant)));
+            }
+        }
+    }
+
+    fn combine_cast(&self, _source_info: &SourceInfo, rvalue: &mut Rvalue<'tcx>) {
+        if let Rvalue::Cast(kind, operand, cast_ty) = rvalue {
+            let operand_ty = operand.ty(self.local_decls, self.tcx);
+            if operand_ty == *cast_ty {
+                *rvalue = Rvalue::Use(operand.clone());
+            } else if *kind == CastKind::Transmute {
+                // Transmuting an integer to another integer is just a signedness cast
+                if let (ty::Int(int), ty::Uint(uint)) | (ty::Uint(uint), ty::Int(int)) = (operand_ty.kind(), cast_ty.kind())
+                    && int.bit_width() == uint.bit_width()
+                {
+                    // The width check isn't strictly necessary, as different widths
+                    // are UB and thus we'd be allowed to turn it into a cast anyway.
+                    // But let's keep the UB around for codegen to exploit later.
+                    // (If `CastKind::Transmute` ever becomes *not* UB for mismatched sizes,
+                    // then the width check is necessary for big-endian correctness.)
+                    *kind = CastKind::IntToInt;
+                    return;
+                }
+
+                // Transmuting a fieldless enum to its repr is a discriminant read
+                if let ty::Adt(adt_def, ..) = operand_ty.kind()
+                    && adt_def.is_enum()
+                    && adt_def.is_payloadfree()
+                    && let Some(place) = operand.place()
+                    && let Some(repr_int) = adt_def.repr().int
+                    && repr_int.to_ty(self.tcx) == *cast_ty
+                {
+                    *rvalue = Rvalue::Discriminant(place);
+                    return;
+                }
+
+                // Transmuting a transparent struct/union to a field's type is a projection
+                if let ty::Adt(adt_def, substs) = operand_ty.kind()
+                    && adt_def.repr().transparent()
+                    && (adt_def.is_struct() || adt_def.is_union())
+                    && let Some(place) = operand.place()
+                {
+                    let variant = adt_def.non_enum_variant();
+                    for (i, field) in variant.fields.iter().enumerate() {
+                        let field_ty = field.ty(self.tcx, substs);
+                        if field_ty == *cast_ty {
+                            let place = place.project_deeper(&[ProjectionElem::Field(FieldIdx::from_usize(i), *cast_ty)], self.tcx);
+                            let operand = if operand.is_move() { Operand::Move(place) } else { Operand::Copy(place) };
+                            *rvalue = Rvalue::Use(operand);
+                            return;
+                        }
+                    }
+                }
             }
         }
     }
@@ -200,4 +263,71 @@ impl<'tcx> InstCombineContext<'tcx, '_> {
         });
         terminator.kind = TerminatorKind::Goto { target: destination_block };
     }
+
+    fn combine_duplicate_switch_targets(&self, terminator: &mut Terminator<'tcx>) {
+        let TerminatorKind::SwitchInt { targets, .. } = &mut terminator.kind
+        else { return };
+
+        let otherwise = targets.otherwise();
+        if targets.iter().any(|t| t.1 == otherwise) {
+            *targets = SwitchTargets::new(
+                targets.iter().filter(|t| t.1 != otherwise),
+                targets.otherwise(),
+            );
+        }
+    }
+
+    fn combine_intrinsic_assert(
+        &self,
+        terminator: &mut Terminator<'tcx>,
+        _statements: &mut Vec<Statement<'tcx>>,
+    ) {
+        let TerminatorKind::Call { func, target, .. } = &mut terminator.kind  else { return; };
+        let Some(target_block) = target else { return; };
+        let func_ty = func.ty(self.local_decls, self.tcx);
+        let Some((intrinsic_name, substs)) = resolve_rust_intrinsic(self.tcx, func_ty) else {
+            return;
+        };
+        // The intrinsics we are interested in have one generic parameter
+        if substs.is_empty() {
+            return;
+        }
+        let ty = substs.type_at(0);
+
+        let known_is_valid = intrinsic_assert_panics(self.tcx, self.param_env, ty, intrinsic_name);
+        match known_is_valid {
+            // We don't know the layout or it's not validity assertion at all, don't touch it
+            None => {}
+            Some(true) => {
+                // If we know the assert panics, indicate to later opts that the call diverges
+                *target = None;
+            }
+            Some(false) => {
+                // If we know the assert does not panic, turn the call into a Goto
+                terminator.kind = TerminatorKind::Goto { target: *target_block };
+            }
+        }
+    }
+}
+
+fn intrinsic_assert_panics<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    param_env: ty::ParamEnv<'tcx>,
+    ty: Ty<'tcx>,
+    intrinsic_name: Symbol,
+) -> Option<bool> {
+    let requirement = ValidityRequirement::from_intrinsic(intrinsic_name)?;
+    Some(!tcx.check_validity_requirement((requirement, param_env.and(ty))).ok()?)
+}
+
+fn resolve_rust_intrinsic<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    func_ty: Ty<'tcx>,
+) -> Option<(Symbol, SubstsRef<'tcx>)> {
+    if let ty::FnDef(def_id, substs) = *func_ty.kind() {
+        if tcx.is_intrinsic(def_id) {
+            return Some((tcx.item_name(def_id), substs));
+        }
+    }
+    None
 }

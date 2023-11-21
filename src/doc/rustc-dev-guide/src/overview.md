@@ -1,4 +1,4 @@
-# Overview of the Compiler
+# Overview of the compiler
 
 <!-- toc -->
 
@@ -292,7 +292,7 @@ Moreover, the compiler wasn't originally built to use a query system; the query
 system has been retrofitted into the compiler, so parts of it are not query-fied
 yet. Also, LLVM isn't our code, so that isn't querified either. The plan is to
 eventually query-fy all of the steps listed in the previous section,
-but as of <!-- date-check --> November 2021, only the steps between HIR and
+but as of <!-- date-check --> November 2022, only the steps between HIR and
 LLVM IR are query-fied. That is, lexing, parsing, name resolution, and macro
 expansion are done all at once for the whole program.
 
@@ -374,7 +374,7 @@ For more details on bootstrapping, see
 - Lexical Analysis: Lex the user program to a stream of tokens
   - Guide: [Lexing and Parsing](the-parser.md)
   - Lexer definition: [`rustc_lexer`](https://doc.rust-lang.org/nightly/nightly-rustc/rustc_lexer/index.html)
-  - Main entry point: [`rustc_lexer::first_token`](https://doc.rust-lang.org/nightly/nightly-rustc/rustc_lexer/fn.first_token.html)
+  - Main entry point: [`rustc_lexer::cursor::Cursor::advance_token`](https://doc.rust-lang.org/nightly/nightly-rustc/rustc_lexer/cursor/struct.Cursor.html#method.advance_token)
 - Parsing: Parse the stream of tokens to an Abstract Syntax Tree (AST)
   - Guide: [Lexing and Parsing](the-parser.md)
   - Guide: [Macro Expansion](macro-expansion.md)

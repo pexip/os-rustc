@@ -1,6 +1,7 @@
 //! Analyze all modules in a project for diagnostics. Exits with a non-zero
 //! status code if any errors are found.
 
+use project_model::{CargoConfig, RustLibSource};
 use rustc_hash::FxHashSet;
 
 use hir::{db::HirDatabase, Crate, Module};
@@ -9,15 +10,16 @@ use ide_db::base_db::SourceDatabaseExt;
 
 use crate::cli::{
     flags,
-    load_cargo::{load_workspace_at, LoadCargoConfig},
+    load_cargo::{load_workspace_at, LoadCargoConfig, ProcMacroServerChoice},
 };
 
 impl flags::Diagnostics {
     pub fn run(self) -> anyhow::Result<()> {
-        let cargo_config = Default::default();
+        let mut cargo_config = CargoConfig::default();
+        cargo_config.sysroot = Some(RustLibSource::Discover);
         let load_cargo_config = LoadCargoConfig {
             load_out_dirs_from_check: !self.disable_build_scripts,
-            with_proc_macro: !self.disable_proc_macros,
+            with_proc_macro_server: ProcMacroServerChoice::Sysroot,
             prefill_caches: false,
         };
         let (host, _vfs, _proc_macro) =
@@ -40,7 +42,7 @@ impl flags::Diagnostics {
             if !visited_files.contains(&file_id) {
                 let crate_name =
                     module.krate().display_name(db).as_deref().unwrap_or("unknown").to_string();
-                println!("processing crate: {}, module: {}", crate_name, _vfs.file_path(file_id));
+                println!("processing crate: {crate_name}, module: {}", _vfs.file_path(file_id));
                 for diagnostic in analysis
                     .diagnostics(
                         &DiagnosticsConfig::test_sample(),
@@ -53,7 +55,7 @@ impl flags::Diagnostics {
                         found_error = true;
                     }
 
-                    println!("{:?}", diagnostic);
+                    println!("{diagnostic:?}");
                 }
 
                 visited_files.insert(file_id);

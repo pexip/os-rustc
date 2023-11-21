@@ -239,7 +239,7 @@ impl fmt::Debug for ImportMap {
                     ItemInNs::Values(_) => "v",
                     ItemInNs::Macros(_) => "m",
                 };
-                format!("- {} ({})", info.path, ns)
+                format!("- {} ({ns})", info.path)
             })
             .collect();
 
@@ -264,6 +264,7 @@ pub enum ImportKind {
     Const,
     Static,
     Trait,
+    TraitAlias,
     TypeAlias,
     BuiltinType,
     AssociatedItem,
@@ -389,12 +390,12 @@ impl Query {
 /// Searches dependencies of `krate` for an importable path matching `query`.
 ///
 /// This returns a list of items that could be imported from dependencies of `krate`.
-pub fn search_dependencies<'a>(
-    db: &'a dyn DefDatabase,
+pub fn search_dependencies(
+    db: &dyn DefDatabase,
     krate: CrateId,
     query: Query,
 ) -> FxHashSet<ItemInNs> {
-    let _p = profile::span("search_dependencies").detail(|| format!("{:?}", query));
+    let _p = profile::span("search_dependencies").detail(|| format!("{query:?}"));
 
     let graph = db.crate_graph();
     let import_maps: Vec<_> =
@@ -459,6 +460,7 @@ fn item_import_kind(item: ItemInNs) -> Option<ImportKind> {
         ModuleDefId::ConstId(_) => ImportKind::Const,
         ModuleDefId::StaticId(_) => ImportKind::Static,
         ModuleDefId::TraitId(_) => ImportKind::Trait,
+        ModuleDefId::TraitAliasId(_) => ImportKind::TraitAlias,
         ModuleDefId::TypeAliasId(_) => ImportKind::TypeAlias,
         ModuleDefId::BuiltinType(_) => ImportKind::BuiltinType,
         ModuleDefId::MacroId(_) => ImportKind::Macro,
@@ -545,7 +547,7 @@ mod tests {
                         None
                     }
                 })?;
-            return Some(format!("{}::{}", dependency_imports.path_of(trait_)?, assoc_item_name));
+            return Some(format!("{}::{assoc_item_name}", dependency_imports.path_of(trait_)?));
         }
         None
     }
@@ -585,7 +587,7 @@ mod tests {
 
                 let map = db.import_map(krate);
 
-                Some(format!("{}:\n{:?}\n", name, map))
+                Some(format!("{name}:\n{map:?}\n"))
             })
             .sorted()
             .collect::<String>();

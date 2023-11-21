@@ -63,7 +63,7 @@ impl<D> TyBuilder<D> {
     }
 
     fn build_internal(self) -> (D, Substitution) {
-        assert_eq!(self.vec.len(), self.param_kinds.len());
+        assert_eq!(self.vec.len(), self.param_kinds.len(), "{:?}", &self.param_kinds);
         for (a, e) in self.vec.iter().zip(self.param_kinds.iter()) {
             self.assert_match_kind(a, e);
         }
@@ -142,7 +142,7 @@ impl<D> TyBuilder<D> {
         match (a.data(Interner), e) {
             (chalk_ir::GenericArgData::Ty(_), ParamKind::Type)
             | (chalk_ir::GenericArgData::Const(_), ParamKind::Const(_)) => (),
-            _ => panic!("Mismatched kinds: {:?}, {:?}, {:?}", a, self.vec, self.param_kinds),
+            _ => panic!("Mismatched kinds: {a:?}, {:?}, {:?}", self.vec, self.param_kinds),
         }
     }
 }
@@ -150,6 +150,15 @@ impl<D> TyBuilder<D> {
 impl TyBuilder<()> {
     pub fn unit() -> Ty {
         TyKind::Tuple(0, Substitution::empty(Interner)).intern(Interner)
+    }
+
+    // FIXME: rustc's ty is dependent on the adt type, maybe we need to do that as well
+    pub fn discr_ty() -> Ty {
+        TyKind::Scalar(chalk_ir::Scalar::Int(chalk_ir::IntTy::I128)).intern(Interner)
+    }
+
+    pub fn bool() -> Ty {
+        TyKind::Scalar(chalk_ir::Scalar::Bool).intern(Interner)
     }
 
     pub fn usize() -> Ty {
@@ -281,6 +290,21 @@ impl TyBuilder<Tuple> {
     pub fn build(self) -> Ty {
         let (Tuple(size), subst) = self.build_internal();
         TyKind::Tuple(size, subst).intern(Interner)
+    }
+
+    pub fn tuple_with<I>(elements: I) -> Ty
+    where
+        I: IntoIterator<Item = Ty>,
+        <I as IntoIterator>::IntoIter: ExactSizeIterator,
+    {
+        let elements = elements.into_iter();
+        let len = elements.len();
+        let mut b =
+            TyBuilder::new(Tuple(len), iter::repeat(ParamKind::Type).take(len).collect(), None);
+        for e in elements {
+            b = b.push(e);
+        }
+        b.build()
     }
 }
 

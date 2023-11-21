@@ -52,7 +52,12 @@ pub(crate) struct AuxVec {
 /// Note that run-time feature detection is not invoked for features that can
 /// be detected at compile-time. Also note that if this function returns an
 /// error, cpuinfo still can (and will) be used to try to perform run-time
-/// feature detecton on some platforms.
+/// feature detection on some platforms.
+///
+/// Note: The `std_detect_dlsym_getauxval` cargo feature is ignored on `*-linux-gnu*` targets,
+/// since [all `*-linux-gnu*` targets ([since Rust 1.64](https://blog.rust-lang.org/2022/08/01/Increasing-glibc-kernel-requirements.html))
+/// have glibc requirements higher than [glibc 2.16 that added `getauxval`](https://sourceware.org/legacy-ml/libc-announce/2012/msg00000.html),
+/// and we can safely assume [`getauxval`] is linked to the binary.
 ///
 /// For more information about when `getauxval` is available check the great
 /// [`auxv` crate documentation][auxv_docs].
@@ -60,7 +65,10 @@ pub(crate) struct AuxVec {
 /// [auxvec_h]: https://github.com/torvalds/linux/blob/master/include/uapi/linux/auxvec.h
 /// [auxv_docs]: https://docs.rs/auxv/0.3.3/auxv/
 pub(crate) fn auxv() -> Result<AuxVec, ()> {
-    #[cfg(feature = "std_detect_dlsym_getauxval")]
+    #[cfg(all(
+        feature = "std_detect_dlsym_getauxval",
+        not(all(target_os = "linux", target_env = "gnu"))
+    ))]
     {
         // Try to call a dynamically-linked getauxval function.
         if let Ok(hwcap) = getauxval(AT_HWCAP) {
@@ -101,7 +109,10 @@ pub(crate) fn auxv() -> Result<AuxVec, ()> {
         }
     }
 
-    #[cfg(not(feature = "std_detect_dlsym_getauxval"))]
+    #[cfg(any(
+        not(feature = "std_detect_dlsym_getauxval"),
+        all(target_os = "linux", target_env = "gnu")
+    ))]
     {
         // Targets with only AT_HWCAP:
         #[cfg(any(
@@ -154,7 +165,10 @@ pub(crate) fn auxv() -> Result<AuxVec, ()> {
 /// Tries to read the `key` from the auxiliary vector by calling the
 /// dynamically-linked `getauxval` function. If the function is not linked,
 /// this function return `Err`.
-#[cfg(feature = "std_detect_dlsym_getauxval")]
+#[cfg(all(
+    feature = "std_detect_dlsym_getauxval",
+    not(all(target_os = "linux", target_env = "gnu"))
+))]
 fn getauxval(key: usize) -> Result<usize, ()> {
     use libc;
     pub type F = unsafe extern "C" fn(usize) -> usize;
@@ -313,7 +327,7 @@ mod tests {
             #[test]
             fn linux_rpi3() {
                 let file = concat!(env!("CARGO_MANIFEST_DIR"), "/src/detect/test_data/linux-rpi3.auxv");
-                println!("file: {}", file);
+                println!("file: {file}");
                 let v = auxv_from_file(file).unwrap();
                 assert_eq!(v.hwcap, 4174038);
                 assert_eq!(v.hwcap2, 16);
@@ -322,7 +336,7 @@ mod tests {
             #[test]
             fn linux_macos_vb() {
                 let file = concat!(env!("CARGO_MANIFEST_DIR"), "/src/detect/test_data/macos-virtualbox-linux-x86-4850HQ.auxv");
-                println!("file: {}", file);
+                println!("file: {file}");
                 // The file contains HWCAP but not HWCAP2. In that case, we treat HWCAP2 as zero.
                 let v = auxv_from_file(file).unwrap();
                 assert_eq!(v.hwcap, 126614527);
@@ -332,7 +346,7 @@ mod tests {
             #[test]
             fn linux_artificial_aarch64() {
                 let file = concat!(env!("CARGO_MANIFEST_DIR"), "/src/detect/test_data/linux-artificial-aarch64.auxv");
-                println!("file: {}", file);
+                println!("file: {file}");
                 let v = auxv_from_file(file).unwrap();
                 assert_eq!(v.hwcap, 0x0123456789abcdef);
                 assert_eq!(v.hwcap2, 0x02468ace13579bdf);
@@ -340,7 +354,7 @@ mod tests {
             #[test]
             fn linux_no_hwcap2_aarch64() {
                 let file = concat!(env!("CARGO_MANIFEST_DIR"), "/src/detect/test_data/linux-no-hwcap2-aarch64.auxv");
-                println!("file: {}", file);
+                println!("file: {file}");
                 let v = auxv_from_file(file).unwrap();
                 // An absent HWCAP2 is treated as zero, and does not prevent acceptance of HWCAP.
                 assert_ne!(v.hwcap, 0);

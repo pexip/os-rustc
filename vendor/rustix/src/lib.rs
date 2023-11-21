@@ -4,7 +4,7 @@
 //!
 //! With rustix, you can write code like this:
 //!
-//! ```rust
+//! ```
 //! # #[cfg(feature = "net")]
 //! # fn read(sock: std::net::TcpStream, buf: &mut [u8]) -> std::io::Result<()> {
 //! # use rustix::net::RecvFlags;
@@ -16,7 +16,7 @@
 //!
 //! instead of like this:
 //!
-//! ```rust
+//! ```
 //! # #[cfg(feature = "net")]
 //! # fn read(sock: std::net::TcpStream, buf: &mut [u8]) -> std::io::Result<()> {
 //! # use std::convert::TryInto;
@@ -60,8 +60,8 @@
 //!  - Multiplexed functions (eg. `fcntl`, `ioctl`, etc.) are de-multiplexed.
 //!  - Variadic functions (eg. `openat`, etc.) are presented as non-variadic.
 //!  - Functions and types which need `l` prefixes or `64` suffixes to enable
-//!    large-file support are used automatically, and file sizes and offsets
-//!    are presented as `u64` and `i64`.
+//!    large-file support (LFS) are used automatically. File sizes and offsets
+//!    are always presented as `u64` and `i64`.
 //!  - Behaviors that depend on the sizes of C types like `long` are hidden.
 //!  - In some places, more human-friendly and less historical-accident names
 //!    are used (and documentation aliases are used so that the original names
@@ -86,12 +86,11 @@
 //! [`io-streams`]: https://crates.io/crates/io-streams
 //! [`getrandom`]: https://crates.io/crates/getrandom
 //! [`bitflags`]: https://crates.io/crates/bitflags
-//! [`AsFd`]: https://doc.rust-lang.org/stable/std/os/unix/io/trait.AsFd.html
-//! [`OwnedFd`]: https://docs.rs/io-lifetimes/latest/io_lifetimes/struct.OwnedFd.html
-//! [io-lifetimes crate]: https://crates.io/crates/io-lifetimes
+//! [`AsFd`]: https://doc.rust-lang.org/stable/std/os/fd/trait.AsFd.html
+//! [`OwnedFd`]: https://doc.rust-lang.org/stable/std/os/fd/struct.OwnedFd.html
 //! [I/O-safe]: https://github.com/rust-lang/rfcs/blob/master/text/3128-io-safety.md
-//! [`Result`]: https://docs.rs/rustix/latest/rustix/io/type.Result.html
-//! [`Arg`]: https://docs.rs/rustix/latest/rustix/path/trait.Arg.html
+//! [`Result`]: https://doc.rust-lang.org/stable/std/result/enum.Result.html
+//! [`Arg`]: https://docs.rs/rustix/*/rustix/path/trait.Arg.html
 
 #![deny(missing_docs)]
 #![allow(stable_features)]
@@ -117,6 +116,12 @@
 )]
 #![cfg_attr(asm_experimental_arch, feature(asm_experimental_arch))]
 #![cfg_attr(not(feature = "all-apis"), allow(dead_code))]
+// Clamp depends on Rust 1.50 which is newer than our MSRV.
+#![allow(clippy::manual_clamp)]
+// It is common in linux and libc APIs for types to vary between platforms.
+#![allow(clippy::unnecessary_cast)]
+// It is common in linux and libc APIs for types to vary between platforms.
+#![allow(clippy::useless_conversion)]
 
 #[cfg(not(feature = "rustc-dep-of-std"))]
 extern crate alloc;
@@ -130,27 +135,20 @@ pub(crate) mod const_assert;
 pub(crate) mod utils;
 
 // Pick the backend implementation to use.
-#[cfg_attr(libc, path = "imp/libc/mod.rs")]
-#[cfg_attr(linux_raw, path = "imp/linux_raw/mod.rs")]
-#[cfg_attr(wasi, path = "imp/wasi/mod.rs")]
-mod imp;
+#[cfg_attr(libc, path = "backend/libc/mod.rs")]
+#[cfg_attr(linux_raw, path = "backend/linux_raw/mod.rs")]
+#[cfg_attr(wasi, path = "backend/wasi/mod.rs")]
+mod backend;
 
 /// Export the `*Fd` types and traits that are used in rustix's public API.
 ///
 /// Users can use this to avoid needing to import anything else to use the same
 /// versions of these types and traits.
-///
-/// Rustix APIs that use `OwnedFd` use [`rustix::io::OwnedFd`] instead, which
-/// allows rustix to implement `close` for them.
-///
-/// [`rustix::io::OwnedFd`]: crate::io::OwnedFd
 pub mod fd {
-    use super::imp;
-    pub use imp::fd::{AsFd, AsRawFd, BorrowedFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
+    use super::backend;
     #[cfg(windows)]
-    pub use imp::fd::{AsSocket, FromSocket, IntoSocket};
-    #[cfg(feature = "std")]
-    pub use imp::fd::{FromFd, IntoFd};
+    pub use backend::fd::AsSocket;
+    pub use backend::fd::{AsFd, AsRawFd, BorrowedFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
 }
 
 // The public API modules.
@@ -189,7 +187,7 @@ pub mod process;
 #[cfg(feature = "rand")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "rand")))]
 pub mod rand;
-#[cfg(not(any(windows, target_os = "wasi")))]
+#[cfg(not(windows))]
 #[cfg(feature = "termios")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "termios")))]
 pub mod termios;
@@ -213,9 +211,6 @@ pub mod runtime;
 // for API features that aren't enabled, declare them as `pub(crate)` so
 // that they're not public, but still available for internal use.
 
-#[cfg(not(windows))]
-#[cfg(not(feature = "fs"))]
-pub(crate) mod fs;
 #[cfg(not(windows))]
 #[cfg(all(
     not(feature = "param"),

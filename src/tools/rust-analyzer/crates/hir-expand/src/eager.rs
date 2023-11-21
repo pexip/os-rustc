@@ -25,7 +25,7 @@ use syntax::{ted, SyntaxNode};
 
 use crate::{
     ast::{self, AstNode},
-    db::AstDatabase,
+    db::ExpandDatabase,
     hygiene::Hygiene,
     mod_path::ModPath,
     EagerCallInfo, ExpandError, ExpandResult, ExpandTo, InFile, MacroCallId, MacroCallKind,
@@ -96,7 +96,7 @@ impl ErrorSink for &'_ mut dyn FnMut(ExpandError) {
 }
 
 pub fn expand_eager_macro(
-    db: &dyn AstDatabase,
+    db: &dyn ExpandDatabase,
     krate: CrateId,
     macro_call: InFile<ast::MacroCall>,
     def: MacroDefId,
@@ -108,7 +108,7 @@ pub fn expand_eager_macro(
         .value
         .token_tree()
         .map(|tt| mbe::syntax_node_to_token_tree(tt.syntax()).0)
-        .unwrap_or_default();
+        .unwrap_or_else(tt::Subtree::empty);
 
     let ast_map = db.ast_id_map(macro_call.file_id);
     let call_id = InFile::new(macro_call.file_id, ast_map.ast_id(&macro_call.value));
@@ -161,18 +161,18 @@ pub fn expand_eager_macro(
 
         Ok(Ok(db.intern_macro_call(loc)))
     } else {
-        panic!("called `expand_eager_macro` on non-eager macro def {:?}", def);
+        panic!("called `expand_eager_macro` on non-eager macro def {def:?}");
     }
 }
 
-fn to_subtree(node: &SyntaxNode) -> tt::Subtree {
+fn to_subtree(node: &SyntaxNode) -> crate::tt::Subtree {
     let mut subtree = mbe::syntax_node_to_token_tree(node).0;
-    subtree.delimiter = None;
+    subtree.delimiter = crate::tt::Delimiter::unspecified();
     subtree
 }
 
 fn lazy_expand(
-    db: &dyn AstDatabase,
+    db: &dyn ExpandDatabase,
     def: &MacroDefId,
     macro_call: InFile<ast::MacroCall>,
     krate: CrateId,
@@ -193,7 +193,7 @@ fn lazy_expand(
 }
 
 fn eager_macro_recur(
-    db: &dyn AstDatabase,
+    db: &dyn ExpandDatabase,
     hygiene: &Hygiene,
     curr: InFile<SyntaxNode>,
     krate: CrateId,
@@ -208,7 +208,7 @@ fn eager_macro_recur(
     // Collect replacement
     for child in children {
         let def = match child.path().and_then(|path| ModPath::from_src(db, path, hygiene)) {
-            Some(path) => macro_resolver(path.clone()).ok_or_else(|| UnresolvedMacro { path })?,
+            Some(path) => macro_resolver(path.clone()).ok_or(UnresolvedMacro { path })?,
             None => {
                 diagnostic_sink(ExpandError::Other("malformed macro invocation".into()));
                 continue;

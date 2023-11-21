@@ -143,7 +143,7 @@ macro_rules! assert {
 
 fn main() {
      {
-        if !true {
+        if !(true ) {
             $crate::panic!("{} {:?}", arg1(a, b, c), arg2);
         }
     };
@@ -163,7 +163,8 @@ macro_rules! compile_error {
 }
 
 // This expands to nothing (since it's in item position), but emits an error.
-compile_error!("error!");
+compile_error!("error, with an escaped quote: \"");
+compile_error!(r"this is a raw string");
 "#,
         expect![[r##"
 #[rustc_builtin_macro]
@@ -172,7 +173,8 @@ macro_rules! compile_error {
     ($msg:expr,) => ({ /* compiler built-in */ })
 }
 
-/* error: error! */
+/* error: error, with an escaped quote: " */
+/* error: this is a raw string */
 "##]],
     );
 }

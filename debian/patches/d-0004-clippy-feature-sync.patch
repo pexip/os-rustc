@@ -6,14 +6,14 @@ enable features needed by rustfmt to make build system happy and speedup build.
 this is what rustc_workspace_hack does in the upstream build.
 ---
  src/tools/clippy/Cargo.toml  | 2 +-
- src/tools/rustfmt/Cargo.toml | 2 +-
- 2 files changed, 2 insertions(+), 2 deletions(-)
+ src/tools/rustfmt/Cargo.toml | 4 +++-
+ 2 files changed, 4 insertions(+), 2 deletions(-)
 
 diff --git a/src/tools/clippy/Cargo.toml b/src/tools/clippy/Cargo.toml
-index 3980db9..fdf1a03 100644
+index a24d2f4..3681c85 100644
 --- a/src/tools/clippy/Cargo.toml
 +++ b/src/tools/clippy/Cargo.toml
-@@ -43,7 +43,7 @@ if_chain = "1.0"
+@@ -44,7 +44,7 @@ if_chain = "1.0"
  itertools = "0.10.1"
  quote = "1.0"
  serde = { version = "1.0.125", features = ["derive"] }
@@ -23,10 +23,15 @@ index 3980db9..fdf1a03 100644
  parking_lot = "0.12"
  tokio = { version = "1", features = ["io-util"] }
 diff --git a/src/tools/rustfmt/Cargo.toml b/src/tools/rustfmt/Cargo.toml
-index 27b91f2..12d1567 100644
+index 12ed654..f85b738 100644
 --- a/src/tools/rustfmt/Cargo.toml
 +++ b/src/tools/rustfmt/Cargo.toml
-@@ -49,7 +49,7 @@ lazy_static = "1.4"
+@@ -46,10 +46,12 @@ getopts = "0.2"
+ ignore = "0.4"
+ itertools = "0.10"
+ lazy_static = "1.4"
++# added for sync with clippy
++libc = { version = "0.2", features = ["extra_traits"] }
  log = "0.4"
  regex = "1.5"
  serde = { version = "1.0", features = ["derive"] }

@@ -57,6 +57,10 @@ impl<'tcx, T> Backend<'tcx> for T where
 }
 
 pub trait CodegenBackend {
+    /// Locale resources for diagnostic messages - a string the content of the Fluent resource.
+    /// Called before `init` so that all other functions are able to emit translatable diagnostics.
+    fn locale_resource(&self) -> &'static str;
+
     fn init(&self, _sess: &Session) {}
     fn print(&self, _req: PrintRequest, _sess: &Session) {}
     fn target_features(&self, _sess: &Session, _allow_unstable: bool) -> Vec<Symbol> {
@@ -119,7 +123,7 @@ pub trait ExtraBackendMethods: CodegenBackend + WriteBackendMethods + Sized + Se
         tcx: TyCtxt<'tcx>,
         module_name: &str,
         kind: AllocatorKind,
-        has_alloc_error_handler: bool,
+        alloc_error_handler_kind: AllocatorKind,
     ) -> Self::Module;
     /// This generates the codegen unit and returns it along with
     /// a `u64` giving an estimate of the unit's processing cost.

@@ -69,13 +69,8 @@ pub trait UnifyKey: Copy + Clone + Debug + PartialEq {
 
     fn tag() -> &'static str;
 
-    /// If true, then `self` should be preferred as root to `other`.
-    /// Note that we assume a consistent partial ordering, so
-    /// returning true implies that `other.prefer_as_root_to(self)`
-    /// would return false.  If there is no ordering between two keys
-    /// (i.e., `a.prefer_as_root_to(b)` and `b.prefer_as_root_to(a)`
-    /// both return false) then the rank will be used to determine the
-    /// root in an optimal way.
+    /// You should return first the key that should be used as root,
+    /// then the other key (that will then point to the new root).
     ///
     /// NB. The only reason to implement this method is if you want to
     /// control what value is returned from `find()`. In general, it
@@ -230,19 +225,8 @@ impl<K: UnifyKey> VarValue<K> {
         self.rank = rank;
         self.value = value;
     }
-
-    fn parent(&self, self_key: K) -> Option<K> {
-        self.if_not_self(self.parent, self_key)
-    }
-
-    fn if_not_self(&self, key: K, self_key: K) -> Option<K> {
-        if key == self_key {
-            None
-        } else {
-            Some(key)
-        }
-    }
 }
+
 impl<K> UnificationTableStorage<K>
 where
     K: UnifyKey,
@@ -311,6 +295,12 @@ impl<S: UnificationStoreBase> UnificationTable<S> {
     pub fn len(&self) -> usize {
         self.values.len()
     }
+
+    /// Obtains the current value for a particular key.
+    /// Not for end-users; they can use `probe_value`.
+    fn value(&self, key: S::Key) -> &VarValue<S::Key> {
+        &self.values[key.index() as usize]
+    }
 }
 
 impl<S: UnificationStoreMut> UnificationTable<S> {
@@ -341,12 +331,6 @@ impl<S: UnificationStoreMut> UnificationTable<S> {
         });
     }
 
-    /// Obtains the current value for a particular key.
-    /// Not for end-users; they can use `probe_value`.
-    fn value(&self, key: S::Key) -> &VarValue<S::Key> {
-        &self.values[key.index() as usize]
-    }
-
     /// Find the root node for `vid`. This uses the standard
     /// union-find algorithm with path compression:
     /// <http://en.wikipedia.org/wiki/Disjoint-set_data_structure>.
@@ -358,13 +342,12 @@ impl<S: UnificationStoreMut> UnificationTable<S> {
     /// callsites. `uninlined_get_root_key` is the never-inlined version.
     #[inline(always)]
     fn inlined_get_root_key(&mut self, vid: S::Key) -> S::Key {
-        let redirect = {
-            match self.value(vid).parent(vid) {
-                None => return vid,
-                Some(redirect) => redirect,
-            }
-        };
+        let v = self.value(vid);
+        if v.parent == vid {
+            return vid;
+        }
 
+        let redirect = v.parent;
         let root_key: S::Key = self.uninlined_get_root_key(redirect);
         if root_key != redirect {
             // Path compression
@@ -463,6 +446,28 @@ impl<S: UnificationStoreMut> UnificationTable<S> {
 
 /// ////////////////////////////////////////////////////////////////////////
 /// Public API
+
+impl<S, K, V> UnificationTable<S>
+where
+    S: UnificationStoreBase<Key = K, Value = V>,
+    K: UnifyKey<Value = V>,
+    V: UnifyValue,
+{
+    /// Obtains current value for key without any pointer chasing; may return `None` if key has been union'd.
+    #[inline]
+    pub fn try_probe_value<'a, K1>(&'a self, id: K1) -> Option<&'a V>
+        where
+            K1: Into<K>,
+            K: 'a,
+    {
+        let id = id.into();
+        let v = self.value(id);
+        if v.parent == id {
+            return Some(&v.value);
+        }
+        None
+    }
+}
 
 impl<S, K, V> UnificationTable<S>
 where

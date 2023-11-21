@@ -1568,7 +1568,7 @@ mod static_keyword {}
 ///
 /// # Style conventions
 ///
-/// Structs are always written in CamelCase, with few exceptions. While the trailing comma on a
+/// Structs are always written in UpperCamelCase, with few exceptions. While the trailing comma on a
 /// struct's list of fields can be omitted, it's usually kept for convenience in adding and
 /// removing fields down the line.
 ///
@@ -1678,7 +1678,7 @@ mod super_keyword {}
 /// below `Iterator` is a **supertrait** and `ThreeIterator` is a **subtrait**:
 ///
 /// ```rust
-/// trait ThreeIterator: std::iter::Iterator {
+/// trait ThreeIterator: Iterator {
 ///     fn next_three(&mut self) -> Option<[Self::Item; 3]>;
 /// }
 /// ```

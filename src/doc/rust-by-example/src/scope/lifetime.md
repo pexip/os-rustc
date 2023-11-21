@@ -1,6 +1,6 @@
 # Lifetimes
 
-A *lifetime* is a construct the compiler (or more specifically, its *borrow
+A *lifetime* is a construct of the compiler (or more specifically, its *borrow
 checker*) uses to ensure all borrows are valid. Specifically, a variable's
 lifetime begins when it is created and ends when it is destroyed. While
 lifetimes and scopes are often referred to together, they are not the same.
@@ -26,7 +26,7 @@ fn main() {
         let borrow1 = &i; // `borrow1` lifetime starts. ──┐│
         //                                                ││
         println!("borrow1: {}", borrow1); //              ││
-    } // `borrow1 ends. ──────────────────────────────────┘│
+    } // `borrow1` ends. ─────────────────────────────────┘│
     //                                                     │
     //                                                     │
     { //                                                   │

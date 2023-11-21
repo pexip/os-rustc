@@ -8,10 +8,10 @@ Subject: d-0003-cc-psm-rebuild-wasm32
  2 files changed, 3 insertions(+), 6 deletions(-)
 
 diff --git a/vendor/cc/src/lib.rs b/vendor/cc/src/lib.rs
-index e3a2b98..9312931 100644
+index 1ebd2cc..0d6ebc8 100644
 --- a/vendor/cc/src/lib.rs
 +++ b/vendor/cc/src/lib.rs
-@@ -2238,7 +2238,7 @@ impl Build {
+@@ -2389,7 +2389,7 @@ impl Build {
                      || target == "wasm32-unknown-wasi"
                      || target == "wasm32-unknown-unknown"
                  {
@@ -21,7 +21,7 @@ index e3a2b98..9312931 100644
                      if self.cpp {
                          "wr-c++".to_string()
 diff --git a/vendor/psm/build.rs b/vendor/psm/build.rs
-index 01a13bf..30bd68d 100644
+index 9d40212..e39549d 100644
 --- a/vendor/psm/build.rs
 +++ b/vendor/psm/build.rs
 @@ -50,7 +50,7 @@ fn find_assembly(
@@ -30,10 +30,10 @@ index 01a13bf..30bd68d 100644
          ("riscv64", _, _, _) => Some(("src/arch/riscv64.s", true)),
 -        ("wasm32", _, _, _) => Some(("src/arch/wasm32.o", true)),
 +        ("wasm32", _, _, _) => Some(("src/arch/wasm32.s", true)),
+         ("loongarch64", _, _, _) => Some(("src/arch/loongarch64.s", true)),
          _ => None,
      }
- }
-@@ -94,11 +94,8 @@ fn main() {
+@@ -97,11 +97,8 @@ fn main() {
          cfg.define(&*format!("CFG_TARGET_ENV_{}", env), None);
      }
  

@@ -86,6 +86,20 @@ impl<T, V> ArenaMap<Idx<T>, V> {
         self.v.iter().enumerate().filter_map(|(idx, o)| Some((Self::from_idx(idx), o.as_ref()?)))
     }
 
+    /// Returns an iterator over the arena indexes and values in the map.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (Idx<T>, &mut V)> {
+        self.v
+            .iter_mut()
+            .enumerate()
+            .filter_map(|(idx, o)| Some((Self::from_idx(idx), o.as_mut()?)))
+    }
+
+    /// Returns an iterator over the arena indexes and values in the map.
+    // FIXME: Implement `IntoIterator` trait.
+    pub fn into_iter(self) -> impl Iterator<Item = (Idx<T>, V)> {
+        self.v.into_iter().enumerate().filter_map(|(idx, o)| Some((Self::from_idx(idx), o?)))
+    }
+
     /// Gets the given key's corresponding entry in the map for in-place manipulation.
     pub fn entry(&mut self, idx: Idx<T>) -> Entry<'_, Idx<T>, V> {
         let idx = Self::to_idx(idx);

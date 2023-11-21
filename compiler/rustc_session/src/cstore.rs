@@ -6,9 +6,9 @@ use crate::search_paths::PathKind;
 use crate::utils::NativeLibKind;
 use crate::Session;
 use rustc_ast as ast;
-use rustc_data_structures::sync::{self, MetadataRef};
-use rustc_hir::def_id::{CrateNum, DefId, StableCrateId, LOCAL_CRATE};
-use rustc_hir::definitions::{DefKey, DefPath, DefPathHash};
+use rustc_data_structures::sync::{self, AppendOnlyIndexVec, MetadataRef, RwLock};
+use rustc_hir::def_id::{CrateNum, DefId, LocalDefId, StableCrateId, LOCAL_CRATE};
+use rustc_hir::definitions::{DefKey, DefPath, DefPathHash, Definitions};
 use rustc_span::hygiene::{ExpnHash, ExpnId};
 use rustc_span::symbol::Symbol;
 use rustc_span::Span;
@@ -67,12 +67,11 @@ pub enum LinkagePreference {
 #[derive(Debug, Encodable, Decodable, HashStable_Generic)]
 pub struct NativeLib {
     pub kind: NativeLibKind,
-    pub name: Option<Symbol>,
+    pub name: Symbol,
     /// If packed_bundled_libs enabled, actual filename of library is stored.
     pub filename: Option<Symbol>,
     pub cfg: Option<ast::MetaItem>,
     pub foreign_module: Option<DefId>,
-    pub wasm_import_module: Option<Symbol>,
     pub verbatim: Option<bool>,
     pub dll_imports: Vec<DllImport>,
 }
@@ -80,6 +79,10 @@ pub struct NativeLib {
 impl NativeLib {
     pub fn has_modifiers(&self) -> bool {
         self.verbatim.is_some() || self.kind.has_modifiers()
+    }
+
+    pub fn wasm_import_module(&self) -> Option<Symbol> {
+        if self.kind == NativeLibKind::WasmImportModule { Some(self.name) } else { None }
     }
 }
 
@@ -199,12 +202,12 @@ pub enum ExternCrateSource {
 /// At the time of this writing, there is only one backend and one way to store
 /// metadata in library -- this trait just serves to decouple rustc_metadata from
 /// the archive reader, which depends on LLVM.
-pub trait MetadataLoader {
+pub trait MetadataLoader: std::fmt::Debug {
     fn get_rlib_metadata(&self, target: &Target, filename: &Path) -> Result<MetadataRef, String>;
     fn get_dylib_metadata(&self, target: &Target, filename: &Path) -> Result<MetadataRef, String>;
 }
 
-pub type MetadataLoaderDyn = dyn MetadataLoader + Sync;
+pub type MetadataLoaderDyn = dyn MetadataLoader + Send + Sync;
 
 /// A store of Rust crates, through which their metadata can be accessed.
 ///
@@ -217,6 +220,7 @@ pub type MetadataLoaderDyn = dyn MetadataLoader + Sync;
 /// during resolve)
 pub trait CrateStore: std::fmt::Debug {
     fn as_any(&self) -> &dyn Any;
+    fn untracked_as_any(&mut self) -> &mut dyn Any;
 
     // Foreign definitions.
     // This information is safe to access, since it's hashed as part of the DefPathHash, which incr.
@@ -226,7 +230,7 @@ pub trait CrateStore: std::fmt::Debug {
     fn def_path_hash(&self, def: DefId) -> DefPathHash;
 
     // This information is safe to access, since it's hashed as part of the StableCrateId, which
-    // incr.  comp. uses to identify a CrateNum.
+    // incr. comp. uses to identify a CrateNum.
     fn crate_name(&self, cnum: CrateNum) -> Symbol;
     fn stable_crate_id(&self, cnum: CrateNum) -> StableCrateId;
     fn stable_crate_id_to_crate_num(&self, stable_crate_id: StableCrateId) -> CrateNum;
@@ -248,4 +252,11 @@ pub trait CrateStore: std::fmt::Debug {
     fn import_source_files(&self, sess: &Session, cnum: CrateNum);
 }
 
-pub type CrateStoreDyn = dyn CrateStore + sync::Sync;
+pub type CrateStoreDyn = dyn CrateStore + sync::Sync + sync::Send;
+
+pub struct Untracked {
+    pub cstore: RwLock<Box<CrateStoreDyn>>,
+    /// Reference span for definitions.
+    pub source_span: AppendOnlyIndexVec<LocalDefId, Span>,
+    pub definitions: RwLock<Definitions>,
+}

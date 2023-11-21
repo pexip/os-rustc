@@ -3,10 +3,12 @@ use rustc_hir::def_id::{DefId, LocalDefId};
 use rustc_infer::infer::TyCtxtInferExt;
 use rustc_middle::traits::CodegenObligationError;
 use rustc_middle::ty::subst::SubstsRef;
-use rustc_middle::ty::{self, Instance, TyCtxt, TypeVisitable};
+use rustc_middle::ty::{self, Instance, TyCtxt, TypeVisitableExt};
 use rustc_span::sym;
 use rustc_trait_selection::traits;
 use traits::{translate_substs, Reveal};
+
+use crate::errors::UnexpectedFnPtrAssociatedItem;
 
 fn resolve_instance<'tcx>(
     tcx: TyCtxt<'tcx>,
@@ -44,10 +46,17 @@ fn inner_resolve_instance<'tcx>(
 
     let result = if let Some(trait_def_id) = tcx.trait_of_item(def.did) {
         debug!(" => associated item, attempting to find impl in param_env {:#?}", param_env);
-        resolve_associated_item(tcx, def.did, param_env, trait_def_id, substs)
+        resolve_associated_item(
+            tcx,
+            def.did,
+            param_env,
+            trait_def_id,
+            tcx.normalize_erasing_regions(param_env, substs),
+        )
     } else {
         let ty = tcx.type_of(def.def_id_for_type_of());
-        let item_type = tcx.subst_and_normalize_erasing_regions(substs, param_env, ty);
+        let item_type =
+            tcx.subst_and_normalize_erasing_regions(substs, param_env, ty.skip_binder());
 
         let def = match *item_type.kind() {
             ty::FnDef(def_id, ..) if tcx.is_intrinsic(def_id) => {
@@ -188,7 +197,7 @@ fn resolve_associated_item<'tcx>(
                 && trait_item_id != leaf_def.item.def_id
                 && let Some(leaf_def_item) = leaf_def.item.def_id.as_local()
             {
-                tcx.compare_assoc_const_impl_item_with_trait_item((
+                tcx.compare_impl_const((
                     leaf_def_item,
                     trait_item_id,
                 ))?;
@@ -202,8 +211,14 @@ fn resolve_associated_item<'tcx>(
             )),
             substs: generator_data.substs,
         }),
+        traits::ImplSource::Future(future_data) => Some(Instance {
+            def: ty::InstanceDef::Item(ty::WithOptConstParam::unknown(
+                future_data.generator_def_id,
+            )),
+            substs: future_data.substs,
+        }),
         traits::ImplSource::Closure(closure_data) => {
-            let trait_closure_kind = tcx.fn_trait_kind_from_lang_item(trait_id).unwrap();
+            let trait_closure_kind = tcx.fn_trait_kind_from_def_id(trait_id).unwrap();
             Instance::resolve_closure(
                 tcx,
                 closure_data.closure_def_id,
@@ -230,7 +245,8 @@ fn resolve_associated_item<'tcx>(
             }
         }
         traits::ImplSource::Builtin(..) => {
-            if Some(trait_ref.def_id) == tcx.lang_items().clone_trait() {
+            let lang_items = tcx.lang_items();
+            if Some(trait_ref.def_id) == lang_items.clone_trait() {
                 // FIXME(eddyb) use lang items for methods instead of names.
                 let name = tcx.item_name(trait_item_id);
                 if name == sym::clone {
@@ -257,6 +273,21 @@ fn resolve_associated_item<'tcx>(
                     let substs = tcx.erase_regions(rcvr_substs);
                     Some(ty::Instance::new(trait_item_id, substs))
                 }
+            } else if Some(trait_ref.def_id) == lang_items.fn_ptr_trait() {
+                if lang_items.fn_ptr_addr() == Some(trait_item_id) {
+                    let self_ty = trait_ref.self_ty();
+                    if !matches!(self_ty.kind(), ty::FnPtr(..)) {
+                        return Ok(None);
+                    }
+                    Some(Instance {
+                        def: ty::InstanceDef::FnPtrAddrShim(trait_item_id, self_ty),
+                        substs: rcvr_substs,
+                    })
+                } else {
+                    tcx.sess.emit_fatal(UnexpectedFnPtrAssociatedItem {
+                        span: tcx.def_span(trait_item_id),
+                    })
+                }
             } else {
                 None
             }
@@ -264,8 +295,6 @@ fn resolve_associated_item<'tcx>(
         traits::ImplSource::AutoImpl(..)
         | traits::ImplSource::Param(..)
         | traits::ImplSource::TraitAlias(..)
-        | traits::ImplSource::DiscriminantKind(..)
-        | traits::ImplSource::Pointee(..)
         | traits::ImplSource::TraitUpcasting(_)
         | traits::ImplSource::ConstDestruct(_) => None,
     })

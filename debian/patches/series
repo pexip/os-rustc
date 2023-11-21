@@ -1,24 +1,20 @@
 # Patches for upstream
 
 # pending, or forwarded
-u-ignore-reproducible-failure.patch
 u-reproducible-build.patch
 u-ignore-endian-big-diff.patch
-u-make-compiletest-work-without-rpath.patch
 u-fix-get-toml-when-test.patch
-
-# can be dropped once upstream updates rustix
-u-fix-rustix-for-sparc64.patch
+u-disable-fp-precision-test-on-i386.patch
 
 # not forwarded, or forwarded but unlikely to be merged
 u-ignore-ppc-hangs.patch
 u-rustc-llvm-cross-flags.patch
 u-reproducible-dl-stage0.patch
-u-make-tests-work-without-rpath.patch
 #u-allow-system-compiler-rt.patch
 
 # Debian-specific patches, not suitable for upstream
 d-fix-rustix-outline.patch
+d-disable-download-tests.patch
 
 ## Patches needed by debian/prune-unused-deps, for building bootstrap
 d-0000-ignore-removed-submodules.patch

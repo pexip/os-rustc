@@ -142,11 +142,11 @@ declared in the file [`compiler/rustc_middle/src/ty/mod.rs`][ty].
 [ty]:https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/index.html
 
 Before we go any further, let's discuss how we can examine the flow of control through the rustc
-codebase. For closures specifically, set the `RUST_LOG` env variable as below and collect the
+codebase. For closures specifically, set the `RUSTC_LOG` env variable as below and collect the
 output in a file:
 
 ```console
-> RUST_LOG=rustc_hir_typeck::upvar rustc +stage1 -Z dump-mir=all \
+> RUSTC_LOG=rustc_hir_typeck::upvar rustc +stage1 -Z dump-mir=all \
     <.rs file to compile> 2> <file where the output will be dumped>
 ```
 
@@ -155,7 +155,7 @@ This uses the stage1 compiler and enables `debug!` logging for the
 
 The other option is to step through the code using lldb or gdb.
 
-1. `rust-lldb build/x86_64-apple-darwin/stage1/bin/rustc test.rs`
+1. `rust-lldb build/host/stage1/bin/rustc test.rs`
 2. In lldb:
     1. `b upvar.rs:134`  // Setting the breakpoint on a certain line in the upvar.rs file`
     2. `r`  // Run the program until it hits the breakpoint

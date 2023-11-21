@@ -22,7 +22,7 @@ target = ["DEB_TARGET_RUST_TYPE"]
 docs = false
 
 extended = true
-tools = ["clippy", "rustfmt"]
+tools = ["clippy", "rustfmt", "rustdoc", "rust-analyzer-proc-macro-srv"]
 
 [install]
 prefix = "/usr"

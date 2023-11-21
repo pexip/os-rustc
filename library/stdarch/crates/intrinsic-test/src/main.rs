@@ -14,7 +14,7 @@ use itertools::Itertools;
 use rayon::prelude::*;
 use types::TypeKind;
 
-use crate::acle_csv_parser::get_acle_intrinsics;
+use crate::acle_csv_parser::{get_acle_intrinsics, CsvMetadata};
 use crate::argument::Argument;
 
 mod acle_csv_parser;
@@ -58,7 +58,7 @@ fn gen_code_c(
                     pass = gen_code_c(
                         intrinsic,
                         constraints,
-                        format!("{}-{}", name, i),
+                        format!("{name}-{i}"),
                         p64_armv7_workaround
                     )
                 )
@@ -70,6 +70,7 @@ fn gen_code_c(
 }
 
 fn generate_c_program(
+    notices: &str,
     header_files: &[&str],
     intrinsic: &Intrinsic,
     p64_armv7_workaround: bool,
@@ -81,7 +82,7 @@ fn generate_c_program(
         .collect_vec();
 
     format!(
-        r#"{header_files}
+        r#"{notices}{header_files}
 #include <iostream>
 #include <cstring>
 #include <iomanip>
@@ -117,7 +118,7 @@ int main(int argc, char **argv) {{
 }}"#,
         header_files = header_files
             .iter()
-            .map(|header| format!("#include <{}>", header))
+            .map(|header| format!("#include <{header}>"))
             .collect::<Vec<_>>()
             .join("\n"),
         arglists = intrinsic.arguments.gen_arglists_c(PASSES),
@@ -148,7 +149,7 @@ fn gen_code_rust(intrinsic: &Intrinsic, constraints: &[&Argument], name: String)
                     name = current.name,
                     ty = current.ty.rust_type(),
                     val = i,
-                    pass = gen_code_rust(intrinsic, constraints, format!("{}-{}", name, i))
+                    pass = gen_code_rust(intrinsic, constraints, format!("{name}-{i}"))
                 )
             })
             .collect()
@@ -157,7 +158,7 @@ fn gen_code_rust(intrinsic: &Intrinsic, constraints: &[&Argument], name: String)
     }
 }
 
-fn generate_rust_program(intrinsic: &Intrinsic, a32: bool) -> String {
+fn generate_rust_program(notices: &str, intrinsic: &Intrinsic, a32: bool) -> String {
     let constraints = intrinsic
         .arguments
         .iter()
@@ -165,7 +166,7 @@ fn generate_rust_program(intrinsic: &Intrinsic, a32: bool) -> String {
         .collect_vec();
 
     format!(
-        r#"#![feature(simd_ffi)]
+        r#"{notices}#![feature(simd_ffi)]
 #![feature(link_llvm_intrinsics)]
 #![feature(stdsimd)]
 #![allow(overflowing_literals)]
@@ -217,7 +218,23 @@ fn compile_c(c_filename: &str, intrinsic: &Intrinsic, compiler: &str, a32: bool)
     }
 }
 
-fn build_c(intrinsics: &Vec<Intrinsic>, compiler: &str, a32: bool) -> bool {
+fn build_notices(csv_metadata: &CsvMetadata, line_prefix: &str) -> String {
+    let mut notices = format!(
+        "\
+{line_prefix}This is a transient test file, not intended for distribution. Some aspects of the
+{line_prefix}test are derived from a CSV specification, published with the following notices:
+{line_prefix}
+"
+    );
+    let lines = csv_metadata
+        .notices_lines()
+        .map(|line| format!("{line_prefix}    {line}\n"));
+    notices.extend(lines);
+    notices.push_str("\n");
+    notices
+}
+
+fn build_c(notices: &str, intrinsics: &Vec<Intrinsic>, compiler: &str, a32: bool) -> bool {
     let _ = std::fs::create_dir("c_programs");
     intrinsics
         .par_iter()
@@ -225,7 +242,7 @@ fn build_c(intrinsics: &Vec<Intrinsic>, compiler: &str, a32: bool) -> bool {
             let c_filename = format!(r#"c_programs/{}.cpp"#, i.name);
             let mut file = File::create(&c_filename).unwrap();
 
-            let c_code = generate_c_program(&["arm_neon.h", "arm_acle.h"], &i, a32);
+            let c_code = generate_c_program(notices, &["arm_neon.h", "arm_acle.h"], &i, a32);
             file.write_all(c_code.into_bytes().as_slice()).unwrap();
             compile_c(&c_filename, &i, compiler, a32)
         })
@@ -233,14 +250,20 @@ fn build_c(intrinsics: &Vec<Intrinsic>, compiler: &str, a32: bool) -> bool {
         .is_none()
 }
 
-fn build_rust(intrinsics: &Vec<Intrinsic>, toolchain: &str, a32: bool) -> bool {
+fn build_rust(
+    notices: &str,
+    spdx_lic: &str,
+    intrinsics: &Vec<Intrinsic>,
+    toolchain: &str,
+    a32: bool,
+) -> bool {
     intrinsics.iter().for_each(|i| {
         let rust_dir = format!(r#"rust_programs/{}"#, i.name);
         let _ = std::fs::create_dir_all(&rust_dir);
-        let rust_filename = format!(r#"{}/main.rs"#, rust_dir);
+        let rust_filename = format!(r#"{rust_dir}/main.rs"#);
         let mut file = File::create(&rust_filename).unwrap();
 
-        let c_code = generate_rust_program(&i, a32);
+        let c_code = generate_rust_program(notices, &i, a32);
         file.write_all(c_code.into_bytes().as_slice()).unwrap();
     });
 
@@ -249,9 +272,10 @@ fn build_rust(intrinsics: &Vec<Intrinsic>, toolchain: &str, a32: bool) -> bool {
         .write_all(
             format!(
                 r#"[package]
-name = "intrinsic-test"
+name = "intrinsic-test-programs"
 version = "{version}"
 authors = ["{authors}"]
+license = "{spdx_lic}"
 edition = "2018"
 [workspace]
 [dependencies]
@@ -355,7 +379,7 @@ fn main() {
     let filename = matches.value_of("INPUT").unwrap();
     let toolchain = matches
         .value_of("TOOLCHAIN")
-        .map_or("".into(), |t| format!("+{}", t));
+        .map_or("".into(), |t| format!("+{t}"));
 
     let cpp_compiler = matches.value_of("CPPCOMPILER").unwrap();
     let c_runner = matches.value_of("RUNNER").unwrap_or("");
@@ -371,7 +395,7 @@ fn main() {
     };
     let a32 = matches.is_present("A32");
 
-    let intrinsics = get_acle_intrinsics(filename);
+    let (csv_metadata, intrinsics) = get_acle_intrinsics(filename);
 
     let mut intrinsics = intrinsics
         .into_iter()
@@ -394,11 +418,14 @@ fn main() {
         .collect::<Vec<_>>();
     intrinsics.dedup();
 
-    if !build_c(&intrinsics, cpp_compiler, a32) {
+    let notices = build_notices(&csv_metadata, "// ");
+    let spdx_lic = csv_metadata.spdx_license_identifier();
+
+    if !build_c(&notices, &intrinsics, cpp_compiler, a32) {
         std::process::exit(2);
     }
 
-    if !build_rust(&intrinsics, &toolchain, a32) {
+    if !build_rust(&notices, spdx_lic, &intrinsics, &toolchain, a32) {
         std::process::exit(3);
     }
 
@@ -443,7 +470,7 @@ fn compare_outputs(intrinsics: &Vec<Intrinsic>, toolchain: &str, runner: &str, a
 
             let (c, rust) = match (c, rust) {
                 (Ok(c), Ok(rust)) => (c, rust),
-                a => panic!("{:#?}", a),
+                a => panic!("{a:#?}"),
             };
 
             if !c.status.success() {
@@ -480,20 +507,20 @@ fn compare_outputs(intrinsics: &Vec<Intrinsic>, toolchain: &str, runner: &str, a
 
     intrinsics.iter().for_each(|reason| match reason {
         FailureReason::Difference(intrinsic, c, rust) => {
-            println!("Difference for intrinsic: {}", intrinsic);
+            println!("Difference for intrinsic: {intrinsic}");
             let diff = diff::lines(c, rust);
             diff.iter().for_each(|diff| match diff {
-                diff::Result::Left(c) => println!("C: {}", c),
-                diff::Result::Right(rust) => println!("Rust: {}", rust),
+                diff::Result::Left(c) => println!("C: {c}"),
+                diff::Result::Right(rust) => println!("Rust: {rust}"),
                 diff::Result::Both(_, _) => (),
             });
             println!("****************************************************************");
         }
         FailureReason::RunC(intrinsic) => {
-            println!("Failed to run C program for intrinsic {}", intrinsic)
+            println!("Failed to run C program for intrinsic {intrinsic}")
         }
         FailureReason::RunRust(intrinsic) => {
-            println!("Failed to run rust program for intrinsic {}", intrinsic)
+            println!("Failed to run rust program for intrinsic {intrinsic}")
         }
     });
     println!("{} differences found", intrinsics.len());

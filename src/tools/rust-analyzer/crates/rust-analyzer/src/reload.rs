@@ -12,17 +12,21 @@
 //! correct. Instead, we try to provide a best-effort service. Even if the
 //! project is currently loading and we don't have a full project model, we
 //! still want to respond to various  requests.
-use std::{mem, sync::Arc};
+use std::{collections::hash_map::Entry, mem, sync::Arc};
 
 use flycheck::{FlycheckConfig, FlycheckHandle};
 use hir::db::DefDatabase;
 use ide::Change;
-use ide_db::base_db::{
-    CrateGraph, Env, ProcMacro, ProcMacroExpander, ProcMacroExpansionError, ProcMacroKind,
-    ProcMacroLoadResult, SourceRoot, VfsPath,
+use ide_db::{
+    base_db::{
+        CrateGraph, Env, ProcMacro, ProcMacroExpander, ProcMacroExpansionError, ProcMacroKind,
+        ProcMacroLoadResult, SourceRoot, VfsPath,
+    },
+    FxHashMap,
 };
+use itertools::Itertools;
 use proc_macro_api::{MacroDylib, ProcMacroServer};
-use project_model::{ProjectWorkspace, WorkspaceBuildScripts};
+use project_model::{PackageRoot, ProjectWorkspace, WorkspaceBuildScripts};
 use syntax::SmolStr;
 use vfs::{file_set::FileSetConfig, AbsPath, AbsPathBuf, ChangeKind};
 
@@ -33,6 +37,8 @@ use crate::{
     main_loop::Task,
     op_queue::Cause,
 };
+
+use ::tt::token_id as tt;
 
 #[derive(Debug)]
 pub(crate) enum ProjectWorkspaceProgress {
@@ -50,7 +56,8 @@ pub(crate) enum BuildDataProgress {
 
 impl GlobalState {
     pub(crate) fn is_quiescent(&self) -> bool {
-        !(self.fetch_workspaces_queue.op_in_progress()
+        !(self.last_reported_status.is_none()
+            || self.fetch_workspaces_queue.op_in_progress()
             || self.fetch_build_data_queue.op_in_progress()
             || self.vfs_progress_config_version < self.vfs_config_version
             || self.vfs_progress_n_done < self.vfs_progress_n_total)
@@ -83,28 +90,54 @@ impl GlobalState {
             quiescent: self.is_quiescent(),
             message: None,
         };
+        let mut message = String::new();
 
         if self.proc_macro_changed {
             status.health = lsp_ext::Health::Warning;
-            status.message =
-                Some("Reload required due to source changes of a procedural macro.".into())
+            message.push_str("Reload required due to source changes of a procedural macro.\n\n");
         }
         if let Err(_) = self.fetch_build_data_error() {
             status.health = lsp_ext::Health::Warning;
-            status.message =
-                Some("Failed to run build scripts of some packages, check the logs.".to_string());
+            message.push_str("Failed to run build scripts of some packages.\n\n");
         }
         if !self.config.cargo_autoreload()
             && self.is_quiescent()
             && self.fetch_workspaces_queue.op_requested()
         {
             status.health = lsp_ext::Health::Warning;
-            status.message = Some("Workspace reload required".to_string())
+            message.push_str("Auto-reloading is disabled and the workspace has changed, a manual workspace reload is required.\n\n");
+        }
+        if self.config.linked_projects().is_empty()
+            && self.config.detached_files().is_empty()
+            && self.config.notifications().cargo_toml_not_found
+        {
+            status.health = lsp_ext::Health::Warning;
+            message.push_str("Failed to discover workspace.\n\n");
         }
 
-        if let Err(error) = self.fetch_workspace_error() {
+        for ws in self.workspaces.iter() {
+            let (ProjectWorkspace::Cargo { sysroot, .. }
+            | ProjectWorkspace::Json { sysroot, .. }
+            | ProjectWorkspace::DetachedFiles { sysroot, .. }) = ws;
+            if let Err(Some(e)) = sysroot {
+                status.health = lsp_ext::Health::Warning;
+                message.push_str(e);
+                message.push_str("\n\n");
+            }
+            if let ProjectWorkspace::Cargo { rustc: Err(Some(e)), .. } = ws {
+                status.health = lsp_ext::Health::Warning;
+                message.push_str(e);
+                message.push_str("\n\n");
+            }
+        }
+
+        if let Err(_) = self.fetch_workspace_error() {
             status.health = lsp_ext::Health::Error;
-            status.message = Some(error)
+            message.push_str("Failed to load workspaces.\n\n");
+        }
+
+        if !message.is_empty() {
+            status.message = Some(message.trim_end().to_owned());
         }
         status
     }
@@ -140,18 +173,20 @@ impl GlobalState {
                             )
                         }
                         LinkedProject::InlineJsonProject(it) => {
-                            project_model::ProjectWorkspace::load_inline(
+                            Ok(project_model::ProjectWorkspace::load_inline(
                                 it.clone(),
                                 cargo_config.target.as_deref(),
                                 &cargo_config.extra_env,
-                            )
+                            ))
                         }
                     })
                     .collect::<Vec<_>>();
 
                 if !detached_files.is_empty() {
-                    workspaces
-                        .push(project_model::ProjectWorkspace::load_detached_files(detached_files));
+                    workspaces.push(project_model::ProjectWorkspace::load_detached_files(
+                        detached_files,
+                        &cargo_config,
+                    ));
                 }
 
                 tracing::info!("did fetch workspaces {:?}", workspaces);
@@ -185,8 +220,7 @@ impl GlobalState {
         let _p = profile::span("GlobalState::switch_workspaces");
         tracing::info!(%cause, "will switch workspaces");
 
-        if let Err(error_message) = self.fetch_workspace_error() {
-            self.show_and_log_error(error_message, None);
+        if let Err(_) = self.fetch_workspace_error() {
             if !self.workspaces.is_empty() {
                 // It only makes sense to switch to a partially broken workspace
                 // if we don't have any workspace at all yet.
@@ -194,45 +228,15 @@ impl GlobalState {
             }
         }
 
-        if let Err(error) = self.fetch_build_data_error() {
-            self.show_and_log_error("failed to run build scripts".to_string(), Some(error));
-        }
-
-        let workspaces = self
-            .fetch_workspaces_queue
-            .last_op_result()
-            .iter()
-            .filter_map(|res| res.as_ref().ok().cloned())
-            .collect::<Vec<_>>();
-
-        fn eq_ignore_build_data<'a>(
-            left: &'a ProjectWorkspace,
-            right: &'a ProjectWorkspace,
-        ) -> bool {
-            let key = |p: &'a ProjectWorkspace| match p {
-                ProjectWorkspace::Cargo {
-                    cargo,
-                    sysroot,
-                    rustc,
-                    rustc_cfg,
-                    cfg_overrides,
-
-                    build_scripts: _,
-                    toolchain: _,
-                } => Some((cargo, sysroot, rustc, rustc_cfg, cfg_overrides)),
-                _ => None,
-            };
-            match (key(left), key(right)) {
-                (Some(lk), Some(rk)) => lk == rk,
-                _ => left == right,
-            }
-        }
+        let Some(workspaces) = self.fetch_workspaces_queue.last_op_result() else { return; };
+        let workspaces =
+            workspaces.iter().filter_map(|res| res.as_ref().ok().cloned()).collect::<Vec<_>>();
 
         let same_workspaces = workspaces.len() == self.workspaces.len()
             && workspaces
                 .iter()
                 .zip(self.workspaces.iter())
-                .all(|(l, r)| eq_ignore_build_data(l, r));
+                .all(|(l, r)| l.eq_ignore_build_data(r));
 
         if same_workspaces {
             let (workspaces, build_scripts) = self.fetch_build_data_queue.last_op_result();
@@ -262,7 +266,8 @@ impl GlobalState {
 
             // Here, we completely changed the workspace (Cargo.toml edit), so
             // we don't care about build-script results, they are stale.
-            self.workspaces = Arc::new(workspaces)
+            // FIXME: can we abort the build scripts here?
+            self.workspaces = Arc::new(workspaces);
         }
 
         if let FilesWatcher::Client = self.config.files().watcher {
@@ -281,7 +286,10 @@ impl GlobalState {
                             ]
                         })
                     })
-                    .map(|glob_pattern| lsp_types::FileSystemWatcher { glob_pattern, kind: None })
+                    .map(|glob_pattern| lsp_types::FileSystemWatcher {
+                        glob_pattern: lsp_types::GlobPattern::String(glob_pattern),
+                        kind: None,
+                    })
                     .collect(),
             };
             let registration = lsp_types::Registration {
@@ -300,9 +308,6 @@ impl GlobalState {
         let files_config = self.config.files();
         let project_folders = ProjectFolders::new(&self.workspaces, &files_config.exclude);
 
-        let standalone_server_name =
-            format!("rust-analyzer-proc-macro-srv{}", std::env::consts::EXE_SUFFIX);
-
         if self.proc_macro_clients.is_empty() {
             if let Some((path, path_manually_set)) = self.config.proc_macro_srv() {
                 tracing::info!("Spawning proc-macro servers");
@@ -310,40 +315,17 @@ impl GlobalState {
                     .workspaces
                     .iter()
                     .map(|ws| {
-                        let (path, args) = if path_manually_set {
+                        let (path, args): (_, &[_]) = if path_manually_set {
                             tracing::debug!(
                                 "Pro-macro server path explicitly set: {}",
                                 path.display()
                             );
-                            (path.clone(), vec![])
+                            (path.clone(), &[])
                         } else {
-                            let mut sysroot_server = None;
-                            if let ProjectWorkspace::Cargo { sysroot, .. }
-                            | ProjectWorkspace::Json { sysroot, .. } = ws
-                            {
-                                if let Some(sysroot) = sysroot.as_ref() {
-                                    let server_path = sysroot
-                                        .root()
-                                        .join("libexec")
-                                        .join(&standalone_server_name);
-                                    if std::fs::metadata(&server_path).is_ok() {
-                                        tracing::debug!(
-                                            "Sysroot proc-macro server exists at {}",
-                                            server_path.display()
-                                        );
-                                        sysroot_server = Some(server_path);
-                                    } else {
-                                        tracing::debug!(
-                                            "Sysroot proc-macro server does not exist at {}",
-                                            server_path.display()
-                                        );
-                                    }
-                                }
+                            match ws.find_sysroot_proc_macro_srv() {
+                                Some(server_path) => (server_path, &[]),
+                                None => (path.clone(), &["proc-macro"]),
                             }
-                            sysroot_server.map_or_else(
-                                || (path.clone(), vec!["proc-macro".to_owned()]),
-                                |path| (path, vec![]),
-                            )
                         };
 
                         tracing::info!(?args, "Using proc-macro server at {}", path.display(),);
@@ -380,7 +362,7 @@ impl GlobalState {
             let loader = &mut self.loader;
             let mem_docs = &self.mem_docs;
             let mut load = move |path: &AbsPath| {
-                let _p = profile::span("GlobalState::load");
+                let _p = profile::span("switch_workspaces::load");
                 let vfs_path = vfs::VfsPath::from(path.to_path_buf());
                 if !mem_docs.contains(&vfs_path) {
                     let contents = loader.handle.load_sync(path);
@@ -424,12 +406,17 @@ impl GlobalState {
         tracing::info!("did switch workspaces");
     }
 
-    fn fetch_workspace_error(&self) -> Result<(), String> {
+    pub(super) fn fetch_workspace_error(&self) -> Result<(), String> {
         let mut buf = String::new();
 
-        for ws in self.fetch_workspaces_queue.last_op_result() {
-            if let Err(err) = ws {
-                stdx::format_to!(buf, "rust-analyzer failed to load workspace: {:#}\n", err);
+        let Some(last_op_result) = self.fetch_workspaces_queue.last_op_result() else { return Ok(()) };
+        if last_op_result.is_empty() {
+            stdx::format_to!(buf, "rust-analyzer failed to discover workspace");
+        } else {
+            for ws in last_op_result {
+                if let Err(err) = ws {
+                    stdx::format_to!(buf, "rust-analyzer failed to load workspace: {:#}\n", err);
+                }
             }
         }
 
@@ -440,7 +427,7 @@ impl GlobalState {
         Err(buf)
     }
 
-    fn fetch_build_data_error(&self) -> Result<(), String> {
+    pub(super) fn fetch_build_data_error(&self) -> Result<(), String> {
         let mut buf = String::new();
 
         for ws in &self.fetch_build_data_queue.last_op_result().1 {
@@ -463,15 +450,7 @@ impl GlobalState {
 
     fn reload_flycheck(&mut self) {
         let _p = profile::span("GlobalState::reload_flycheck");
-        let config = match self.config.flycheck() {
-            Some(it) => it,
-            None => {
-                self.flycheck = Arc::new([]);
-                self.diagnostics.clear_check_all();
-                return;
-            }
-        };
-
+        let config = self.config.flycheck();
         let sender = self.flycheck_sender.clone();
         let invocation_strategy = match config {
             FlycheckConfig::CargoCommand { .. } => flycheck::InvocationStrategy::PerWorkspace,
@@ -482,7 +461,7 @@ impl GlobalState {
             flycheck::InvocationStrategy::Once => vec![FlycheckHandle::spawn(
                 0,
                 Box::new(move |msg| sender.send(msg).unwrap()),
-                config.clone(),
+                config,
                 self.config.root_path().clone(),
             )],
             flycheck::InvocationStrategy::PerWorkspace => {
@@ -533,7 +512,69 @@ impl ProjectFolders {
         let mut fsc = FileSetConfig::builder();
         let mut local_filesets = vec![];
 
-        for root in workspaces.iter().flat_map(|ws| ws.to_roots()) {
+        // Dedup source roots
+        // Depending on the project setup, we can have duplicated source roots, or for example in
+        // the case of the rustc workspace, we can end up with two source roots that are almost the
+        // same but not quite, like:
+        // PackageRoot { is_local: false, include: [AbsPathBuf(".../rust/src/tools/miri/cargo-miri")], exclude: [] }
+        // PackageRoot {
+        //     is_local: true,
+        //     include: [AbsPathBuf(".../rust/src/tools/miri/cargo-miri"), AbsPathBuf(".../rust/build/x86_64-pc-windows-msvc/stage0-tools/x86_64-pc-windows-msvc/release/build/cargo-miri-85801cd3d2d1dae4/out")],
+        //     exclude: [AbsPathBuf(".../rust/src/tools/miri/cargo-miri/.git"), AbsPathBuf(".../rust/src/tools/miri/cargo-miri/target")]
+        // }
+        //
+        // The first one comes from the explicit rustc workspace which points to the rustc workspace itself
+        // The second comes from the rustc workspace that we load as the actual project workspace
+        // These `is_local` differing in this kind of way gives us problems, especially when trying to filter diagnostics as we don't report diagnostics for external libraries.
+        // So we need to deduplicate these, usually it would be enough to deduplicate by `include`, but as the rustc example shows here that doesn't work,
+        // so we need to also coalesce the includes if they overlap.
+
+        let mut roots: Vec<_> = workspaces
+            .iter()
+            .flat_map(|ws| ws.to_roots())
+            .update(|root| root.include.sort())
+            .sorted_by(|a, b| a.include.cmp(&b.include))
+            .collect();
+
+        // map that tracks indices of overlapping roots
+        let mut overlap_map = FxHashMap::<_, Vec<_>>::default();
+        let mut done = false;
+
+        while !mem::replace(&mut done, true) {
+            // maps include paths to indices of the corresponding root
+            let mut include_to_idx = FxHashMap::default();
+            // Find and note down the indices of overlapping roots
+            for (idx, root) in roots.iter().enumerate().filter(|(_, it)| !it.include.is_empty()) {
+                for include in &root.include {
+                    match include_to_idx.entry(include) {
+                        Entry::Occupied(e) => {
+                            overlap_map.entry(*e.get()).or_default().push(idx);
+                        }
+                        Entry::Vacant(e) => {
+                            e.insert(idx);
+                        }
+                    }
+                }
+            }
+            for (k, v) in overlap_map.drain() {
+                done = false;
+                for v in v {
+                    let r = mem::replace(
+                        &mut roots[v],
+                        PackageRoot { is_local: false, include: vec![], exclude: vec![] },
+                    );
+                    roots[k].is_local |= r.is_local;
+                    roots[k].include.extend(r.include);
+                    roots[k].exclude.extend(r.exclude);
+                }
+                roots[k].include.sort();
+                roots[k].exclude.sort();
+                roots[k].include.dedup();
+                roots[k].exclude.dedup();
+            }
+        }
+
+        for root in roots.into_iter().filter(|it| !it.include.is_empty()) {
             let file_set_roots: Vec<VfsPath> =
                 root.include.iter().cloned().map(VfsPath::from).collect();
 
@@ -605,10 +646,10 @@ pub(crate) fn load_proc_macro(
     path: &AbsPath,
     dummy_replace: &[Box<str>],
 ) -> ProcMacroLoadResult {
+    let server = server.map_err(ToOwned::to_owned)?;
     let res: Result<Vec<_>, String> = (|| {
         let dylib = MacroDylib::new(path.to_path_buf())
             .map_err(|io| format!("Proc-macro dylib loading failed: {io}"))?;
-        let server = server.map_err(ToOwned::to_owned)?;
         let vec = server.load_dylib(dylib).map_err(|e| format!("{e}"))?;
         if vec.is_empty() {
             return Err("proc macro library returned no proc macros".to_string());
@@ -700,7 +741,7 @@ pub(crate) fn load_proc_macro(
             _: Option<&tt::Subtree>,
             _: &Env,
         ) -> Result<tt::Subtree, ProcMacroExpansionError> {
-            Ok(tt::Subtree::default())
+            Ok(tt::Subtree::empty())
         }
     }
 }

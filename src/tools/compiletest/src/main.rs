@@ -6,22 +6,26 @@
 extern crate test;
 
 use crate::common::{expected_output_path, output_base_dir, output_relative_path, UI_EXTENSIONS};
-use crate::common::{CompareMode, Config, Debugger, Mode, PassMode, TestPaths};
+use crate::common::{Config, Debugger, Mode, PassMode, TestPaths};
 use crate::util::logv;
+use build_helper::git::{get_git_modified_files, get_git_untracked_files};
+use core::panic;
 use getopts::Options;
-use lazycell::LazyCell;
-use std::env;
+use lazycell::AtomicLazyCell;
+use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::fs;
 use std::io::{self, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::SystemTime;
+use std::{env, vec};
 use test::ColorConfig;
 use tracing::*;
 use walkdir::WalkDir;
 
 use self::header::{make_test_description, EarlyProps};
+use std::sync::Arc;
 
 #[cfg(test)]
 mod tests;
@@ -39,7 +43,7 @@ pub mod util;
 fn main() {
     tracing_subscriber::fmt::init();
 
-    let config = parse_config(env::args().collect());
+    let config = Arc::new(parse_config(env::args().collect()));
 
     if config.valgrind_path.is_none() && config.force_valgrind {
         panic!("Can't find Valgrind to run Valgrind tests");
@@ -69,6 +73,7 @@ pub fn parse_config(args: Vec<String>) -> Config {
         .optopt("", "llvm-filecheck", "path to LLVM's FileCheck binary", "DIR")
         .reqopt("", "src-base", "directory to scan for test files", "PATH")
         .reqopt("", "build-base", "directory to deposit test outputs", "PATH")
+        .reqopt("", "sysroot-base", "directory containing the compiler sysroot", "PATH")
         .reqopt("", "stage-id", "the target-stage identifier", "stageN-TARGET")
         .reqopt(
             "",
@@ -111,6 +116,7 @@ pub fn parse_config(args: Vec<String>) -> Config {
         )
         .optflag("", "quiet", "print one character per test instead of one line")
         .optopt("", "color", "coloring: auto, always, never", "WHEN")
+        .optflag("", "json", "emit json output instead of plaintext output")
         .optopt("", "logfile", "file to log test execution to", "FILE")
         .optopt("", "target", "the target to build for", "TARGET")
         .optopt("", "host", "the host to build for", "HOST")
@@ -128,7 +134,8 @@ pub fn parse_config(args: Vec<String>) -> Config {
         .reqopt("", "cflags", "flags for the C compiler", "FLAGS")
         .reqopt("", "cxxflags", "flags for the CXX compiler", "FLAGS")
         .optopt("", "ar", "path to an archiver", "PATH")
-        .optopt("", "linker", "path to a linker", "PATH")
+        .optopt("", "target-linker", "path to a linker for the target", "PATH")
+        .optopt("", "host-linker", "path to a linker for the host", "PATH")
         .reqopt("", "llvm-components", "list of LLVM components built in", "LIST")
         .optopt("", "llvm-bin-dir", "Path to LLVM's `bin` directory", "PATH")
         .optopt("", "nodejs", "the name of nodejs", "PATH")
@@ -144,9 +151,11 @@ pub fn parse_config(args: Vec<String>) -> Config {
             "",
             "rustfix-coverage",
             "enable this to generate a Rustfix coverage file, which is saved in \
-                `./<build_base>/rustfix_missing_coverage.txt`",
+            `./<build_base>/rustfix_missing_coverage.txt`",
         )
         .optflag("", "force-rerun", "rerun tests even if the inputs are unchanged")
+        .optflag("", "only-modified", "only run tests that result been modified")
+        .optflag("", "nocapture", "")
         .optflag("h", "help", "show this message")
         .reqopt("", "channel", "current Rust channel", "CHANNEL")
         .optopt("", "edition", "default Rust edition", "EDITION");
@@ -234,6 +243,7 @@ pub fn parse_config(args: Vec<String>) -> Config {
         llvm_bin_dir: matches.opt_str("llvm-bin-dir").map(PathBuf::from),
         src_base,
         build_base: opt_path(matches, "build-base"),
+        sysroot_base: opt_path(matches, "sysroot-base"),
         stage_id: matches.opt_str("stage-id").unwrap(),
         mode,
         suite: matches.opt_str("suite").unwrap(),
@@ -276,10 +286,18 @@ pub fn parse_config(args: Vec<String>) -> Config {
             && !opt_str2(matches.opt_str("adb-test-dir")).is_empty(),
         lldb_python_dir: matches.opt_str("lldb-python-dir"),
         verbose: matches.opt_present("verbose"),
-        quiet: matches.opt_present("quiet"),
+        format: match (matches.opt_present("quiet"), matches.opt_present("json")) {
+            (true, true) => panic!("--quiet and --json are incompatible"),
+            (true, false) => test::OutputFormat::Terse,
+            (false, true) => test::OutputFormat::Json,
+            (false, false) => test::OutputFormat::Pretty,
+        },
+        only_modified: matches.opt_present("only-modified"),
         color,
         remote_test_client: matches.opt_str("remote-test-client").map(PathBuf::from),
-        compare_mode: matches.opt_str("compare-mode").map(CompareMode::parse),
+        compare_mode: matches
+            .opt_str("compare-mode")
+            .map(|s| s.parse().expect("invalid --compare-mode provided")),
         rustfix_coverage: matches.opt_present("rustfix-coverage"),
         has_tidy,
         channel: matches.opt_str("channel").unwrap(),
@@ -290,14 +308,17 @@ pub fn parse_config(args: Vec<String>) -> Config {
         cflags: matches.opt_str("cflags").unwrap(),
         cxxflags: matches.opt_str("cxxflags").unwrap(),
         ar: matches.opt_str("ar").unwrap_or_else(|| String::from("ar")),
-        linker: matches.opt_str("linker"),
+        target_linker: matches.opt_str("target-linker"),
+        host_linker: matches.opt_str("host-linker"),
         llvm_components: matches.opt_str("llvm-components").unwrap(),
         nodejs: matches.opt_str("nodejs"),
         npm: matches.opt_str("npm"),
 
         force_rerun: matches.opt_present("force-rerun"),
 
-        target_cfg: LazyCell::new(),
+        target_cfgs: AtomicLazyCell::new(),
+
+        nocapture: matches.opt_present("nocapture"),
     }
 }
 
@@ -331,9 +352,10 @@ pub fn log_config(config: &Config) {
     logv(c, format!("adb_test_dir: {:?}", config.adb_test_dir));
     logv(c, format!("adb_device_status: {}", config.adb_device_status));
     logv(c, format!("ar: {}", config.ar));
-    logv(c, format!("linker: {:?}", config.linker));
+    logv(c, format!("target-linker: {:?}", config.target_linker));
+    logv(c, format!("host-linker: {:?}", config.host_linker));
     logv(c, format!("verbose: {}", config.verbose));
-    logv(c, format!("quiet: {}", config.quiet));
+    logv(c, format!("format: {:?}", config.format));
     logv(c, "\n".to_string());
 }
 
@@ -351,7 +373,7 @@ pub fn opt_str2(maybestr: Option<String>) -> String {
     }
 }
 
-pub fn run_tests(config: Config) {
+pub fn run_tests(config: Arc<Config>) {
     // If we want to collect rustfix coverage information,
     // we first make sure that the coverage file does not exist.
     // It will be created later on.
@@ -393,8 +415,10 @@ pub fn run_tests(config: Config) {
     };
 
     let mut tests = Vec::new();
-    for c in &configs {
-        make_tests(c, &mut tests);
+    for c in configs {
+        let mut found_paths = BTreeSet::new();
+        make_tests(c, &mut tests, &mut found_paths);
+        check_overlapping_tests(&found_paths);
     }
 
     tests.sort_by(|a, b| a.desc.name.as_slice().cmp(&b.desc.name.as_slice()));
@@ -410,10 +434,14 @@ pub fn run_tests(config: Config) {
             // easy to miss which tests failed, and as such fail to reproduce
             // the failure locally.
 
-            eprintln!(
+            println!(
                 "Some tests failed in compiletest suite={}{} mode={} host={} target={}",
                 config.suite,
-                config.compare_mode.map(|c| format!(" compare_mode={:?}", c)).unwrap_or_default(),
+                config
+                    .compare_mode
+                    .as_ref()
+                    .map(|c| format!(" compare_mode={:?}", c))
+                    .unwrap_or_default(),
                 config.mode,
                 config.host,
                 config.target
@@ -433,13 +461,13 @@ pub fn run_tests(config: Config) {
     }
 }
 
-fn configure_cdb(config: &Config) -> Option<Config> {
+fn configure_cdb(config: &Config) -> Option<Arc<Config>> {
     config.cdb.as_ref()?;
 
-    Some(Config { debugger: Some(Debugger::Cdb), ..config.clone() })
+    Some(Arc::new(Config { debugger: Some(Debugger::Cdb), ..config.clone() }))
 }
 
-fn configure_gdb(config: &Config) -> Option<Config> {
+fn configure_gdb(config: &Config) -> Option<Arc<Config>> {
     config.gdb_version?;
 
     if config.matches_env("msvc") {
@@ -470,10 +498,10 @@ fn configure_gdb(config: &Config) -> Option<Config> {
         env::set_var("RUST_TEST_THREADS", "1");
     }
 
-    Some(Config { debugger: Some(Debugger::Gdb), ..config.clone() })
+    Some(Arc::new(Config { debugger: Some(Debugger::Gdb), ..config.clone() }))
 }
 
-fn configure_lldb(config: &Config) -> Option<Config> {
+fn configure_lldb(config: &Config) -> Option<Arc<Config>> {
     config.lldb_python_dir.as_ref()?;
 
     if let Some(350) = config.lldb_version {
@@ -486,23 +514,27 @@ fn configure_lldb(config: &Config) -> Option<Config> {
         return None;
     }
 
-    Some(Config { debugger: Some(Debugger::Lldb), ..config.clone() })
+    Some(Arc::new(Config { debugger: Some(Debugger::Lldb), ..config.clone() }))
 }
 
 pub fn test_opts(config: &Config) -> test::TestOpts {
+    if env::var("RUST_TEST_NOCAPTURE").is_ok() {
+        eprintln!(
+            "WARNING: RUST_TEST_NOCAPTURE is no longer used. \
+                   Use the `--nocapture` flag instead."
+        );
+    }
+
     test::TestOpts {
         exclude_should_panic: false,
         filters: config.filters.clone(),
         filter_exact: config.filter_exact,
         run_ignored: if config.run_ignored { test::RunIgnored::Yes } else { test::RunIgnored::No },
-        format: if config.quiet { test::OutputFormat::Terse } else { test::OutputFormat::Pretty },
+        format: config.format,
         logfile: config.logfile.clone(),
         run_tests: true,
         bench_benchmarks: true,
-        nocapture: match env::var("RUST_TEST_NOCAPTURE") {
-            Ok(val) => &val != "0",
-            Err(_) => false,
-        },
+        nocapture: config.nocapture,
         color: config.color,
         shuffle: false,
         shuffle_seed: None,
@@ -512,14 +544,30 @@ pub fn test_opts(config: &Config) -> test::TestOpts {
         options: test::Options::new(),
         time_options: None,
         force_run_in_process: false,
+        fail_fast: std::env::var_os("RUSTC_TEST_FAIL_FAST").is_some(),
     }
 }
 
-pub fn make_tests(config: &Config, tests: &mut Vec<test::TestDescAndFn>) {
+pub fn make_tests(
+    config: Arc<Config>,
+    tests: &mut Vec<test::TestDescAndFn>,
+    found_paths: &mut BTreeSet<PathBuf>,
+) {
     debug!("making tests from {:?}", config.src_base.display());
-    let inputs = common_inputs_stamp(config);
-    collect_tests_from_dir(config, &config.src_base, &PathBuf::new(), &inputs, tests)
-        .unwrap_or_else(|_| panic!("Could not read tests from {}", config.src_base.display()));
+    let inputs = common_inputs_stamp(&config);
+    let modified_tests = modified_tests(&config, &config.src_base).unwrap_or_else(|err| {
+        panic!("modified_tests got error from dir: {}, error: {}", config.src_base.display(), err)
+    });
+    collect_tests_from_dir(
+        config.clone(),
+        &config.src_base,
+        &PathBuf::new(),
+        &inputs,
+        tests,
+        found_paths,
+        &modified_tests,
+    )
+    .unwrap_or_else(|_| panic!("Could not read tests from {}", config.src_base.display()));
 }
 
 /// Returns a stamp constructed from input files common to all test cases.
@@ -558,12 +606,37 @@ fn common_inputs_stamp(config: &Config) -> Stamp {
     stamp
 }
 
+fn modified_tests(config: &Config, dir: &Path) -> Result<Vec<PathBuf>, String> {
+    if !config.only_modified {
+        return Ok(vec![]);
+    }
+    let files =
+        get_git_modified_files(Some(dir), &vec!["rs", "stderr", "fixed"])?.unwrap_or(vec![]);
+    // Add new test cases to the list, it will be convenient in daily development.
+    let untracked_files = get_git_untracked_files(None)?.unwrap_or(vec![]);
+
+    let all_paths = [&files[..], &untracked_files[..]].concat();
+    let full_paths = {
+        let mut full_paths: Vec<PathBuf> = all_paths
+            .into_iter()
+            .map(|f| PathBuf::from(f).with_extension("").with_extension("rs"))
+            .filter_map(|f| if Path::new(&f).exists() { f.canonicalize().ok() } else { None })
+            .collect();
+        full_paths.dedup();
+        full_paths.sort_unstable();
+        full_paths
+    };
+    Ok(full_paths)
+}
+
 fn collect_tests_from_dir(
-    config: &Config,
+    config: Arc<Config>,
     dir: &Path,
     relative_dir_path: &Path,
     inputs: &Stamp,
     tests: &mut Vec<test::TestDescAndFn>,
+    found_paths: &mut BTreeSet<PathBuf>,
+    modified_tests: &Vec<PathBuf>,
 ) -> io::Result<()> {
     // Ignore directories that contain a file named `compiletest-ignore-dir`.
     if dir.join("compiletest-ignore-dir").exists() {
@@ -585,7 +658,7 @@ fn collect_tests_from_dir(
     // sequential loop because otherwise, if we do it in the
     // tests themselves, they race for the privilege of
     // creating the directories and sometimes fail randomly.
-    let build_dir = output_relative_path(config, relative_dir_path);
+    let build_dir = output_relative_path(&config, relative_dir_path);
     fs::create_dir_all(&build_dir).unwrap();
 
     // Add each `.rs` file as a test, and recurse further on any
@@ -594,17 +667,27 @@ fn collect_tests_from_dir(
         let file = file?;
         let file_path = file.path();
         let file_name = file.file_name();
-        if is_test(&file_name) {
+        if is_test(&file_name) && (!config.only_modified || modified_tests.contains(&file_path)) {
             debug!("found test file: {:?}", file_path.display());
+            let rel_test_path = relative_dir_path.join(file_path.file_stem().unwrap());
+            found_paths.insert(rel_test_path);
             let paths =
                 TestPaths { file: file_path, relative_dir: relative_dir_path.to_path_buf() };
 
-            tests.extend(make_test(config, &paths, inputs))
+            tests.extend(make_test(config.clone(), &paths, inputs))
         } else if file_path.is_dir() {
             let relative_file_path = relative_dir_path.join(file.file_name());
             if &file_name != "auxiliary" {
                 debug!("found directory: {:?}", file_path.display());
-                collect_tests_from_dir(config, &file_path, &relative_file_path, inputs, tests)?;
+                collect_tests_from_dir(
+                    config.clone(),
+                    &file_path,
+                    &relative_file_path,
+                    inputs,
+                    tests,
+                    found_paths,
+                    modified_tests,
+                )?;
             }
         } else {
             debug!("found other file/directory: {:?}", file_path.display());
@@ -626,14 +709,18 @@ pub fn is_test(file_name: &OsString) -> bool {
     !invalid_prefixes.iter().any(|p| file_name.starts_with(p))
 }
 
-fn make_test(config: &Config, testpaths: &TestPaths, inputs: &Stamp) -> Vec<test::TestDescAndFn> {
+fn make_test(
+    config: Arc<Config>,
+    testpaths: &TestPaths,
+    inputs: &Stamp,
+) -> Vec<test::TestDescAndFn> {
     let test_path = if config.mode == Mode::RunMake {
         // Parse directives in the Makefile
         testpaths.file.join("Makefile")
     } else {
         PathBuf::from(&testpaths.file)
     };
-    let early_props = EarlyProps::from_file(config, &test_path);
+    let early_props = EarlyProps::from_file(&config, &test_path);
 
     // Incremental tests are special, they inherently cannot be run in parallel.
     // `runtest::run` will be responsible for iterating over revisions.
@@ -648,19 +735,22 @@ fn make_test(config: &Config, testpaths: &TestPaths, inputs: &Stamp) -> Vec<test
             let src_file =
                 std::fs::File::open(&test_path).expect("open test file to parse ignores");
             let cfg = revision.map(|v| &**v);
-            let test_name = crate::make_test_name(config, testpaths, revision);
-            let mut desc = make_test_description(config, test_name, &test_path, src_file, cfg);
+            let test_name = crate::make_test_name(&config, testpaths, revision);
+            let mut desc = make_test_description(&config, test_name, &test_path, src_file, cfg);
             // Ignore tests that already run and are up to date with respect to inputs.
             if !config.force_rerun {
                 desc.ignore |= is_up_to_date(
-                    config,
+                    &config,
                     testpaths,
                     &early_props,
                     revision.map(|s| s.as_str()),
                     inputs,
                 );
             }
-            test::TestDescAndFn { desc, testfn: make_test_closure(config, testpaths, revision) }
+            test::TestDescAndFn {
+                desc,
+                testfn: make_test_closure(config.clone(), testpaths, revision),
+            }
         })
         .collect()
 }
@@ -771,8 +861,8 @@ fn make_test_name(
     revision: Option<&String>,
 ) -> test::TestName {
     // Print the name of the file, relative to the repository root.
-    // `src_base` looks like `/path/to/rust/src/test/ui`
-    let root_directory = config.src_base.parent().unwrap().parent().unwrap().parent().unwrap();
+    // `src_base` looks like `/path/to/rust/tests/ui`
+    let root_directory = config.src_base.parent().unwrap().parent().unwrap();
     let path = testpaths.file.strip_prefix(root_directory).unwrap();
     let debugger = match config.debugger {
         Some(d) => format!("-{}", d),
@@ -794,7 +884,7 @@ fn make_test_name(
 }
 
 fn make_test_closure(
-    config: &Config,
+    config: Arc<Config>,
     testpaths: &TestPaths,
     revision: Option<&String>,
 ) -> test::TestFn {
@@ -1017,4 +1107,25 @@ fn extract_lldb_version(full_version_line: &str) -> Option<(u32, bool)> {
 
 fn not_a_digit(c: char) -> bool {
     !c.is_digit(10)
+}
+
+fn check_overlapping_tests(found_paths: &BTreeSet<PathBuf>) {
+    let mut collisions = Vec::new();
+    for path in found_paths {
+        for ancestor in path.ancestors().skip(1) {
+            if found_paths.contains(ancestor) {
+                collisions.push((path, ancestor.clone()));
+            }
+        }
+    }
+    if !collisions.is_empty() {
+        let collisions: String = collisions
+            .into_iter()
+            .map(|(path, check_parent)| format!("test {path:?} clashes with {check_parent:?}\n"))
+            .collect();
+        panic!(
+            "{collisions}\n\
+            Tests cannot have overlapping names. Make sure they use unique prefixes."
+        );
+    }
 }

@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.10] - 2023-02-22
+### Added
+- `MmapOptions::map_anon` accounts for `populate` on Linux now.
+  [@jsgf](https://github.com/jsgf)
+
+## [0.5.9] - 2023-02-17
+### Added
+- `From<Mmap> for MmapRaw` and `From<MmapMut> for MmapRaw`.
+  [@swlynch99](https://github.com/swlynch99)
+- `Mmap::advise_range`, `MmapMut::advise_range`, `MmapRaw::advise_range`.
+  [@ho-229](https://github.com/ho-229)
+
+## [0.5.8] - 2022-11-09
+### Added
+- `MmapRaw::advise`, `MmapRaw::lock` and `MmapRaw::unlock`.
+  [@diwic](https://github.com/diwic)
+- Improve `MmapMut::make_exec` documentation.
+
 ## [0.5.7] - 2022-08-15
 ### Changed
 - Simplify file size retrieving code.
@@ -117,7 +135,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Removed
 - `winapi` dependency. [memmap-rs/pull/89](https://github.com/danburkert/memmap-rs/pull/89)
 
-[Unreleased]: https://github.com/RazrFalcon/memmap2-rs/compare/v0.5.7...HEAD
+[Unreleased]: https://github.com/RazrFalcon/memmap2-rs/compare/v0.5.10...HEAD
+[0.5.10]: https://github.com/RazrFalcon/memmap2-rs/compare/v0.5.9...v0.5.10
+[0.5.9]: https://github.com/RazrFalcon/memmap2-rs/compare/v0.5.8...v0.5.9
+[0.5.8]: https://github.com/RazrFalcon/memmap2-rs/compare/v0.5.7...v0.5.8
 [0.5.7]: https://github.com/RazrFalcon/memmap2-rs/compare/v0.5.6...v0.5.7
 [0.5.6]: https://github.com/RazrFalcon/memmap2-rs/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/RazrFalcon/memmap2-rs/compare/v0.5.4...v0.5.5

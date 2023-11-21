@@ -111,6 +111,7 @@ pub(crate) fn detect_features() -> cache::Initializer {
         enable(proc_info_ecx, 13, Feature::cmpxchg16b);
         enable(proc_info_ecx, 19, Feature::sse4_1);
         enable(proc_info_ecx, 20, Feature::sse4_2);
+        enable(proc_info_ecx, 22, Feature::movbe);
         enable(proc_info_ecx, 23, Feature::popcnt);
         enable(proc_info_ecx, 25, Feature::aes);
         enable(proc_info_ecx, 29, Feature::f16c);
@@ -127,6 +128,8 @@ pub(crate) fn detect_features() -> cache::Initializer {
 
         enable(extended_features_ebx, 3, Feature::bmi1);
         enable(extended_features_ebx, 8, Feature::bmi2);
+
+        enable(extended_features_ebx, 9, Feature::ermsb);
 
         // `XSAVE` and `AVX` support:
         let cpu_xsave = bit::test(proc_info_ecx as usize, 26);
@@ -211,10 +214,10 @@ pub(crate) fn detect_features() -> cache::Initializer {
                         enable(extended_features_ecx, 1, Feature::avx512vbmi);
                         enable(extended_features_ecx, 5, Feature::avx512bf16);
                         enable(extended_features_ecx, 6, Feature::avx512vbmi2);
-                        enable(extended_features_ecx, 8, Feature::avx512gfni);
+                        enable(extended_features_ecx, 8, Feature::gfni);
                         enable(extended_features_ecx, 8, Feature::avx512vp2intersect);
-                        enable(extended_features_ecx, 9, Feature::avx512vaes);
-                        enable(extended_features_ecx, 10, Feature::avx512vpclmulqdq);
+                        enable(extended_features_ecx, 9, Feature::vaes);
+                        enable(extended_features_ecx, 10, Feature::vpclmulqdq);
                         enable(extended_features_ecx, 11, Feature::avx512vnni);
                         enable(extended_features_ecx, 12, Feature::avx512bitalg);
                         enable(extended_features_ecx, 14, Feature::avx512vpopcntdq);

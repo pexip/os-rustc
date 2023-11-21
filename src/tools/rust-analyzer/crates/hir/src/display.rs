@@ -4,6 +4,7 @@ use hir_def::{
     generics::{
         TypeOrConstParamData, TypeParamProvenance, WherePredicate, WherePredicateTypeTarget,
     },
+    lang_item::LangItem,
     type_ref::{TypeBound, TypeRef},
     AdtId, GenericDefId,
 };
@@ -14,18 +15,25 @@ use hir_ty::{
     },
     Interner, TraitRefExt, WhereClause,
 };
-use syntax::SmolStr;
 
 use crate::{
-    Adt, Const, ConstParam, Enum, Field, Function, GenericParam, HasCrate, HasVisibility,
-    LifetimeParam, Macro, Module, Static, Struct, Trait, TyBuilder, Type, TypeAlias,
-    TypeOrConstParam, TypeParam, Union, Variant,
+    Adt, AsAssocItem, AssocItemContainer, Const, ConstParam, Enum, Field, Function, GenericParam,
+    HasCrate, HasVisibility, LifetimeParam, Macro, Module, Static, Struct, Trait, TraitAlias,
+    TyBuilder, Type, TypeAlias, TypeOrConstParam, TypeParam, Union, Variant,
 };
 
 impl HirDisplay for Function {
     fn hir_fmt(&self, f: &mut HirFormatter<'_>) -> Result<(), HirDisplayError> {
-        let data = f.db.function_data(self.id);
-        write_visibility(self.module(f.db).id, self.visibility(f.db), f)?;
+        let db = f.db;
+        let data = db.function_data(self.id);
+        let container = self.as_assoc_item(db).map(|it| it.container(db));
+        let mut module = self.module(db);
+        if let Some(AssocItemContainer::Impl(_)) = container {
+            // Block-local impls are "hoisted" to the nearest (non-block) module.
+            module = module.nearest_non_block_module(db);
+        }
+        let module_id = module.id;
+        write_visibility(module_id, self.visibility(db), f)?;
         if data.has_default_kw() {
             f.write_str("default ")?;
         }
@@ -35,7 +43,7 @@ impl HirDisplay for Function {
         if data.has_async_kw() {
             f.write_str("async ")?;
         }
-        if self.is_unsafe_to_call(f.db) {
+        if self.is_unsafe_to_call(db) {
             f.write_str("unsafe ")?;
         }
         if let Some(abi) = &data.abi {
@@ -50,7 +58,7 @@ impl HirDisplay for Function {
 
         let write_self_param = |ty: &TypeRef, f: &mut HirFormatter<'_>| match ty {
             TypeRef::Path(p) if p.is_self_type() => f.write_str("self"),
-            TypeRef::Reference(inner, lifetime, mut_) if matches!(&**inner,TypeRef::Path(p) if p.is_self_type()) =>
+            TypeRef::Reference(inner, lifetime, mut_) if matches!(&**inner, TypeRef::Path(p) if p.is_self_type()) =>
             {
                 f.write_char('&')?;
                 if let Some(lifetime) = lifetime {
@@ -79,7 +87,7 @@ impl HirDisplay for Function {
                 }
             }
             match name {
-                Some(name) => write!(f, "{}: ", name)?,
+                Some(name) => write!(f, "{name}: ")?,
                 None => f.write_str("_: ")?,
             }
             // FIXME: Use resolved `param.ty` or raw `type_ref`?
@@ -261,8 +269,7 @@ impl HirDisplay for TypeParam {
             bounds.iter().cloned().map(|b| b.substitute(Interner, &substs)).collect();
         let krate = self.id.parent().krate(f.db).id;
         let sized_trait =
-            f.db.lang_item(krate, SmolStr::new_inline("sized"))
-                .and_then(|lang_item| lang_item.as_trait());
+            f.db.lang_item(krate, LangItem::Sized).and_then(|lang_item| lang_item.as_trait());
         let has_only_sized_bound = predicates.iter().all(move |pred| match pred.skip_binders() {
             WhereClause::Implemented(it) => Some(it.hir_trait_id()) == sized_trait,
             _ => false,
@@ -270,7 +277,7 @@ impl HirDisplay for TypeParam {
         let has_only_not_sized_bound = predicates.is_empty();
         if !has_only_sized_bound || has_only_not_sized_bound {
             let default_sized = SizedByDefault::Sized { anchor: krate };
-            write_bounds_like_dyn_trait_with_prefix(":", &predicates, default_sized, f)?;
+            write_bounds_like_dyn_trait_with_prefix(f, ":", &predicates, default_sized)?;
         }
         Ok(())
     }
@@ -327,7 +334,7 @@ fn write_generic_params(
                         continue;
                     }
                     delim(f)?;
-                    write!(f, "{}", name)?;
+                    write!(f, "{name}")?;
                     if let Some(default) = &ty.default {
                         f.write_str(" = ")?;
                         default.hir_fmt(f)?;
@@ -335,7 +342,7 @@ fn write_generic_params(
                 }
                 TypeOrConstParamData::ConstParamData(c) => {
                     delim(f)?;
-                    write!(f, "const {}: ", name)?;
+                    write!(f, "const {name}: ")?;
                     c.ty.hir_fmt(f)?;
                 }
             }
@@ -372,7 +379,7 @@ fn write_where_clause(def: GenericDefId, f: &mut HirFormatter<'_>) -> Result<(),
         WherePredicateTypeTarget::TypeRef(ty) => ty.hir_fmt(f),
         WherePredicateTypeTarget::TypeOrConstParam(id) => {
             match &params.type_or_consts[*id].name() {
-                Some(name) => write!(f, "{}", name),
+                Some(name) => write!(f, "{name}"),
                 None => f.write_str("{unnamed}"),
             }
         }
@@ -424,7 +431,7 @@ fn write_where_clause(def: GenericDefId, f: &mut HirFormatter<'_>) -> Result<(),
                         if idx != 0 {
                             f.write_str(", ")?;
                         }
-                        write!(f, "{}", lifetime)?;
+                        write!(f, "{lifetime}")?;
                     }
                     f.write_str("> ")?;
                     write_target(target, f)?;
@@ -443,11 +450,18 @@ fn write_where_clause(def: GenericDefId, f: &mut HirFormatter<'_>) -> Result<(),
 
 impl HirDisplay for Const {
     fn hir_fmt(&self, f: &mut HirFormatter<'_>) -> Result<(), HirDisplayError> {
-        write_visibility(self.module(f.db).id, self.visibility(f.db), f)?;
-        let data = f.db.const_data(self.id);
+        let db = f.db;
+        let container = self.as_assoc_item(db).map(|it| it.container(db));
+        let mut module = self.module(db);
+        if let Some(AssocItemContainer::Impl(_)) = container {
+            // Block-local impls are "hoisted" to the nearest (non-block) module.
+            module = module.nearest_non_block_module(db);
+        }
+        write_visibility(module.id, self.visibility(db), f)?;
+        let data = db.const_data(self.id);
         f.write_str("const ")?;
         match &data.name {
-            Some(name) => write!(f, "{}: ", name)?,
+            Some(name) => write!(f, "{name}: ")?,
             None => f.write_str("_: ")?,
         }
         data.type_ref.hir_fmt(f)?;
@@ -487,6 +501,22 @@ impl HirDisplay for Trait {
     }
 }
 
+impl HirDisplay for TraitAlias {
+    fn hir_fmt(&self, f: &mut HirFormatter<'_>) -> Result<(), HirDisplayError> {
+        write_visibility(self.module(f.db).id, self.visibility(f.db), f)?;
+        let data = f.db.trait_alias_data(self.id);
+        write!(f, "trait {}", data.name)?;
+        let def_id = GenericDefId::TraitAliasId(self.id);
+        write_generic_params(def_id, f)?;
+        f.write_str(" = ")?;
+        // FIXME: Currently we lower every bounds in a trait alias as a trait bound on `Self` i.e.
+        // `trait Foo = Bar` is stored and displayed as `trait Foo = where Self: Bar`, which might
+        // be less readable.
+        write_where_clause(def_id, f)?;
+        Ok(())
+    }
+}
+
 impl HirDisplay for TypeAlias {
     fn hir_fmt(&self, f: &mut HirFormatter<'_>) -> Result<(), HirDisplayError> {
         write_visibility(self.module(f.db).id, self.visibility(f.db), f)?;
@@ -511,9 +541,9 @@ impl HirDisplay for Module {
     fn hir_fmt(&self, f: &mut HirFormatter<'_>) -> Result<(), HirDisplayError> {
         // FIXME: Module doesn't have visibility saved in data.
         match self.name(f.db) {
-            Some(name) => write!(f, "mod {}", name),
+            Some(name) => write!(f, "mod {name}"),
             None if self.is_crate_root(f.db) => match self.krate(f.db).display_name(f.db) {
-                Some(name) => write!(f, "extern crate {}", name),
+                Some(name) => write!(f, "extern crate {name}"),
                 None => f.write_str("extern crate {unknown}"),
             },
             None => f.write_str("mod {unnamed}"),

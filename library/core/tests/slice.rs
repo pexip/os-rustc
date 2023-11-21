@@ -1,6 +1,7 @@
 use core::cell::Cell;
 use core::cmp::Ordering;
 use core::mem::MaybeUninit;
+use core::num::NonZeroUsize;
 use core::result::Result::{Err, Ok};
 use core::slice;
 
@@ -142,20 +143,20 @@ fn test_iterator_advance_by() {
 
     for i in 0..=v.len() {
         let mut iter = v.iter();
-        iter.advance_by(i).unwrap();
+        assert_eq!(iter.advance_by(i), Ok(()));
         assert_eq!(iter.as_slice(), &v[i..]);
     }
 
     let mut iter = v.iter();
-    assert_eq!(iter.advance_by(v.len() + 1), Err(v.len()));
+    assert_eq!(iter.advance_by(v.len() + 1), Err(NonZeroUsize::new(1).unwrap()));
     assert_eq!(iter.as_slice(), &[]);
 
     let mut iter = v.iter();
-    iter.advance_by(3).unwrap();
+    assert_eq!(iter.advance_by(3), Ok(()));
     assert_eq!(iter.as_slice(), &v[3..]);
-    iter.advance_by(2).unwrap();
+    assert_eq!(iter.advance_by(2), Ok(()));
     assert_eq!(iter.as_slice(), &[]);
-    iter.advance_by(0).unwrap();
+    assert_eq!(iter.advance_by(0), Ok(()));
 }
 
 #[test]
@@ -164,20 +165,20 @@ fn test_iterator_advance_back_by() {
 
     for i in 0..=v.len() {
         let mut iter = v.iter();
-        iter.advance_back_by(i).unwrap();
+        assert_eq!(iter.advance_back_by(i), Ok(()));
         assert_eq!(iter.as_slice(), &v[..v.len() - i]);
     }
 
     let mut iter = v.iter();
-    assert_eq!(iter.advance_back_by(v.len() + 1), Err(v.len()));
+    assert_eq!(iter.advance_back_by(v.len() + 1), Err(NonZeroUsize::new(1).unwrap()));
     assert_eq!(iter.as_slice(), &[]);
 
     let mut iter = v.iter();
-    iter.advance_back_by(3).unwrap();
+    assert_eq!(iter.advance_back_by(3), Ok(()));
     assert_eq!(iter.as_slice(), &v[..v.len() - 3]);
-    iter.advance_back_by(2).unwrap();
+    assert_eq!(iter.advance_back_by(2), Ok(()));
     assert_eq!(iter.as_slice(), &[]);
-    iter.advance_back_by(0).unwrap();
+    assert_eq!(iter.advance_back_by(0), Ok(()));
 }
 
 #[test]
@@ -1488,7 +1489,7 @@ mod slice_index {
                 // optional:
                 //
                 // one or more similar inputs for which data[input] succeeds,
-                // and the corresponding output as an array.  This helps validate
+                // and the corresponding output as an array. This helps validate
                 // "critical points" where an input range straddles the boundary
                 // between valid and invalid.
                 // (such as the input `len..len`, which is just barely valid)
@@ -1805,7 +1806,7 @@ fn brute_force_rotate_test_1() {
 fn sort_unstable() {
     use core::cmp::Ordering::{Equal, Greater, Less};
     use core::slice::heapsort;
-    use rand::{rngs::StdRng, seq::SliceRandom, Rng, SeedableRng};
+    use rand::{seq::SliceRandom, Rng};
 
     // Miri is too slow (but still need to `chain` to make the types match)
     let lens = if cfg!(miri) { (2..20).chain(0..0) } else { (2..25).chain(500..510) };
@@ -1813,7 +1814,7 @@ fn sort_unstable() {
 
     let mut v = [0; 600];
     let mut tmp = [0; 600];
-    let mut rng = StdRng::from_entropy();
+    let mut rng = crate::test_rng();
 
     for len in lens {
         let v = &mut v[0..len];
@@ -1879,11 +1880,10 @@ fn sort_unstable() {
 #[cfg_attr(miri, ignore)] // Miri is too slow
 fn select_nth_unstable() {
     use core::cmp::Ordering::{Equal, Greater, Less};
-    use rand::rngs::StdRng;
     use rand::seq::SliceRandom;
-    use rand::{Rng, SeedableRng};
+    use rand::Rng;
 
-    let mut rng = StdRng::from_entropy();
+    let mut rng = crate::test_rng();
 
     for len in (2..21).chain(500..501) {
         let mut orig = vec![0; len];
@@ -2594,4 +2594,64 @@ fn test_flatten_size_overflow() {
 fn test_flatten_mut_size_overflow() {
     let x = &mut [[(); usize::MAX]; 2][..];
     let _ = x.flatten_mut();
+}
+
+#[test]
+fn test_get_many_mut_normal_2() {
+    let mut v = vec![1, 2, 3, 4, 5];
+    let [a, b] = v.get_many_mut([3, 0]).unwrap();
+    *a += 10;
+    *b += 100;
+    assert_eq!(v, vec![101, 2, 3, 14, 5]);
+}
+
+#[test]
+fn test_get_many_mut_normal_3() {
+    let mut v = vec![1, 2, 3, 4, 5];
+    let [a, b, c] = v.get_many_mut([0, 4, 2]).unwrap();
+    *a += 10;
+    *b += 100;
+    *c += 1000;
+    assert_eq!(v, vec![11, 2, 1003, 4, 105]);
+}
+
+#[test]
+fn test_get_many_mut_empty() {
+    let mut v = vec![1, 2, 3, 4, 5];
+    let [] = v.get_many_mut([]).unwrap();
+    assert_eq!(v, vec![1, 2, 3, 4, 5]);
+}
+
+#[test]
+fn test_get_many_mut_single_first() {
+    let mut v = vec![1, 2, 3, 4, 5];
+    let [a] = v.get_many_mut([0]).unwrap();
+    *a += 10;
+    assert_eq!(v, vec![11, 2, 3, 4, 5]);
+}
+
+#[test]
+fn test_get_many_mut_single_last() {
+    let mut v = vec![1, 2, 3, 4, 5];
+    let [a] = v.get_many_mut([4]).unwrap();
+    *a += 10;
+    assert_eq!(v, vec![1, 2, 3, 4, 15]);
+}
+
+#[test]
+fn test_get_many_mut_oob_nonempty() {
+    let mut v = vec![1, 2, 3, 4, 5];
+    assert!(v.get_many_mut([5]).is_err());
+}
+
+#[test]
+fn test_get_many_mut_oob_empty() {
+    let mut v: Vec<i32> = vec![];
+    assert!(v.get_many_mut([0]).is_err());
+}
+
+#[test]
+fn test_get_many_mut_duplicate() {
+    let mut v = vec![1, 2, 3, 4, 5];
+    assert!(v.get_many_mut([1, 3, 3, 4]).is_err());
 }

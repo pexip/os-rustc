@@ -99,7 +99,7 @@ pub use num::FloatToInt;
 /// ```
 #[stable(feature = "convert_id", since = "1.33.0")]
 #[rustc_const_stable(feature = "const_identity", since = "1.33.0")]
-#[inline]
+#[inline(always)]
 pub const fn identity<T>(x: T) -> T {
     x
 }
@@ -542,7 +542,7 @@ pub trait Into<T>: Sized {
 #[const_trait]
 pub trait From<T>: Sized {
     /// Converts to this type from the input type.
-    #[lang = "from"]
+    #[rustc_diagnostic_item = "from_fn"]
     #[must_use]
     #[stable(feature = "rust1", since = "1.0.0")]
     fn from(value: T) -> Self;
@@ -722,6 +722,7 @@ where
     ///
     /// That is, this conversion is whatever the implementation of
     /// <code>[From]&lt;T&gt; for U</code> chooses to do.
+    #[inline]
     fn into(self) -> U {
         U::from(self)
     }
@@ -763,6 +764,7 @@ where
 {
     type Error = U::Error;
 
+    #[inline]
     fn try_into(self) -> Result<U, U::Error> {
         U::try_from(self)
     }
@@ -778,6 +780,7 @@ where
 {
     type Error = Infallible;
 
+    #[inline]
     fn try_from(value: U) -> Result<Self, Self::Error> {
         Ok(U::into(value))
     }
@@ -789,6 +792,7 @@ where
 
 #[stable(feature = "rust1", since = "1.0.0")]
 impl<T> AsRef<[T]> for [T] {
+    #[inline(always)]
     fn as_ref(&self) -> &[T] {
         self
     }
@@ -796,6 +800,7 @@ impl<T> AsRef<[T]> for [T] {
 
 #[stable(feature = "rust1", since = "1.0.0")]
 impl<T> AsMut<[T]> for [T] {
+    #[inline(always)]
     fn as_mut(&mut self) -> &mut [T] {
         self
     }
@@ -803,7 +808,7 @@ impl<T> AsMut<[T]> for [T] {
 
 #[stable(feature = "rust1", since = "1.0.0")]
 impl AsRef<str> for str {
-    #[inline]
+    #[inline(always)]
     fn as_ref(&self) -> &str {
         self
     }
@@ -811,7 +816,7 @@ impl AsRef<str> for str {
 
 #[stable(feature = "as_mut_str_for_str", since = "1.51.0")]
 impl AsMut<str> for str {
-    #[inline]
+    #[inline(always)]
     fn as_mut(&mut self) -> &mut str {
         self
     }

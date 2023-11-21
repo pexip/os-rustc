@@ -111,7 +111,7 @@ fn punctuation(
             let is_raw_ptr = (|| {
                 let prefix_expr = parent.and_then(ast::PrefixExpr::cast)?;
                 let expr = prefix_expr.expr()?;
-                sema.type_of_expr(&expr)?.original.is_raw_ptr().then(|| ())
+                sema.type_of_expr(&expr)?.original.is_raw_ptr().then_some(())
             })();
             if let Some(()) = is_raw_ptr {
                 HlTag::Operator(HlOperator::Other) | HlMod::Unsafe
@@ -174,6 +174,7 @@ fn keyword(
         | T![return]
         | T![while]
         | T![yield] => h | HlMod::ControlFlow,
+        T![do] | T![yeet] if parent_matches::<ast::YeetExpr>(&token) => h | HlMod::ControlFlow,
         T![for] if parent_matches::<ast::ForExpr>(&token) => h | HlMod::ControlFlow,
         T![unsafe] => h | HlMod::Unsafe,
         T![true] | T![false] => HlTag::BoolLiteral.into(),
@@ -216,7 +217,9 @@ fn highlight_name_ref(
         // to anything when used.
         // We can fix this for derive attributes since derive helpers are recorded, but not for
         // general attributes.
-        None if name_ref.syntax().ancestors().any(|it| it.kind() == ATTR) => {
+        None if name_ref.syntax().ancestors().any(|it| it.kind() == ATTR)
+            && !sema.hir_file_for(name_ref.syntax()).is_derive_attr_pseudo_expansion(sema.db) =>
+        {
             return HlTag::Symbol(SymbolKind::Attribute).into();
         }
         None => return HlTag::UnresolvedReference.into(),
@@ -409,6 +412,7 @@ fn highlight_def(
             h
         }
         Definition::Trait(_) => Highlight::new(HlTag::Symbol(SymbolKind::Trait)),
+        Definition::TraitAlias(_) => Highlight::new(HlTag::Symbol(SymbolKind::TraitAlias)),
         Definition::TypeAlias(type_) => {
             let mut h = Highlight::new(HlTag::Symbol(SymbolKind::TypeAlias));
 

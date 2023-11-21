@@ -262,11 +262,13 @@ use crate::sys_common::memchr;
 
 #[stable(feature = "bufwriter_into_parts", since = "1.56.0")]
 pub use self::buffered::WriterPanicked;
+#[unstable(feature = "raw_os_error_ty", issue = "107792")]
+pub use self::error::RawOsError;
 pub(crate) use self::stdio::attempt_print_to_stderr;
 #[unstable(feature = "internal_output_capture", issue = "none")]
 #[doc(no_inline, hidden)]
 pub use self::stdio::set_output_capture;
-#[unstable(feature = "is_terminal", issue = "98070")]
+#[stable(feature = "is_terminal", since = "1.70.0")]
 pub use self::stdio::IsTerminal;
 #[unstable(feature = "print_internals", issue = "none")]
 pub use self::stdio::{_eprint, _print};
@@ -821,8 +823,22 @@ pub trait Read {
 
     /// Read the exact number of bytes required to fill `cursor`.
     ///
-    /// This is equivalent to the [`read_exact`](Read::read_exact) method, except that it is passed a [`BorrowedCursor`] rather than `[u8]` to
-    /// allow use with uninitialized buffers.
+    /// This is similar to the [`read_exact`](Read::read_exact) method, except
+    /// that it is passed a [`BorrowedCursor`] rather than `[u8]` to allow use
+    /// with uninitialized buffers.
+    ///
+    /// # Errors
+    ///
+    /// If this function encounters an error of the kind [`ErrorKind::Interrupted`]
+    /// then the error is ignored and the operation will continue.
+    ///
+    /// If this function encounters an "end of file" before completely filling
+    /// the buffer, it returns an error of the kind [`ErrorKind::UnexpectedEof`].
+    ///
+    /// If any other read error is encountered then this function immediately
+    /// returns.
+    ///
+    /// If this function returns an error, all bytes read will be appended to `cursor`.
     #[unstable(feature = "read_buf", issue = "78485")]
     fn read_buf_exact(&mut self, mut cursor: BorrowedCursor<'_>) -> Result<()> {
         while cursor.capacity() > 0 {
@@ -2137,8 +2153,10 @@ pub trait BufRead: Read {
     }
 
     /// Read all bytes until a newline (the `0xA` byte) is reached, and append
-    /// them to the provided buffer. You do not need to clear the buffer before
-    /// appending.
+    /// them to the provided `String` buffer.
+    ///
+    /// Previous content of the buffer will be preserved. To avoid appending to
+    /// the buffer, you need to [`clear`] it first.
     ///
     /// This function will read bytes from the underlying stream until the
     /// newline delimiter (the `0xA` byte) or EOF is found. Once found, all bytes
@@ -2151,9 +2169,11 @@ pub trait BufRead: Read {
     ///
     /// This function is blocking and should be used carefully: it is possible for
     /// an attacker to continuously send bytes without ever sending a newline
-    /// or EOF.
+    /// or EOF. You can use [`take`] to limit the maximum number of bytes read.
     ///
     /// [`Ok(0)`]: Ok
+    /// [`clear`]: String::clear
+    /// [`take`]: crate::io::Read::take
     ///
     /// # Errors
     ///

@@ -26,7 +26,7 @@ using a GNU linker).
 
 --- a/compiler/rustc_codegen_ssa/src/back/link.rs
 +++ b/compiler/rustc_codegen_ssa/src/back/link.rs
-@@ -2280,6 +2280,13 @@
+@@ -2241,6 +2241,13 @@
      }
  
      add_rpath_args(cmd, sess, codegen_results, out_filename);

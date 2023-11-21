@@ -7,7 +7,6 @@ mod tests;
 
 use crate::os::unix::prelude::*;
 
-use crate::convert::TryFrom;
 use crate::error::Error as StdError;
 use crate::ffi::{CStr, CString, OsStr, OsString};
 use crate::fmt;
@@ -62,6 +61,7 @@ extern "C" {
         link_name = "__errno"
     )]
     #[cfg_attr(any(target_os = "solaris", target_os = "illumos"), link_name = "___errno")]
+    #[cfg_attr(target_os = "nto", link_name = "__get_errno_ptr")]
     #[cfg_attr(
         any(target_os = "macos", target_os = "ios", target_os = "freebsd", target_os = "watchos"),
         link_name = "__error"
@@ -114,7 +114,10 @@ pub fn set_errno(e: i32) {
 /// Gets a detailed string description for the given error number.
 pub fn error_string(errno: i32) -> String {
     extern "C" {
-        #[cfg_attr(any(target_os = "linux", target_env = "newlib"), link_name = "__xpg_strerror_r")]
+        #[cfg_attr(
+            all(any(target_os = "linux", target_env = "newlib"), not(target_env = "ohos")),
+            link_name = "__xpg_strerror_r"
+        )]
         fn strerror_r(errnum: c_int, buf: *mut c_char, buflen: libc::size_t) -> c_int;
     }
 
@@ -359,6 +362,17 @@ pub fn current_exe() -> io::Result<PathBuf> {
         )),
         other => other,
     }
+}
+
+#[cfg(target_os = "nto")]
+pub fn current_exe() -> io::Result<PathBuf> {
+    let mut e = crate::fs::read("/proc/self/exefile")?;
+    // Current versions of QNX Neutrino provide a null-terminated path.
+    // Ensure the trailing null byte is not returned here.
+    if let Some(0) = e.last() {
+        e.pop();
+    }
+    Ok(PathBuf::from(OsString::from_vec(e)))
 }
 
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "watchos"))]

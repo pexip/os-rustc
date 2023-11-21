@@ -40,6 +40,28 @@ pub enum Abi {
     RustCold,
 }
 
+impl Abi {
+    pub fn supports_varargs(self) -> bool {
+        // * C and Cdecl obviously support varargs.
+        // * C can be based on SysV64 or Win64, so they must support varargs.
+        // * EfiApi is based on Win64 or C, so it also supports it.
+        //
+        // * Stdcall does not, because it would be impossible for the callee to clean
+        //   up the arguments. (callee doesn't know how many arguments are there)
+        // * Same for Fastcall, Vectorcall and Thiscall.
+        // * System can become Stdcall, so is also a no-no.
+        // * Other calling conventions are related to hardware or the compiler itself.
+        match self {
+            Self::C { .. }
+            | Self::Cdecl { .. }
+            | Self::Win64 { .. }
+            | Self::SysV64 { .. }
+            | Self::EfiApi => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Copy, Clone)]
 pub struct AbiData {
     abi: Abi,
@@ -127,7 +149,7 @@ pub fn is_stable(name: &str) -> Result<(), AbiDisabled> {
     match name {
         // Stable
         "Rust" | "C" | "cdecl" | "stdcall" | "fastcall" | "aapcs" | "win64" | "sysv64"
-        | "system" => Ok(()),
+        | "system" | "efiapi" => Ok(()),
         "rust-intrinsic" => Err(AbiDisabled::Unstable {
             feature: sym::intrinsics,
             explain: "intrinsics are subject to change",
@@ -175,10 +197,6 @@ pub fn is_stable(name: &str) -> Result<(), AbiDisabled> {
         "avr-interrupt" | "avr-non-blocking-interrupt" => Err(AbiDisabled::Unstable {
             feature: sym::abi_avr_interrupt,
             explain: "avr-interrupt and avr-non-blocking-interrupt ABIs are experimental and subject to change",
-        }),
-        "efiapi" => Err(AbiDisabled::Unstable {
-            feature: sym::abi_efiapi,
-            explain: "efiapi ABI is experimental and subject to change",
         }),
         "C-cmse-nonsecure-call" => Err(AbiDisabled::Unstable {
             feature: sym::abi_c_cmse_nonsecure_call,
@@ -306,8 +324,6 @@ impl Abi {
 
 impl fmt::Display for Abi {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            abi => write!(f, "\"{}\"", abi.name()),
-        }
+        write!(f, "\"{}\"", self.name())
     }
 }

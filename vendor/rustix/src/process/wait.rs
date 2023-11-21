@@ -1,16 +1,36 @@
 use crate::process::Pid;
-use crate::{imp, io};
+use crate::{backend, io};
 use bitflags::bitflags;
+
+#[cfg(target_os = "linux")]
+use crate::fd::BorrowedFd;
 
 bitflags! {
     /// Options for modifying the behavior of wait/waitpid
     pub struct WaitOptions: u32 {
         /// Return immediately if no child has exited.
-        const NOHANG = imp::process::wait::WNOHANG as _;
+        const NOHANG = backend::process::wait::WNOHANG as _;
         /// Return if a child has stopped (but not traced via `ptrace(2)`)
-        const UNTRACED = imp::process::wait::WUNTRACED as _;
+        const UNTRACED = backend::process::wait::WUNTRACED as _;
         /// Return if a stopped child has been resumed by delivery of `SIGCONT`
-        const CONTINUED = imp::process::wait::WCONTINUED as _;
+        const CONTINUED = backend::process::wait::WCONTINUED as _;
+    }
+}
+
+#[cfg(not(any(target_os = "wasi", target_os = "redox", target_os = "openbsd")))]
+bitflags! {
+    /// Options for modifying the behavior of waitid
+    pub struct WaitidOptions: u32 {
+        /// Return immediately if no child has exited.
+        const NOHANG = backend::process::wait::WNOHANG as _;
+        /// Return if a stopped child has been resumed by delivery of `SIGCONT`
+        const CONTINUED = backend::process::wait::WCONTINUED as _;
+        /// Wait for processed that have exited.
+        const EXITED = backend::process::wait::WEXITED as _;
+        /// Keep processed in a waitable state.
+        const NOWAIT = backend::process::wait::WNOWAIT as _;
+        /// Wait for processes that have been stopped.
+        const STOPPED = backend::process::wait::WSTOPPED as _;
     }
 }
 
@@ -34,13 +54,13 @@ impl WaitStatus {
     /// Returns whether the process is currently stopped.
     #[inline]
     pub fn stopped(self) -> bool {
-        imp::process::wait::WIFSTOPPED(self.0 as _)
+        backend::process::wait::WIFSTOPPED(self.0 as _)
     }
 
     /// Returns whether the process has continued from a job control stop.
     #[inline]
     pub fn continued(self) -> bool {
-        imp::process::wait::WIFCONTINUED(self.0 as _)
+        backend::process::wait::WIFCONTINUED(self.0 as _)
     }
 
     /// Returns the number of the signal that stopped the process,
@@ -48,7 +68,7 @@ impl WaitStatus {
     #[inline]
     pub fn stopping_signal(self) -> Option<u32> {
         if self.stopped() {
-            Some(imp::process::wait::WSTOPSIG(self.0 as _) as _)
+            Some(backend::process::wait::WSTOPSIG(self.0 as _) as _)
         } else {
             None
         }
@@ -58,8 +78,8 @@ impl WaitStatus {
     /// if it exited normally.
     #[inline]
     pub fn exit_status(self) -> Option<u32> {
-        if imp::process::wait::WIFEXITED(self.0 as _) {
-            Some(imp::process::wait::WEXITSTATUS(self.0 as _) as _)
+        if backend::process::wait::WIFEXITED(self.0 as _) {
+            Some(backend::process::wait::WEXITSTATUS(self.0 as _) as _)
         } else {
             None
         }
@@ -69,12 +89,39 @@ impl WaitStatus {
     /// if the process was terminated by a signal.
     #[inline]
     pub fn terminating_signal(self) -> Option<u32> {
-        if imp::process::wait::WIFSIGNALED(self.0 as _) {
-            Some(imp::process::wait::WTERMSIG(self.0 as _) as _)
+        if backend::process::wait::WIFSIGNALED(self.0 as _) {
+            Some(backend::process::wait::WTERMSIG(self.0 as _) as _)
         } else {
             None
         }
     }
+}
+
+/// The status of a process after calling [`waitid`].
+#[derive(Clone, Copy)]
+#[cfg(not(any(target_os = "wasi", target_os = "redox", target_os = "openbsd")))]
+pub struct WaitidStatus(pub(crate) backend::c::siginfo_t);
+
+/// The identifier to wait on in a call to [`waitid`].
+#[cfg(not(any(target_os = "wasi", target_os = "redox", target_os = "openbsd")))]
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub enum WaitId<'a> {
+    /// Wait on all processes.
+    All,
+
+    /// Wait for a specific process ID.
+    Pid(Pid),
+
+    /// Wait for a specific process file descriptor.
+    #[cfg(target_os = "linux")]
+    PidFd(BorrowedFd<'a>),
+
+    /// Eat the lifetime for non-Linux platforms.
+    #[doc(hidden)]
+    #[cfg(not(target_os = "linux"))]
+    __EatLifetime(std::marker::PhantomData<&'a ()>),
+    // TODO(notgull): Once this crate has the concept of PGIDs, add a WaitId::Pgid
 }
 
 /// `waitpid(pid, waitopts)`—Wait for a specific process to change state.
@@ -104,7 +151,7 @@ impl WaitStatus {
 #[cfg(not(target_os = "wasi"))]
 #[inline]
 pub fn waitpid(pid: Option<Pid>, waitopts: WaitOptions) -> io::Result<Option<WaitStatus>> {
-    Ok(imp::process::syscalls::waitpid(pid, waitopts)?.map(|(_, status)| status))
+    Ok(backend::process::syscalls::waitpid(pid, waitopts)?.map(|(_, status)| status))
 }
 
 /// `wait(waitopts)`—Wait for any of the children of calling process to
@@ -125,5 +172,16 @@ pub fn waitpid(pid: Option<Pid>, waitopts: WaitOptions) -> io::Result<Option<Wai
 #[cfg(not(target_os = "wasi"))]
 #[inline]
 pub fn wait(waitopts: WaitOptions) -> io::Result<Option<(Pid, WaitStatus)>> {
-    imp::process::syscalls::wait(waitopts)
+    backend::process::syscalls::wait(waitopts)
+}
+
+/// `waitid(_, _, _, opts)`—Wait for the specified child process to change
+/// state.
+#[cfg(not(any(target_os = "wasi", target_os = "redox", target_os = "openbsd")))]
+#[inline]
+pub fn waitid<'a>(
+    id: impl Into<WaitId<'a>>,
+    options: WaitidOptions,
+) -> io::Result<Option<WaitidStatus>> {
+    backend::process::syscalls::waitid(id.into(), options)
 }

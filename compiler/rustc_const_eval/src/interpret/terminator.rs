@@ -13,7 +13,7 @@ use rustc_target::spec::abi::Abi;
 
 use super::{
     FnVal, ImmTy, Immediate, InterpCx, InterpResult, MPlaceTy, Machine, MemoryKind, OpTy, Operand,
-    PlaceTy, Scalar, StackPopCleanup, StackPopUnwind,
+    PlaceTy, Scalar, StackPopCleanup,
 };
 
 impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
@@ -29,10 +29,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
             Goto { target } => self.go_to_block(target),
 
-            SwitchInt { ref discr, ref targets, switch_ty } => {
+            SwitchInt { ref discr, ref targets } => {
                 let discr = self.read_immediate(&self.eval_operand(discr, None)?)?;
                 trace!("SwitchInt({:?})", *discr);
-                assert_eq!(discr.layout.ty, switch_ty);
 
                 // Branch to the `otherwise` case by default, if no match is found.
                 let mut target_block = targets.otherwise();
@@ -61,7 +60,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 ref args,
                 destination,
                 target,
-                ref cleanup,
+                unwind,
                 from_hir_call: _,
                 fn_span: _,
             } => {
@@ -74,7 +73,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 let fn_sig =
                     self.tcx.normalize_erasing_late_bound_regions(self.param_env, fn_sig_binder);
                 let extra_args = &args[fn_sig.inputs().len()..];
-                let extra_args = self.tcx.mk_type_list(extra_args.iter().map(|arg| arg.layout.ty));
+                let extra_args =
+                    self.tcx.mk_type_list_from_iter(extra_args.iter().map(|arg| arg.layout.ty));
 
                 let (fn_val, fn_abi, with_caller_location) = match *func.layout.ty.kind() {
                     ty::FnPtr(_sig) => {
@@ -106,11 +106,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     with_caller_location,
                     &destination,
                     target,
-                    match (cleanup, fn_abi.can_unwind) {
-                        (Some(cleanup), true) => StackPopUnwind::Cleanup(*cleanup),
-                        (None, true) => StackPopUnwind::Skip,
-                        (_, false) => StackPopUnwind::NotAllowed,
-                    },
+                    if fn_abi.can_unwind { unwind } else { mir::UnwindAction::Unreachable },
                 )?;
                 // Sanity-check that `eval_fn_call` either pushed a new frame or
                 // did a jump to another block.
@@ -120,25 +116,37 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             }
 
             Drop { place, target, unwind } => {
-                let place = self.eval_place(place)?;
-                let ty = place.layout.ty;
-                trace!("TerminatorKind::drop: {:?}, type {}", place, ty);
-
+                let frame = self.frame();
+                let ty = place.ty(&frame.body.local_decls, *self.tcx).ty;
+                let ty = self.subst_from_frame_and_normalize_erasing_regions(frame, ty)?;
                 let instance = Instance::resolve_drop_in_place(*self.tcx, ty);
+                if let ty::InstanceDef::DropGlue(_, None) = instance.def {
+                    // This is the branch we enter if and only if the dropped type has no drop glue
+                    // whatsoever. This can happen as a result of monomorphizing a drop of a
+                    // generic. In order to make sure that generic and non-generic code behaves
+                    // roughly the same (and in keeping with Mir semantics) we do nothing here.
+                    self.go_to_block(target);
+                    return Ok(());
+                }
+                let place = self.eval_place(place)?;
+                trace!("TerminatorKind::drop: {:?}, type {}", place, ty);
                 self.drop_in_place(&place, instance, target, unwind)?;
             }
 
-            Assert { ref cond, expected, ref msg, target, cleanup } => {
+            Assert { ref cond, expected, ref msg, target, unwind } => {
+                let ignored =
+                    M::ignore_optional_overflow_checks(self) && msg.is_optional_overflow_check();
                 let cond_val = self.read_scalar(&self.eval_operand(cond, None)?)?.to_bool()?;
-                if expected == cond_val {
+                if ignored || expected == cond_val {
                     self.go_to_block(target);
                 } else {
-                    M::assert_panic(self, msg, cleanup)?;
+                    M::assert_panic(self, msg, unwind)?;
                 }
             }
 
-            Abort => {
-                M::abort(self, "the program aborted execution".to_owned())?;
+            Terminate => {
+                // FIXME: maybe should call `panic_no_unwind` lang item instead.
+                M::abort(self, "panic in a function that cannot unwind".to_owned())?;
             }
 
             // When we encounter Resume, we've finished unwinding
@@ -156,11 +164,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             Unreachable => throw_ub!(Unreachable),
 
             // These should never occur for MIR we actually run.
-            DropAndReplace { .. }
-            | FalseEdge { .. }
-            | FalseUnwind { .. }
-            | Yield { .. }
-            | GeneratorDrop => span_bug!(
+            FalseEdge { .. } | FalseUnwind { .. } | Yield { .. } | GeneratorDrop => span_bug!(
                 terminator.source_info.span,
                 "{:#?} should have been eliminated by MIR pass",
                 terminator.kind
@@ -344,7 +348,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         with_caller_location: bool,
         destination: &PlaceTy<'tcx, M::Provenance>,
         target: Option<mir::BasicBlock>,
-        mut unwind: StackPopUnwind,
+        mut unwind: mir::UnwindAction,
     ) -> InterpResult<'tcx> {
         trace!("eval_fn_call: {:#?}", fn_val);
 
@@ -375,6 +379,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             | ty::InstanceDef::FnPtrShim(..)
             | ty::InstanceDef::DropGlue(..)
             | ty::InstanceDef::CloneShim(..)
+            | ty::InstanceDef::FnPtrAddrShim(..)
+            | ty::InstanceDef::ThreadLocalShim(..)
             | ty::InstanceDef::Item(_) => {
                 // We need MIR for this fn
                 let Some((body, instance)) =
@@ -401,9 +407,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     }
                 }
 
-                if !matches!(unwind, StackPopUnwind::NotAllowed) && !callee_fn_abi.can_unwind {
-                    // The callee cannot unwind.
-                    unwind = StackPopUnwind::NotAllowed;
+                if !callee_fn_abi.can_unwind {
+                    // The callee cannot unwind, so force the `Unreachable` unwind handling.
+                    unwind = mir::UnwindAction::Unreachable;
                 }
 
                 self.push_stack_frame(
@@ -438,7 +444,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     // they go to.
 
                     // For where they come from: If the ABI is RustCall, we untuple the
-                    // last incoming argument.  These two iterators do not have the same type,
+                    // last incoming argument. These two iterators do not have the same type,
                     // so to keep the code paths uniform we accept an allocation
                     // (for RustCall ABI only).
                     let caller_args: Cow<'_, [OpTy<'tcx, M::Provenance>]> =
@@ -473,7 +479,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         .filter(|arg_and_abi| !matches!(arg_and_abi.1.mode, PassMode::Ignore));
 
                     // Now we have to spread them out across the callee's locals,
-                    // taking into account the `spread_arg`.  If we could write
+                    // taking into account the `spread_arg`. If we could write
                     // this is a single iterator (that handles `spread_arg`), then
                     // `pass_argument` would be the loop body. It takes care to
                     // not advance `caller_iter` for ZSTs.
@@ -532,8 +538,23 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 let mut receiver = args[0].clone();
                 let receiver_place = loop {
                     match receiver.layout.ty.kind() {
-                        ty::Ref(..) | ty::RawPtr(..) => break self.deref_operand(&receiver)?,
-                        ty::Dynamic(..) => break receiver.assert_mem_place(), // no immediate unsized values
+                        ty::Ref(..) | ty::RawPtr(..) => {
+                            // We do *not* use `deref_operand` here: we don't want to conceptually
+                            // create a place that must be dereferenceable, since the receiver might
+                            // be a raw pointer and (for `*const dyn Trait`) we don't need to
+                            // actually access memory to resolve this method.
+                            // Also see <https://github.com/rust-lang/miri/issues/2786>.
+                            let val = self.read_immediate(&receiver)?;
+                            break self.ref_to_mplace(&val)?;
+                        }
+                        ty::Dynamic(.., ty::Dyn) => break receiver.assert_mem_place(), // no immediate unsized values
+                        ty::Dynamic(.., ty::DynStar) => {
+                            // Not clear how to handle this, so far we assume the receiver is always a pointer.
+                            span_bug!(
+                                self.cur_span(),
+                                "by-value calls on a `dyn*`... are those a thing?"
+                            );
+                        }
                         _ => {
                             // Not there yet, search for the only non-ZST field.
                             let mut non_zst_field = None;
@@ -559,39 +580,59 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         }
                     }
                 };
-                // Obtain the underlying trait we are working on.
-                let receiver_tail = self
-                    .tcx
-                    .struct_tail_erasing_lifetimes(receiver_place.layout.ty, self.param_env);
-                let ty::Dynamic(data, ..) = receiver_tail.kind() else {
-                    span_bug!(self.cur_span(), "dynamic call on non-`dyn` type {}", receiver_tail)
-                };
 
-                // Get the required information from the vtable.
-                let vptr = receiver_place.meta.unwrap_meta().to_pointer(self)?;
-                let (dyn_ty, dyn_trait) = self.get_ptr_vtable(vptr)?;
-                if dyn_trait != data.principal() {
-                    throw_ub_format!(
-                        "`dyn` call on a pointer whose vtable does not match its type"
-                    );
-                }
+                // Obtain the underlying trait we are working on, and the adjusted receiver argument.
+                let (vptr, dyn_ty, adjusted_receiver) = if let ty::Dynamic(data, _, ty::DynStar) =
+                    receiver_place.layout.ty.kind()
+                {
+                    let (recv, vptr) = self.unpack_dyn_star(&receiver_place.into())?;
+                    let (dyn_ty, dyn_trait) = self.get_ptr_vtable(vptr)?;
+                    if dyn_trait != data.principal() {
+                        throw_ub_format!(
+                            "`dyn*` call on a pointer whose vtable does not match its type"
+                        );
+                    }
+                    let recv = recv.assert_mem_place(); // we passed an MPlaceTy to `unpack_dyn_star` so we definitely still have one
+
+                    (vptr, dyn_ty, recv.ptr)
+                } else {
+                    // Doesn't have to be a `dyn Trait`, but the unsized tail must be `dyn Trait`.
+                    // (For that reason we also cannot use `unpack_dyn_trait`.)
+                    let receiver_tail = self
+                        .tcx
+                        .struct_tail_erasing_lifetimes(receiver_place.layout.ty, self.param_env);
+                    let ty::Dynamic(data, _, ty::Dyn) = receiver_tail.kind() else {
+                            span_bug!(self.cur_span(), "dynamic call on non-`dyn` type {}", receiver_tail)
+                        };
+                    assert!(receiver_place.layout.is_unsized());
+
+                    // Get the required information from the vtable.
+                    let vptr = receiver_place.meta.unwrap_meta().to_pointer(self)?;
+                    let (dyn_ty, dyn_trait) = self.get_ptr_vtable(vptr)?;
+                    if dyn_trait != data.principal() {
+                        throw_ub_format!(
+                            "`dyn` call on a pointer whose vtable does not match its type"
+                        );
+                    }
+
+                    // It might be surprising that we use a pointer as the receiver even if this
+                    // is a by-val case; this works because by-val passing of an unsized `dyn
+                    // Trait` to a function is actually desugared to a pointer.
+                    (vptr, dyn_ty, receiver_place.ptr)
+                };
 
                 // Now determine the actual method to call. We can do that in two different ways and
                 // compare them to ensure everything fits.
                 let Some(ty::VtblEntry::Method(fn_inst)) = self.get_vtable_entries(vptr)?.get(idx).copied() else {
                     throw_ub_format!("`dyn` call trying to call something that is not a method")
                 };
+                trace!("Virtual call dispatches to {fn_inst:#?}");
                 if cfg!(debug_assertions) {
                     let tcx = *self.tcx;
 
                     let trait_def_id = tcx.trait_of_item(def_id).unwrap();
                     let virtual_trait_ref =
                         ty::TraitRef::from_method(tcx, trait_def_id, instance.substs);
-                    assert_eq!(
-                        receiver_tail,
-                        virtual_trait_ref.self_ty(),
-                        "mismatch in underlying dyn trait computation within Miri and MIR building",
-                    );
                     let existential_trait_ref =
                         ty::ExistentialTraitRef::erase_self_ty(tcx, virtual_trait_ref);
                     let concrete_trait_ref = existential_trait_ref.with_self_ty(tcx, dyn_ty);
@@ -606,17 +647,12 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     assert_eq!(fn_inst, concrete_method);
                 }
 
-                // `*mut receiver_place.layout.ty` is almost the layout that we
-                // want for args[0]: We have to project to field 0 because we want
-                // a thin pointer.
-                assert!(receiver_place.layout.is_unsized());
-                let receiver_ptr_ty = self.tcx.mk_mut_ptr(receiver_place.layout.ty);
-                let this_receiver_ptr = self.layout_of(receiver_ptr_ty)?.field(self, 0);
-                // Adjust receiver argument.
-                args[0] = OpTy::from(ImmTy::from_immediate(
-                    Scalar::from_maybe_pointer(receiver_place.ptr, self).into(),
-                    this_receiver_ptr,
-                ));
+                // Adjust receiver argument. Layout can be any (thin) ptr.
+                args[0] = ImmTy::from_immediate(
+                    Scalar::from_maybe_pointer(adjusted_receiver, self).into(),
+                    self.layout_of(self.tcx.mk_mut_ptr(dyn_ty))?,
+                )
+                .into();
                 trace!("Patched receiver operand to {:#?}", args[0]);
                 // recurse with concrete function
                 self.eval_fn_call(
@@ -637,23 +673,32 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         place: &PlaceTy<'tcx, M::Provenance>,
         instance: ty::Instance<'tcx>,
         target: mir::BasicBlock,
-        unwind: Option<mir::BasicBlock>,
+        unwind: mir::UnwindAction,
     ) -> InterpResult<'tcx> {
         trace!("drop_in_place: {:?},\n  {:?}, {:?}", *place, place.layout.ty, instance);
-        // We take the address of the object.  This may well be unaligned, which is fine
-        // for us here.  However, unaligned accesses will probably make the actual drop
+        // We take the address of the object. This may well be unaligned, which is fine
+        // for us here. However, unaligned accesses will probably make the actual drop
         // implementation fail -- a problem shared by rustc.
         let place = self.force_allocation(place)?;
 
-        let (instance, place) = match place.layout.ty.kind() {
-            ty::Dynamic(..) => {
+        let place = match place.layout.ty.kind() {
+            ty::Dynamic(_, _, ty::Dyn) => {
                 // Dropping a trait object. Need to find actual drop fn.
-                let place = self.unpack_dyn_trait(&place)?;
-                let instance = ty::Instance::resolve_drop_in_place(*self.tcx, place.layout.ty);
-                (instance, place)
+                self.unpack_dyn_trait(&place)?.0
             }
-            _ => (instance, place),
+            ty::Dynamic(_, _, ty::DynStar) => {
+                // Dropping a `dyn*`. Need to find actual drop fn.
+                self.unpack_dyn_star(&place.into())?.0.assert_mem_place()
+            }
+            _ => {
+                debug_assert_eq!(
+                    instance,
+                    ty::Instance::resolve_drop_in_place(*self.tcx, place.layout.ty)
+                );
+                place
+            }
         };
+        let instance = ty::Instance::resolve_drop_in_place(*self.tcx, place.layout.ty);
         let fn_abi = self.fn_abi_of_instance(instance, ty::List::empty())?;
 
         let arg = ImmTy::from_immediate(
@@ -669,10 +714,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             false,
             &ret.into(),
             Some(target),
-            match unwind {
-                Some(cleanup) => StackPopUnwind::Cleanup(cleanup),
-                None => StackPopUnwind::Skip,
-            },
+            unwind,
         )
     }
 }

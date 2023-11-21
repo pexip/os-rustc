@@ -12,10 +12,10 @@ Forwarded: not-needed
 
 --- a/src/bootstrap/channel.rs
 +++ b/src/bootstrap/channel.rs
-@@ -33,6 +33,12 @@
+@@ -36,6 +36,12 @@
  
  impl GitInfo {
-     pub fn new(ignore_git: bool, dir: &Path) -> GitInfo {
+     pub fn new(omit_git_hash: bool, dir: &Path) -> GitInfo {
 +        //
 +        // Debian: returning early because the Debian package is also in a git
 +        //         repository, but we don't want to parse gitinfo. This is
@@ -27,15 +27,15 @@ Forwarded: not-needed
              match read_commit_info_file(dir) {
 --- a/src/bootstrap/dist.rs
 +++ b/src/bootstrap/dist.rs
-@@ -925,7 +925,10 @@
+@@ -995,7 +995,10 @@
          }
  
          // If we're building from git sources, we need to vendor a complete distribution.
--        if builder.rust_info.is_managed_git_subrepository() {
+-        if builder.rust_info().is_managed_git_subrepository() {
 +        //
 +        // Debian: short-circuited because the Debian package is also in a git
 +        //         repository, but cargo-vendor should not be installed or run.
-+        if false && builder.rust_info.is_managed_git_subrepository() {
++        if false && builder.rust_info().is_managed_git_subrepository() {
              // Ensure we have the submodules checked out.
              builder.update_submodule(Path::new("src/tools/rust-analyzer"));
  

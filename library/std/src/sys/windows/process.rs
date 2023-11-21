@@ -252,10 +252,6 @@ impl Command {
     ) -> io::Result<(Process, StdioPipes)> {
         let maybe_env = self.env.capture_if_changed();
 
-        let mut si = zeroed_startupinfo();
-        si.cb = mem::size_of::<c::STARTUPINFO>() as c::DWORD;
-        si.dwFlags = c::STARTF_USESTDHANDLES;
-
         let child_paths = if let Some(env) = maybe_env.as_ref() {
             env.get(&EnvKey::new("PATH")).map(|s| s.as_os_str())
         } else {
@@ -270,11 +266,7 @@ impl Command {
         let (program, mut cmd_str) = if is_batch_file {
             (
                 command_prompt()?,
-                args::make_bat_command_line(
-                    &args::to_user_path(program)?,
-                    &self.args,
-                    self.force_quotes_enabled,
-                )?,
+                args::make_bat_command_line(&program, &self.args, self.force_quotes_enabled)?,
             )
         } else {
             let cmd_str = make_command_line(&self.program, &self.args, self.force_quotes_enabled)?;
@@ -314,9 +306,21 @@ impl Command {
         let stdin = stdin.to_handle(c::STD_INPUT_HANDLE, &mut pipes.stdin)?;
         let stdout = stdout.to_handle(c::STD_OUTPUT_HANDLE, &mut pipes.stdout)?;
         let stderr = stderr.to_handle(c::STD_ERROR_HANDLE, &mut pipes.stderr)?;
-        si.hStdInput = stdin.as_raw_handle();
-        si.hStdOutput = stdout.as_raw_handle();
-        si.hStdError = stderr.as_raw_handle();
+
+        let mut si = zeroed_startupinfo();
+        si.cb = mem::size_of::<c::STARTUPINFO>() as c::DWORD;
+
+        // If at least one of stdin, stdout or stderr are set (i.e. are non null)
+        // then set the `hStd` fields in `STARTUPINFO`.
+        // Otherwise skip this and allow the OS to apply its default behaviour.
+        // This provides more consistent behaviour between Win7 and Win8+.
+        let is_set = |stdio: &Handle| !stdio.as_raw_handle().is_null();
+        if is_set(&stderr) || is_set(&stdout) || is_set(&stdin) {
+            si.dwFlags |= c::STARTF_USESTDHANDLES;
+            si.hStdInput = stdin.as_raw_handle();
+            si.hStdOutput = stdout.as_raw_handle();
+            si.hStdError = stderr.as_raw_handle();
+        }
 
         unsafe {
             cvt(c::CreateProcessW(
@@ -342,6 +346,11 @@ impl Command {
                 pipes,
             ))
         }
+    }
+
+    pub fn output(&mut self) -> io::Result<(ExitStatus, Vec<u8>, Vec<u8>)> {
+        let (proc, pipes) = self.spawn(Stdio::MakePipe, false)?;
+        crate::sys_common::process::wait_with_output(proc, pipes)
     }
 }
 
@@ -397,7 +406,7 @@ fn resolve_exe<'a>(
         if has_exe_suffix {
             // The application name is a path to a `.exe` file.
             // Let `CreateProcessW` figure out if it exists or not.
-            return path::maybe_verbatim(Path::new(exe_path));
+            return args::to_user_path(Path::new(exe_path));
         }
         let mut path = PathBuf::from(exe_path);
 
@@ -409,7 +418,7 @@ fn resolve_exe<'a>(
             // It's ok to use `set_extension` here because the intent is to
             // remove the extension that was just added.
             path.set_extension("");
-            return path::maybe_verbatim(&path);
+            return args::to_user_path(&path);
         }
     } else {
         ensure_no_nuls(exe_path)?;
@@ -497,7 +506,7 @@ where
 /// Check if a file exists without following symlinks.
 fn program_exists(path: &Path) -> Option<Vec<u16>> {
     unsafe {
-        let path = path::maybe_verbatim(path).ok()?;
+        let path = args::to_user_path(path).ok()?;
         // Getting attributes using `GetFileAttributesW` does not follow symlinks
         // and it will almost always be successful if the link exists.
         // There are some exceptions for special system files (e.g. the pagefile)
@@ -513,9 +522,6 @@ fn program_exists(path: &Path) -> Option<Vec<u16>> {
 impl Stdio {
     fn to_handle(&self, stdio_id: c::DWORD, pipe: &mut Option<AnonPipe>) -> io::Result<Handle> {
         match *self {
-            // If no stdio handle is available, then inherit means that it
-            // should still be unavailable so propagate the
-            // INVALID_HANDLE_VALUE.
             Stdio::Inherit => match stdio::get_handle(stdio_id) {
                 Ok(io) => unsafe {
                     let io = Handle::from_raw_handle(io);
@@ -523,7 +529,8 @@ impl Stdio {
                     io.into_raw_handle();
                     ret
                 },
-                Err(..) => unsafe { Ok(Handle::from_raw_handle(c::INVALID_HANDLE_VALUE)) },
+                // If no stdio handle is available, then propagate the null value.
+                Err(..) => unsafe { Ok(Handle::from_raw_handle(ptr::null_mut())) },
             },
 
             Stdio::MakePipe => {
@@ -730,9 +737,9 @@ fn zeroed_startupinfo() -> c::STARTUPINFO {
         wShowWindow: 0,
         cbReserved2: 0,
         lpReserved2: ptr::null_mut(),
-        hStdInput: c::INVALID_HANDLE_VALUE,
-        hStdOutput: c::INVALID_HANDLE_VALUE,
-        hStdError: c::INVALID_HANDLE_VALUE,
+        hStdInput: ptr::null_mut(),
+        hStdOutput: ptr::null_mut(),
+        hStdError: ptr::null_mut(),
     }
 }
 

@@ -3,13 +3,14 @@
 use crate::prelude::*;
 
 use cranelift_codegen::ir::immediates::Offset32;
+use cranelift_codegen::ir::{InstructionData, Opcode};
 
 fn codegen_field<'tcx>(
     fx: &mut FunctionCx<'_, '_, 'tcx>,
     base: Pointer,
     extra: Option<Value>,
     layout: TyAndLayout<'tcx>,
-    field: mir::Field,
+    field: FieldIdx,
 ) -> (Pointer, TyAndLayout<'tcx>) {
     let field_offset = layout.fields.offset(field.index());
     let field_layout = layout.field(&*fx, field.index());
@@ -19,7 +20,7 @@ fn codegen_field<'tcx>(
     };
 
     if let Some(extra) = extra {
-        if !field_layout.is_unsized() {
+        if field_layout.is_sized() {
             return simple(fx);
         }
         match field_layout.ty.kind() {
@@ -108,8 +109,8 @@ impl<'tcx> CValue<'tcx> {
     }
 
     // FIXME remove
-    // Forces the data value of a dyn* value to the stack and returns a pointer to it as well as the
-    // vtable pointer.
+    /// Forces the data value of a dyn* value to the stack and returns a pointer to it as well as the
+    /// vtable pointer.
     pub(crate) fn dyn_star_force_data_on_stack(
         self,
         fx: &mut FunctionCx<'_, '_, 'tcx>,
@@ -209,7 +210,7 @@ impl<'tcx> CValue<'tcx> {
     pub(crate) fn value_field(
         self,
         fx: &mut FunctionCx<'_, '_, 'tcx>,
-        field: mir::Field,
+        field: FieldIdx,
     ) -> CValue<'tcx> {
         let layout = self.1;
         match self.0 {
@@ -364,7 +365,7 @@ impl<'tcx> CPlace<'tcx> {
         fx: &mut FunctionCx<'_, '_, 'tcx>,
         layout: TyAndLayout<'tcx>,
     ) -> CPlace<'tcx> {
-        assert!(!layout.is_unsized());
+        assert!(layout.is_sized());
         if layout.size.bytes() == 0 {
             return CPlace {
                 inner: CPlaceInner::Addr(Pointer::dangling(layout.align.pref), None),
@@ -392,7 +393,7 @@ impl<'tcx> CPlace<'tcx> {
         local: Local,
         layout: TyAndLayout<'tcx>,
     ) -> CPlace<'tcx> {
-        let var = Variable::with_u32(fx.next_ssa_var);
+        let var = Variable::from_u32(fx.next_ssa_var);
         fx.next_ssa_var += 1;
         fx.bcx.declare_var(var, fx.clif_type(layout.ty).unwrap());
         CPlace { inner: CPlaceInner::Var(local, var), layout }
@@ -403,9 +404,9 @@ impl<'tcx> CPlace<'tcx> {
         local: Local,
         layout: TyAndLayout<'tcx>,
     ) -> CPlace<'tcx> {
-        let var1 = Variable::with_u32(fx.next_ssa_var);
+        let var1 = Variable::from_u32(fx.next_ssa_var);
         fx.next_ssa_var += 1;
-        let var2 = Variable::with_u32(fx.next_ssa_var);
+        let var2 = Variable::from_u32(fx.next_ssa_var);
         fx.next_ssa_var += 1;
 
         let (ty1, ty2) = fx.clif_pair_type(layout.ty).unwrap();
@@ -457,6 +458,7 @@ impl<'tcx> CPlace<'tcx> {
         }
     }
 
+    #[track_caller]
     pub(crate) fn to_ptr(self) -> Pointer {
         match self.to_ptr_maybe_unsized() {
             (ptr, None) => ptr,
@@ -464,6 +466,7 @@ impl<'tcx> CPlace<'tcx> {
         }
     }
 
+    #[track_caller]
     pub(crate) fn to_ptr_maybe_unsized(self) -> (Pointer, Option<Value>) {
         match self.inner {
             CPlaceInner::Addr(ptr, extra) => (ptr, extra),
@@ -514,10 +517,8 @@ impl<'tcx> CPlace<'tcx> {
                 (types::I32, types::F32)
                 | (types::F32, types::I32)
                 | (types::I64, types::F64)
-                | (types::F64, types::I64) => fx.bcx.ins().bitcast(dst_ty, data),
-                _ if src_ty.is_vector() && dst_ty.is_vector() => {
-                    fx.bcx.ins().raw_bitcast(dst_ty, data)
-                }
+                | (types::F64, types::I64) => codegen_bitcast(fx, dst_ty, data),
+                _ if src_ty.is_vector() && dst_ty.is_vector() => codegen_bitcast(fx, dst_ty, data),
                 _ if src_ty.is_vector() || dst_ty.is_vector() => {
                     // FIXME do something more efficient for transmutes between vectors and integers.
                     let stack_slot = fx.bcx.create_sized_stack_slot(StackSlotData {
@@ -566,8 +567,8 @@ impl<'tcx> CPlace<'tcx> {
             CPlaceInner::Var(_local, var) => {
                 if let ty::Array(element, len) = dst_layout.ty.kind() {
                     // Can only happen for vector types
-                    let len =
-                        u32::try_from(len.eval_usize(fx.tcx, ParamEnv::reveal_all())).unwrap();
+                    let len = u32::try_from(len.eval_target_usize(fx.tcx, ParamEnv::reveal_all()))
+                        .unwrap();
                     let vector_ty = fx.clif_type(*element).unwrap().by(len).unwrap();
 
                     let data = match from.0 {
@@ -590,7 +591,13 @@ impl<'tcx> CPlace<'tcx> {
                 return;
             }
             CPlaceInner::VarPair(_local, var1, var2) => {
-                let (data1, data2) = CValue(from.0, dst_layout).load_scalar_pair(fx);
+                let (data1, data2) = if from.layout().ty == dst_layout.ty {
+                    CValue(from.0, dst_layout).load_scalar_pair(fx)
+                } else {
+                    let (ptr, meta) = from.force_stack(fx);
+                    assert!(meta.is_none());
+                    CValue(CValueInner::ByRef(ptr, None), dst_layout).load_scalar_pair(fx)
+                };
                 let (dst_ty1, dst_ty2) = fx.clif_pair_type(self.layout().ty).unwrap();
                 transmute_value(fx, var1, data1, dst_ty1);
                 transmute_value(fx, var2, data2, dst_ty2);
@@ -680,7 +687,7 @@ impl<'tcx> CPlace<'tcx> {
     pub(crate) fn place_field(
         self,
         fx: &mut FunctionCx<'_, '_, 'tcx>,
-        field: mir::Field,
+        field: FieldIdx,
     ) -> CPlace<'tcx> {
         let layout = self.layout();
 
@@ -694,7 +701,8 @@ impl<'tcx> CPlace<'tcx> {
                     };
                 }
                 ty::Adt(adt_def, substs) if layout.ty.is_simd() => {
-                    let f0_ty = adt_def.non_enum_variant().fields[0].ty(fx.tcx, substs);
+                    let f0 = &adt_def.non_enum_variant().fields[FieldIdx::from_u32(0)];
+                    let f0_ty = f0.ty(fx.tcx, substs);
 
                     match f0_ty.kind() {
                         ty::Array(_, _) => {
@@ -783,7 +791,36 @@ impl<'tcx> CPlace<'tcx> {
         index: Value,
     ) -> CPlace<'tcx> {
         let (elem_layout, ptr) = match self.layout().ty.kind() {
-            ty::Array(elem_ty, _) => (fx.layout_of(*elem_ty), self.to_ptr()),
+            ty::Array(elem_ty, _) => {
+                let elem_layout = fx.layout_of(*elem_ty);
+                match self.inner {
+                    CPlaceInner::Var(local, var) => {
+                        // This is a hack to handle `vector_val.0[1]`. It doesn't allow dynamic
+                        // indexing.
+                        let lane_idx = match fx.bcx.func.dfg.insts
+                            [fx.bcx.func.dfg.value_def(index).unwrap_inst()]
+                        {
+                            InstructionData::UnaryImm { opcode: Opcode::Iconst, imm } => imm,
+                            _ => bug!(
+                                "Dynamic indexing into a vector type is not supported: {self:?}[{index}]"
+                            ),
+                        };
+                        return CPlace {
+                            inner: CPlaceInner::VarLane(
+                                local,
+                                var,
+                                lane_idx.bits().try_into().unwrap(),
+                            ),
+                            layout: elem_layout,
+                        };
+                    }
+                    CPlaceInner::Addr(addr, None) => (elem_layout, addr),
+                    CPlaceInner::Addr(_, Some(_))
+                    | CPlaceInner::VarPair(_, _, _)
+                    | CPlaceInner::VarLane(_, _, _) => bug!("Can't index into {self:?}"),
+                }
+                // FIXME use VarLane in case of Var with simd type
+            }
             ty::Slice(elem_ty) => (fx.layout_of(*elem_ty), self.to_ptr_maybe_unsized().0),
             _ => bug!("place_index({:?})", self.layout().ty),
         };
@@ -825,7 +862,7 @@ impl<'tcx> CPlace<'tcx> {
         fx: &FunctionCx<'_, '_, 'tcx>,
         variant: VariantIdx,
     ) -> Self {
-        assert!(!self.layout().is_unsized());
+        assert!(self.layout().is_sized());
         let layout = self.layout().for_variant(fx, variant);
         CPlace { inner: self.inner, layout }
     }

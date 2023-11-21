@@ -6,20 +6,20 @@
 //! kernel into `&str` references, which assumes that they're NUL-terminated.
 #![allow(unsafe_code)]
 
+use crate::backend;
 use crate::ffi::CStr;
-use crate::imp;
 use core::fmt;
 
 /// `uname()`—Returns high-level information about the runtime OS and
 /// hardware.
 #[inline]
 pub fn uname() -> Uname {
-    Uname(imp::process::syscalls::uname())
+    Uname(backend::process::syscalls::uname())
 }
 
 /// `struct utsname`—Return type for [`uname`].
 #[doc(alias = "utsname")]
-pub struct Uname(imp::process::types::RawUname);
+pub struct Uname(backend::process::types::RawUname);
 
 impl Uname {
     /// `sysname`—Operating system release name
@@ -65,7 +65,7 @@ impl Uname {
 
     #[inline]
     fn to_cstr<'a>(ptr: *const u8) -> &'a CStr {
-        // Safety: Strings returned from the kernel are always NUL-terminated.
+        // SAFETY: Strings returned from the kernel are always NUL-terminated.
         unsafe { CStr::from_ptr(ptr.cast()) }
     }
 }

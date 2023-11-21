@@ -3,13 +3,13 @@
 use base_db::{CrateOrigin, LangCrateOrigin};
 use tracing::debug;
 
+use crate::tt::{self, TokenId};
 use syntax::{
     ast::{self, AstNode, HasGenericParams, HasModuleItem, HasName},
     match_ast,
 };
-use tt::TokenId;
 
-use crate::{db::AstDatabase, name, quote, ExpandError, ExpandResult, MacroCallId};
+use crate::{db::ExpandDatabase, name, quote, ExpandError, ExpandResult, MacroCallId};
 
 macro_rules! register_builtin {
     ( $($trait:ident => $expand:ident),* ) => {
@@ -21,7 +21,7 @@ macro_rules! register_builtin {
         impl BuiltinDeriveExpander {
             pub fn expand(
                 &self,
-                db: &dyn AstDatabase,
+                db: &dyn ExpandDatabase,
                 id: MacroCallId,
                 tt: &tt::Subtree,
             ) -> ExpandResult<tt::Subtree> {
@@ -92,7 +92,7 @@ fn parse_adt(tt: &tt::Subtree) -> Result<BasicAdtInfo, ExpandError> {
     })?;
     let name_token_id =
         token_map.token_by_range(name.syntax().text_range()).unwrap_or_else(TokenId::unspecified);
-    let name_token = tt::Ident { id: name_token_id, text: name.text().into() };
+    let name_token = tt::Ident { span: name_token_id, text: name.text().into() };
     let param_types = params
         .into_iter()
         .flat_map(|param_list| param_list.type_or_const_params())
@@ -101,7 +101,7 @@ fn parse_adt(tt: &tt::Subtree) -> Result<BasicAdtInfo, ExpandError> {
                 let ty = param
                     .ty()
                     .map(|ty| mbe::syntax_node_to_token_tree(ty.syntax()).0)
-                    .unwrap_or_default();
+                    .unwrap_or_else(tt::Subtree::empty);
                 Some(ty)
             } else {
                 None
@@ -114,7 +114,7 @@ fn parse_adt(tt: &tt::Subtree) -> Result<BasicAdtInfo, ExpandError> {
 fn expand_simple_derive(tt: &tt::Subtree, trait_path: tt::Subtree) -> ExpandResult<tt::Subtree> {
     let info = match parse_adt(tt) {
         Ok(info) => info,
-        Err(e) => return ExpandResult::only_err(e),
+        Err(e) => return ExpandResult::with_err(tt::Subtree::empty(), e),
     };
     let (params, args): (Vec<_>, Vec<_>) = info
         .param_types
@@ -122,7 +122,7 @@ fn expand_simple_derive(tt: &tt::Subtree, trait_path: tt::Subtree) -> ExpandResu
         .enumerate()
         .map(|(idx, param_ty)| {
             let ident = tt::Leaf::Ident(tt::Ident {
-                id: tt::TokenId::unspecified(),
+                span: tt::TokenId::unspecified(),
                 text: format!("T{idx}").into(),
             });
             let ident_ = ident.clone();
@@ -141,7 +141,7 @@ fn expand_simple_derive(tt: &tt::Subtree, trait_path: tt::Subtree) -> ExpandResu
     ExpandResult::ok(expanded)
 }
 
-fn find_builtin_crate(db: &dyn AstDatabase, id: MacroCallId) -> tt::TokenTree {
+fn find_builtin_crate(db: &dyn ExpandDatabase, id: MacroCallId) -> tt::TokenTree {
     // FIXME: make hygiene works for builtin derive macro
     // such that $crate can be used here.
     let cg = db.crate_graph();
@@ -158,7 +158,7 @@ fn find_builtin_crate(db: &dyn AstDatabase, id: MacroCallId) -> tt::TokenTree {
 }
 
 fn copy_expand(
-    db: &dyn AstDatabase,
+    db: &dyn ExpandDatabase,
     id: MacroCallId,
     tt: &tt::Subtree,
 ) -> ExpandResult<tt::Subtree> {
@@ -167,7 +167,7 @@ fn copy_expand(
 }
 
 fn clone_expand(
-    db: &dyn AstDatabase,
+    db: &dyn ExpandDatabase,
     id: MacroCallId,
     tt: &tt::Subtree,
 ) -> ExpandResult<tt::Subtree> {
@@ -176,7 +176,7 @@ fn clone_expand(
 }
 
 fn default_expand(
-    db: &dyn AstDatabase,
+    db: &dyn ExpandDatabase,
     id: MacroCallId,
     tt: &tt::Subtree,
 ) -> ExpandResult<tt::Subtree> {
@@ -185,7 +185,7 @@ fn default_expand(
 }
 
 fn debug_expand(
-    db: &dyn AstDatabase,
+    db: &dyn ExpandDatabase,
     id: MacroCallId,
     tt: &tt::Subtree,
 ) -> ExpandResult<tt::Subtree> {
@@ -194,7 +194,7 @@ fn debug_expand(
 }
 
 fn hash_expand(
-    db: &dyn AstDatabase,
+    db: &dyn ExpandDatabase,
     id: MacroCallId,
     tt: &tt::Subtree,
 ) -> ExpandResult<tt::Subtree> {
@@ -202,13 +202,17 @@ fn hash_expand(
     expand_simple_derive(tt, quote! { #krate::hash::Hash })
 }
 
-fn eq_expand(db: &dyn AstDatabase, id: MacroCallId, tt: &tt::Subtree) -> ExpandResult<tt::Subtree> {
+fn eq_expand(
+    db: &dyn ExpandDatabase,
+    id: MacroCallId,
+    tt: &tt::Subtree,
+) -> ExpandResult<tt::Subtree> {
     let krate = find_builtin_crate(db, id);
     expand_simple_derive(tt, quote! { #krate::cmp::Eq })
 }
 
 fn partial_eq_expand(
-    db: &dyn AstDatabase,
+    db: &dyn ExpandDatabase,
     id: MacroCallId,
     tt: &tt::Subtree,
 ) -> ExpandResult<tt::Subtree> {
@@ -217,7 +221,7 @@ fn partial_eq_expand(
 }
 
 fn ord_expand(
-    db: &dyn AstDatabase,
+    db: &dyn ExpandDatabase,
     id: MacroCallId,
     tt: &tt::Subtree,
 ) -> ExpandResult<tt::Subtree> {
@@ -226,7 +230,7 @@ fn ord_expand(
 }
 
 fn partial_ord_expand(
-    db: &dyn AstDatabase,
+    db: &dyn ExpandDatabase,
     id: MacroCallId,
     tt: &tt::Subtree,
 ) -> ExpandResult<tt::Subtree> {

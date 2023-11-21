@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use super::OutputFormatter;
 use crate::{
-    console::{ConsoleTestState, OutputLocation},
+    console::{ConsoleTestDiscoveryState, ConsoleTestState, OutputLocation},
     test_result::TestResult,
     time,
     types::{TestDesc, TestType},
@@ -27,6 +27,18 @@ impl<T: Write> JunitFormatter<T> {
 }
 
 impl<T: Write> OutputFormatter for JunitFormatter<T> {
+    fn write_discovery_start(&mut self) -> io::Result<()> {
+        Err(io::Error::new(io::ErrorKind::NotFound, "Not yet implemented!"))
+    }
+
+    fn write_test_discovered(&mut self, _desc: &TestDesc, _test_type: &str) -> io::Result<()> {
+        Err(io::Error::new(io::ErrorKind::NotFound, "Not yet implemented!"))
+    }
+
+    fn write_discovery_finish(&mut self, _state: &ConsoleTestDiscoveryState) -> io::Result<()> {
+        Err(io::Error::new(io::ErrorKind::NotFound, "Not yet implemented!"))
+    }
+
     fn write_run_start(
         &mut self,
         _test_count: usize,
@@ -64,7 +76,7 @@ impl<T: Write> OutputFormatter for JunitFormatter<T> {
     fn write_run_finish(&mut self, state: &ConsoleTestState) -> io::Result<bool> {
         self.write_message("<testsuites>")?;
 
-        self.write_message(&*format!(
+        self.write_message(&format!(
             "<testsuite name=\"test\" package=\"test\" id=\"0\" \
              errors=\"0\" \
              failures=\"{}\" \
@@ -73,12 +85,12 @@ impl<T: Write> OutputFormatter for JunitFormatter<T> {
              >",
             state.failed, state.total, state.ignored
         ))?;
-        for (desc, result, duration) in std::mem::replace(&mut self.results, Vec::new()) {
+        for (desc, result, duration) in std::mem::take(&mut self.results) {
             let (class_name, test_name) = parse_class_name(&desc);
             match result {
                 TestResult::TrIgnored => { /* no-op */ }
                 TestResult::TrFailed => {
-                    self.write_message(&*format!(
+                    self.write_message(&format!(
                         "<testcase classname=\"{}\" \
                          name=\"{}\" time=\"{}\">",
                         class_name,
@@ -90,19 +102,19 @@ impl<T: Write> OutputFormatter for JunitFormatter<T> {
                 }
 
                 TestResult::TrFailedMsg(ref m) => {
-                    self.write_message(&*format!(
+                    self.write_message(&format!(
                         "<testcase classname=\"{}\" \
                          name=\"{}\" time=\"{}\">",
                         class_name,
                         test_name,
                         duration.as_secs_f64()
                     ))?;
-                    self.write_message(&*format!("<failure message=\"{m}\" type=\"assert\"/>"))?;
+                    self.write_message(&format!("<failure message=\"{m}\" type=\"assert\"/>"))?;
                     self.write_message("</testcase>")?;
                 }
 
                 TestResult::TrTimedFail => {
-                    self.write_message(&*format!(
+                    self.write_message(&format!(
                         "<testcase classname=\"{}\" \
                          name=\"{}\" time=\"{}\">",
                         class_name,
@@ -114,7 +126,7 @@ impl<T: Write> OutputFormatter for JunitFormatter<T> {
                 }
 
                 TestResult::TrBench(ref b) => {
-                    self.write_message(&*format!(
+                    self.write_message(&format!(
                         "<testcase classname=\"benchmark::{}\" \
                          name=\"{}\" time=\"{}\" />",
                         class_name, test_name, b.ns_iter_summ.sum
@@ -122,7 +134,7 @@ impl<T: Write> OutputFormatter for JunitFormatter<T> {
                 }
 
                 TestResult::TrOk => {
-                    self.write_message(&*format!(
+                    self.write_message(&format!(
                         "<testcase classname=\"{}\" \
                          name=\"{}\" time=\"{}\"/>",
                         class_name,

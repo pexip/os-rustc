@@ -3,7 +3,7 @@
 use super::err2io;
 use super::fd::WasiFd;
 use crate::fmt;
-use crate::io::{self, IoSlice, IoSliceMut};
+use crate::io::{self, BorrowedCursor, IoSlice, IoSliceMut};
 use crate::net::{Ipv4Addr, Ipv6Addr, Shutdown, SocketAddr};
 use crate::os::wasi::io::{AsFd, AsRawFd, BorrowedFd, FromRawFd, IntoRawFd, RawFd};
 use crate::sys::unsupported;
@@ -91,6 +91,10 @@ impl TcpStream {
         self.read_vectored(&mut [IoSliceMut::new(buf)])
     }
 
+    pub fn read_buf(&self, buf: BorrowedCursor<'_>) -> io::Result<()> {
+        self.socket().as_inner().read_buf(buf)
+    }
+
     pub fn read_vectored(&self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
         self.socket().as_inner().read(bufs)
     }
@@ -119,8 +123,14 @@ impl TcpStream {
         unsupported()
     }
 
-    pub fn shutdown(&self, _: Shutdown) -> io::Result<()> {
-        unsupported()
+    pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
+        let wasi_how = match how {
+            Shutdown::Read => wasi::SDFLAGS_RD,
+            Shutdown::Write => wasi::SDFLAGS_WR,
+            Shutdown::Both => wasi::SDFLAGS_RD | wasi::SDFLAGS_WR,
+        };
+
+        unsafe { wasi::sock_shutdown(self.socket().as_raw_fd() as _, wasi_how).map_err(err2io) }
     }
 
     pub fn duplicate(&self) -> io::Result<TcpStream> {

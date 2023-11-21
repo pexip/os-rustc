@@ -88,9 +88,11 @@ Feature     | Implicitly Enables | Description
 `avx2`      | `avx`    | [AVX2] — Advanced Vector Extensions 2
 `bmi1`      |          | [BMI1] — Bit Manipulation Instruction Sets
 `bmi2`      |          | [BMI2] — Bit Manipulation Instruction Sets 2
+`cmpxchg16b`|          | [`cmpxchg16b`] - Compares and exchange 16 bytes (128 bits) of data atomically
 `fma`       | `avx`    | [FMA3] — Three-operand fused multiply-add
 `fxsr`      |          | [`fxsave`] and [`fxrstor`] — Save and restore x87 FPU, MMX Technology, and SSE State
 `lzcnt`     |          | [`lzcnt`] — Leading zeros count
+`movbe`     |          | [`movbe`] - Move data after swapping bytes
 `pclmulqdq` | `sse2`   | [`pclmulqdq`] — Packed carry-less multiplication quadword
 `popcnt`    |          | [`popcnt`] — Count of bits set to 1
 `rdrand`    |          | [`rdrand`] — Read random number
@@ -115,10 +117,12 @@ Feature     | Implicitly Enables | Description
 [AVX2]: https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#AVX2
 [BMI1]: https://en.wikipedia.org/wiki/Bit_Manipulation_Instruction_Sets
 [BMI2]: https://en.wikipedia.org/wiki/Bit_Manipulation_Instruction_Sets#BMI2
+[`cmpxchg16b`]: https://www.felixcloutier.com/x86/cmpxchg8b:cmpxchg16b
 [FMA3]: https://en.wikipedia.org/wiki/FMA_instruction_set
 [`fxsave`]: https://www.felixcloutier.com/x86/fxsave
 [`fxrstor`]: https://www.felixcloutier.com/x86/fxrstor
 [`lzcnt`]: https://www.felixcloutier.com/x86/lzcnt
+[`movbe`]: https://www.felixcloutier.com/x86/movbe
 [`pclmulqdq`]: https://www.felixcloutier.com/x86/pclmulqdq
 [`popcnt`]: https://www.felixcloutier.com/x86/popcnt
 [`rdrand`]: https://en.wikipedia.org/wiki/RdRand
@@ -352,3 +356,26 @@ trait object whose methods are attributed.
 [`core::intrinsics::caller_location`]: ../../core/intrinsics/fn.caller_location.html
 [`core::panic::Location::caller`]: ../../core/panic/struct.Location.html#method.caller
 [`Location`]: ../../core/panic/struct.Location.html
+
+## The `instruction_set` attribute
+
+The *`instruction_set` attribute* may be applied to a function to enable code generation for a specific
+instruction set supported by the target architecture. It uses the [_MetaListPath_] syntax and a path
+comprised of the architecture and instruction set to specify how to generate the code for
+architectures where a single program may utilize multiple instruction sets.
+
+The following values are available on targets for the `ARMv4` and `ARMv5te` architectures:
+
+* `arm::a32` - Uses ARM code.
+* `arm::t32` - Uses Thumb code.
+
+<!-- ignore: arm-only -->
+```rust,ignore
+#[instruction_set(arm::a32)]
+fn foo_arm_code() {}
+
+#[instruction_set(arm::t32)]
+fn bar_thumb_code() {}
+```
+
+[_MetaListPath_]: ../attributes.md#meta-item-attribute-syntax

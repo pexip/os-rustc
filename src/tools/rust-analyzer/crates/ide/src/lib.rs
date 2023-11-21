@@ -55,6 +55,7 @@ mod syntax_tree;
 mod typing;
 mod view_crate_graph;
 mod view_hir;
+mod view_mir;
 mod view_item_tree;
 mod shuffle_crate_graph;
 
@@ -81,8 +82,9 @@ pub use crate::{
     highlight_related::{HighlightRelatedConfig, HighlightedRange},
     hover::{HoverAction, HoverConfig, HoverDocFormat, HoverGotoTypeData, HoverResult},
     inlay_hints::{
-        ClosureReturnTypeHints, InlayHint, InlayHintLabel, InlayHintsConfig, InlayKind,
-        InlayTooltip, LifetimeElisionHints, ReborrowHints,
+        AdjustmentHints, AdjustmentHintsMode, ClosureReturnTypeHints, DiscriminantHints, InlayHint,
+        InlayHintLabel, InlayHintLabelPart, InlayHintsConfig, InlayKind, InlayTooltip,
+        LifetimeElisionHints,
     },
     join_lines::JoinLinesConfig,
     markup::Markup,
@@ -114,7 +116,7 @@ pub use ide_db::{
         SourceRoot, SourceRootId,
     },
     label::Label,
-    line_index::{LineCol, LineColUtf16, LineIndex},
+    line_index::{LineCol, LineIndex},
     search::{ReferenceCategory, SearchScope},
     source_change::{FileSystemEdit, SourceChange},
     symbol_index::Query,
@@ -236,6 +238,7 @@ impl Analysis {
             Ok(Vec::new()),
             false,
             CrateOrigin::CratesIo { repo: None, name: None },
+            Err("Analysis::from_single_file has no target layout".into()),
         );
         change.change_file(file_id, Some(Arc::new(text)));
         change.set_crate_graph(crate_graph);
@@ -306,6 +309,10 @@ impl Analysis {
         self.with_db(|db| view_hir::view_hir(db, position))
     }
 
+    pub fn view_mir(&self, position: FilePosition) -> Cancellable<String> {
+        self.with_db(|db| view_mir::view_mir(db, position))
+    }
+
     pub fn view_item_tree(&self, file_id: FileId) -> Cancellable<String> {
         self.with_db(|db| view_item_tree::view_item_tree(db, file_id))
     }
@@ -367,7 +374,7 @@ impl Analysis {
         &self,
         config: &InlayHintsConfig,
         file_id: FileId,
-        range: Option<FileRange>,
+        range: Option<TextRange>,
     ) -> Cancellable<Vec<InlayHint>> {
         self.with_db(|db| inlay_hints::inlay_hints(db, file_id, range, config))
     }

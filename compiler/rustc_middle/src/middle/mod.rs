@@ -19,7 +19,7 @@ pub mod lib_features {
                 .stable
                 .iter()
                 .map(|(f, (s, _))| (*f, Some(*s)))
-                .chain(self.unstable.iter().map(|(f, _)| (*f, None)))
+                .chain(self.unstable.keys().map(|f| (*f, None)))
                 .collect();
             all_features.sort_unstable_by(|a, b| a.0.as_str().partial_cmp(b.0.as_str()).unwrap());
             all_features
@@ -29,7 +29,7 @@ pub mod lib_features {
 pub mod limits;
 pub mod privacy;
 pub mod region;
-pub mod resolve_lifetime;
+pub mod resolve_bound_vars;
 pub mod stability;
 
 pub fn provide(providers: &mut crate::ty::query::Providers) {

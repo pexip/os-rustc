@@ -291,9 +291,8 @@
 
 use self::ArmType::*;
 use self::Usefulness::*;
-
-use super::check_match::{joined_uncovered_patterns, pattern_not_covered_label};
 use super::deconstruct_pat::{Constructor, DeconstructedPat, Fields, SplitWildcard};
+use crate::errors::{NonExhaustiveOmittedPattern, Uncovered};
 
 use rustc_data_structures::captures::Captures;
 
@@ -319,12 +318,14 @@ pub(crate) struct MatchCheckCtxt<'p, 'tcx> {
     pub(crate) module: DefId,
     pub(crate) param_env: ty::ParamEnv<'tcx>,
     pub(crate) pattern_arena: &'p TypedArena<DeconstructedPat<'p, 'tcx>>,
+    /// Only produce `NON_EXHAUSTIVE_OMITTED_PATTERNS` lint on refutable patterns.
+    pub(crate) refutable: bool,
 }
 
 impl<'a, 'tcx> MatchCheckCtxt<'a, 'tcx> {
     pub(super) fn is_uninhabited(&self, ty: Ty<'tcx>) -> bool {
         if self.tcx.features().exhaustive_patterns {
-            self.tcx.is_ty_uninhabited_from(self.module, ty, self.param_env)
+            !ty.is_inhabited_from(self.tcx, self.module, self.param_env)
         } else {
             false
         }
@@ -604,7 +605,7 @@ impl<'p, 'tcx> Usefulness<'p, 'tcx> {
                     let new_patterns = if pcx.is_non_exhaustive {
                         // Here we don't want the user to try to list all variants, we want them to add
                         // a wildcard, so we only suggest that.
-                        vec![DeconstructedPat::wildcard(pcx.ty)]
+                        vec![DeconstructedPat::wildcard(pcx.ty, pcx.span)]
                     } else {
                         let mut split_wildcard = SplitWildcard::new(pcx);
                         split_wildcard.split(pcx, matrix.heads().map(DeconstructedPat::ctor));
@@ -631,7 +632,7 @@ impl<'p, 'tcx> Usefulness<'p, 'tcx> {
                             .collect();
 
                         if hide_variant_show_wild {
-                            new.push(DeconstructedPat::wildcard(pcx.ty));
+                            new.push(DeconstructedPat::wildcard(pcx.ty, pcx.span));
                         }
 
                         new
@@ -734,38 +735,13 @@ impl<'p, 'tcx> Witness<'p, 'tcx> {
             let arity = ctor.arity(pcx);
             let pats = self.0.drain((len - arity)..).rev();
             let fields = Fields::from_iter(pcx.cx, pats);
-            DeconstructedPat::new(ctor.clone(), fields, pcx.ty, DUMMY_SP)
+            DeconstructedPat::new(ctor.clone(), fields, pcx.ty, pcx.span)
         };
 
         self.0.push(pat);
 
         self
     }
-}
-
-/// Report that a match of a `non_exhaustive` enum marked with `non_exhaustive_omitted_patterns`
-/// is not exhaustive enough.
-///
-/// NB: The partner lint for structs lives in `compiler/rustc_hir_analysis/src/check/pat.rs`.
-fn lint_non_exhaustive_omitted_patterns<'p, 'tcx>(
-    cx: &MatchCheckCtxt<'p, 'tcx>,
-    scrut_ty: Ty<'tcx>,
-    sp: Span,
-    hir_id: HirId,
-    witnesses: Vec<DeconstructedPat<'p, 'tcx>>,
-) {
-    cx.tcx.struct_span_lint_hir(NON_EXHAUSTIVE_OMITTED_PATTERNS, hir_id, sp, "some variants are not matched explicitly", |lint| {
-        let joined_patterns = joined_uncovered_patterns(cx, &witnesses);
-        lint.span_label(sp, pattern_not_covered_label(&witnesses, &joined_patterns));
-        lint.help(
-            "ensure that all variants are matched explicitly by adding the suggested match arms",
-        );
-        lint.note(&format!(
-            "the matched value is of type `{}` and the `non_exhaustive_omitted_patterns` attribute was found",
-            scrut_ty,
-        ));
-        lint
-    });
 }
 
 /// Algorithm from <http://moscova.inria.fr/~maranget/papers/warn/index.html>.
@@ -790,13 +766,13 @@ fn lint_non_exhaustive_omitted_patterns<'p, 'tcx>(
 /// `is_under_guard` is used to inform if the pattern has a guard. If it
 /// has one it must not be inserted into the matrix. This shouldn't be
 /// relied on for soundness.
-#[instrument(level = "debug", skip(cx, matrix, hir_id), ret)]
+#[instrument(level = "debug", skip(cx, matrix, lint_root), ret)]
 fn is_useful<'p, 'tcx>(
     cx: &MatchCheckCtxt<'p, 'tcx>,
     matrix: &Matrix<'p, 'tcx>,
     v: &PatStack<'p, 'tcx>,
     witness_preference: ArmType,
-    hir_id: HirId,
+    lint_root: HirId,
     is_under_guard: bool,
     is_top_level: bool,
 ) -> Usefulness<'p, 'tcx> {
@@ -829,7 +805,7 @@ fn is_useful<'p, 'tcx>(
         for v in v.expand_or_pat() {
             debug!(?v);
             let usefulness = ensure_sufficient_stack(|| {
-                is_useful(cx, &matrix, &v, witness_preference, hir_id, is_under_guard, false)
+                is_useful(cx, &matrix, &v, witness_preference, lint_root, is_under_guard, false)
             });
             debug!(?usefulness);
             ret.extend(usefulness);
@@ -845,7 +821,7 @@ fn is_useful<'p, 'tcx>(
 
         // Opaque types can't get destructured/split, but the patterns can
         // actually hint at hidden types, so we use the patterns' types instead.
-        if let ty::Opaque(..) = ty.kind() {
+        if let ty::Alias(ty::Opaque, ..) = ty.kind() {
             if let Some(row) = rows.first() {
                 ty = row.head().ty();
             }
@@ -862,7 +838,7 @@ fn is_useful<'p, 'tcx>(
                 pcx,
                 matrix.heads(),
                 matrix.column_count().unwrap_or(0),
-                hir_id,
+                lint_root,
             )
         }
         // We split the head constructor of `v`.
@@ -877,7 +853,15 @@ fn is_useful<'p, 'tcx>(
             let spec_matrix = start_matrix.specialize_constructor(pcx, &ctor);
             let v = v.pop_head_constructor(pcx, &ctor);
             let usefulness = ensure_sufficient_stack(|| {
-                is_useful(cx, &spec_matrix, &v, witness_preference, hir_id, is_under_guard, false)
+                is_useful(
+                    cx,
+                    &spec_matrix,
+                    &v,
+                    witness_preference,
+                    lint_root,
+                    is_under_guard,
+                    false,
+                )
             });
             let usefulness = usefulness.apply_constructor(pcx, start_matrix, &ctor);
 
@@ -885,6 +869,8 @@ fn is_useful<'p, 'tcx>(
             // that has the potential to trigger the `non_exhaustive_omitted_patterns` lint.
             // To understand the workings checkout `Constructor::split` and `SplitWildcard::new/into_ctors`
             if is_non_exhaustive_and_wild
+                // Only emit a lint on refutable patterns.
+                && cx.refutable
                 // We check that the match has a wildcard pattern and that wildcard is useful,
                 // meaning there are variants that are covered by the wildcard. Without the check
                 // for `witness_preference` the lint would trigger on `if let NonExhaustiveEnum::A = foo {}`
@@ -913,7 +899,19 @@ fn is_useful<'p, 'tcx>(
                         .collect::<Vec<_>>()
                 };
 
-                lint_non_exhaustive_omitted_patterns(pcx.cx, pcx.ty, pcx.span, hir_id, patterns);
+                // Report that a match of a `non_exhaustive` enum marked with `non_exhaustive_omitted_patterns`
+                // is not exhaustive enough.
+                //
+                // NB: The partner lint for structs lives in `compiler/rustc_hir_analysis/src/check/pat.rs`.
+                cx.tcx.emit_spanned_lint(
+                    NON_EXHAUSTIVE_OMITTED_PATTERNS,
+                    lint_root,
+                    pcx.span,
+                    NonExhaustiveOmittedPattern {
+                        scrut_ty: pcx.ty,
+                        uncovered: Uncovered::new(pcx.span, pcx.cx, patterns),
+                    },
+                );
             }
 
             ret.extend(usefulness);
@@ -965,7 +963,7 @@ pub(crate) struct UsefulnessReport<'p, 'tcx> {
 pub(crate) fn compute_match_usefulness<'p, 'tcx>(
     cx: &MatchCheckCtxt<'p, 'tcx>,
     arms: &[MatchArm<'p, 'tcx>],
-    scrut_hir_id: HirId,
+    lint_root: HirId,
     scrut_ty: Ty<'tcx>,
 ) -> UsefulnessReport<'p, 'tcx> {
     let mut matrix = Matrix::empty();
@@ -988,9 +986,9 @@ pub(crate) fn compute_match_usefulness<'p, 'tcx>(
         })
         .collect();
 
-    let wild_pattern = cx.pattern_arena.alloc(DeconstructedPat::wildcard(scrut_ty));
+    let wild_pattern = cx.pattern_arena.alloc(DeconstructedPat::wildcard(scrut_ty, DUMMY_SP));
     let v = PatStack::from_pattern(wild_pattern);
-    let usefulness = is_useful(cx, &matrix, &v, FakeExtraWildcard, scrut_hir_id, false, true);
+    let usefulness = is_useful(cx, &matrix, &v, FakeExtraWildcard, lint_root, false, true);
     let non_exhaustiveness_witnesses = match usefulness {
         WithWitnesses(pats) => pats.into_iter().map(|w| w.single_pattern()).collect(),
         NoWitnesses { .. } => bug!(),

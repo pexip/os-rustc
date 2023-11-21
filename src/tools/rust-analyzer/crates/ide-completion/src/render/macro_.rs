@@ -66,7 +66,7 @@ fn render(
 
     match ctx.snippet_cap() {
         Some(cap) if needs_bang && !has_call_parens => {
-            let snippet = format!("{}!{}$0{}", escaped_name, bra, ket);
+            let snippet = format!("{escaped_name}!{bra}$0{ket}");
             let lookup = banged_name(&name);
             item.insert_snippet(cap, snippet).lookup_by(lookup);
         }
@@ -263,6 +263,65 @@ macro_rules! foo {
 
 fn main() {
     foo!($0)
+}
+"#,
+        );
+    }
+
+    #[test]
+    fn complete_missing_macro_arg() {
+        // Regression test for https://github.com/rust-lang/rust-analyzer/issues/14246
+        check_edit(
+            "BAR",
+            r#"
+macro_rules! foo {
+    ($val:ident,  $val2: ident) => {
+        $val $val2
+    };
+}
+
+const BAR: u32 = 9;
+fn main() {
+    foo!(BAR, $0)
+}
+"#,
+            r#"
+macro_rules! foo {
+    ($val:ident,  $val2: ident) => {
+        $val $val2
+    };
+}
+
+const BAR: u32 = 9;
+fn main() {
+    foo!(BAR, BAR)
+}
+"#,
+        );
+        check_edit(
+            "BAR",
+            r#"
+macro_rules! foo {
+    ($val:ident,  $val2: ident) => {
+        $val $val2
+    };
+}
+
+const BAR: u32 = 9;
+fn main() {
+    foo!($0)
+}
+"#,
+            r#"
+macro_rules! foo {
+    ($val:ident,  $val2: ident) => {
+        $val $val2
+    };
+}
+
+const BAR: u32 = 9;
+fn main() {
+    foo!(BAR)
 }
 "#,
         );

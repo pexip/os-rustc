@@ -1,5 +1,4 @@
 # Debugging the compiler
-[debugging]: #debugging
 
 <!-- toc -->
 
@@ -43,7 +42,7 @@ otherwise you need to disable new symbol-mangling-version in `config.toml`.
 new-symbol-mangling = false
 ```
 
-> See the comments in `config.toml.example` for more info.
+> See the comments in `config.example.toml` for more info.
 
 You will need to rebuild the compiler after changing any configuration option.
 
@@ -128,7 +127,7 @@ fn main() {
 }
 ```
 
-```bash
+```
 $ rustc +stage1 error.rs
 error[E0277]: cannot add `()` to `{integer}`
  --> error.rs:2:7
@@ -143,7 +142,7 @@ error: aborting due to previous error
 
 Now, where does the error above come from?
 
-```bash
+```
 $ RUST_BACKTRACE=1 rustc +stage1 error.rs -Z treat-err-as-bug
 error[E0277]: the trait bound `{integer}: std::ops::Add<()>` is not satisfied
  --> error.rs:2:7
@@ -184,6 +183,40 @@ stack backtrace:
 ```
 
 Cool, now I have a backtrace for the error!
+
+## Getting the error creation location
+
+`-Z track-diagnostics` can help figure out where errors are emitted. It uses `#[track_caller]`
+for this and prints its location alongside the error:
+
+```
+$ RUST_BACKTRACE=1 rustc +stage1 error.rs -Z track-diagnostics
+error[E0277]: cannot add `()` to `{integer}`
+ --> src\error.rs:2:7
+  |
+2 |     1 + ();
+  |       ^ no implementation for `{integer} + ()`
+-Ztrack-diagnostics: created at compiler/rustc_trait_selection/src/traits/error_reporting/mod.rs:638:39
+  |
+  = help: the trait `Add<()>` is not implemented for `{integer}`
+  = help: the following other types implement trait `Add<Rhs>`:
+            <&'a f32 as Add<f32>>
+            <&'a f64 as Add<f64>>
+            <&'a i128 as Add<i128>>
+            <&'a i16 as Add<i16>>
+            <&'a i32 as Add<i32>>
+            <&'a i64 as Add<i64>>
+            <&'a i8 as Add<i8>>
+            <&'a isize as Add<isize>>
+          and 48 others
+
+For more information about this error, try `rustc --explain E0277`.
+```
+
+This is similar but different to `-Z treat-err-as-bug`:
+- it will print the locations for all errors emitted
+- it does not require a compiler built with debug symbols
+- you don't have to read through a big stack trace.
 
 ## Getting logging output
 
@@ -236,7 +269,7 @@ on *why* it was changed.  See [this tutorial][bisect-tutorial] on how to use
 it.
 
 [bisect]: https://github.com/rust-lang/cargo-bisect-rustc
-[bisect-tutorial]: https://github.com/rust-lang/cargo-bisect-rustc/blob/master/TUTORIAL.md
+[bisect-tutorial]: https://rust-lang.github.io/cargo-bisect-rustc/tutorial.html
 
 ## Downloading Artifacts from Rust's CI
 
@@ -307,3 +340,37 @@ error: aborting due to previous error
 ```
 
 [`Layout`]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_target/abi/struct.Layout.html
+
+
+## Configuring CodeLLDB for debugging `rustc`
+
+If you are using VSCode, and have edited your `config.toml` to request debugging
+level 1 or 2 for the parts of the code you're interested in, then you should be
+able to use the [CodeLLDB] extension in VSCode to debug it.
+
+Here is a sample `launch.json` file, being used to run a stage 1 compiler direct
+from the directory where it is built (does not have to be "installed"):
+
+```javascript
+// .vscode/launch.json
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "lldb",
+        "request": "launch",
+        "name": "Launch",
+        "args": [],  // array of string command-line arguments to pass to compiler
+        "program": "${workspaceFolder}/build/host/stage1/bin/rustc",
+        "windows": {  // applicable if using windows
+            "program": "${workspaceFolder}/build/host/stage1/bin/rustc.exe"
+        },
+        "cwd": "${workspaceFolder}",  // current working directory at program start
+        "stopOnEntry": false,
+        "sourceLanguages": ["rust"]
+      }
+    ]
+  }
+```
+
+[CodeLLDB]: https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb
