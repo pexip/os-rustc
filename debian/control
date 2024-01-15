@@ -21,6 +21,7 @@ Build-Depends:
  gcc-mingw-w64-x86-64-posix:native [amd64] <!nowindows>,
  gcc-mingw-w64-i686-posix:native [i386] <!nowindows>,
  libllvm16 (>= 1:16.0.0),
+ libclang-rt-16-dev:native,
  cmake (>= 3.0) | cmake3,
 # needed by some vendor crates
  pkg-config,

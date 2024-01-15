@@ -1,3 +1,35 @@
+rustc (1.70.0+dfsg1-5) unstable; urgency=medium
+
+  * adapt LLVM_PROFILER_RT_LIB path
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Mon, 15 Jan 2024 08:16:35 +0100
+
+rustc (1.70.0+dfsg1-4) unstable; urgency=medium
+
+  * fix libclang-rt-16-dev Build-dep
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Mon, 15 Jan 2024 07:00:08 +0100
+
+rustc (1.70.0+dfsg1-3) unstable; urgency=medium
+
+  [ Andres Salomon ]
+  * Enable profiler builtin and backport u-profiler.patch (closes: #1043311).
+  * Build-dep on libclang-rt-16-dev.
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Sun, 14 Jan 2024 20:06:29 +0100
+
+rustc (1.70.0+dfsg1-2) unstable; urgency=medium
+
+  * Upload to unstable
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Sat, 30 Dec 2023 14:52:00 +0100
+
+rustc (1.70.0+dfsg1-2~exp1) experimental; urgency=medium
+
+  * riscv: disable split debuginfo support
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Sat, 02 Dec 2023 11:19:31 +0100
+
 rustc (1.70.0+dfsg1-1) unstable; urgency=medium
 
   * Upload to unstable
