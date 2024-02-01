@@ -1,3 +1,9 @@
+rustc (1.70.0+dfsg1-1+pexip24u3) pexip-bookworm; urgency=medium
+
+  * New versioning scheme
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Thu, 01 Feb 2024 16:35:06 +0000
+
 rustc (1.70.0+dfsg1-1pexip2) pexip-bookworm; urgency=medium
 
   * Bookworm build for product distribution
