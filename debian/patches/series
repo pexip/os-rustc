@@ -5,6 +5,8 @@ u-reproducible-build.patch
 u-ignore-endian-big-diff.patch
 u-fix-get-toml-when-test.patch
 u-disable-fp-precision-test-on-i386.patch
+u-riscv-disable-unpacked-split-debuginfo.patch
+u-profiler.patch
 
 # not forwarded, or forwarded but unlikely to be merged
 u-ignore-ppc-hangs.patch

@@ -1,0 +1,140 @@
+Description: explicitly disable split unpacked debuginfo for now on riscv64,
+ it's broken and we don't want cargo to auto-enable it..
+ https://github.com/llvm/llvm-project/issues/56642
+ https://github.com/rust-lang/rust/issues/110224Z
+
+diff --git a/compiler/rustc_target/src/spec/riscv64gc_unknown_freebsd.rs b/compiler/rustc_target/src/spec/riscv64gc_unknown_freebsd.rs
+index 8281bac10f..ad1fc624ad 100644
+--- a/compiler/rustc_target/src/spec/riscv64gc_unknown_freebsd.rs
++++ b/compiler/rustc_target/src/spec/riscv64gc_unknown_freebsd.rs
+@@ -1,4 +1,5 @@
+-use crate::spec::{CodeModel, Target, TargetOptions};
++use crate::spec::{CodeModel, SplitDebuginfo, Target, TargetOptions};
++use std::borrow::Cow;
+ 
+ pub fn target() -> Target {
+     Target {
+@@ -12,6 +13,7 @@ pub fn target() -> Target {
+             features: "+m,+a,+f,+d,+c".into(),
+             llvm_abiname: "lp64d".into(),
+             max_atomic_width: Some(64),
++            supported_split_debuginfo: Cow::Borrowed(&[SplitDebuginfo::Off]),
+             ..super::freebsd_base::opts()
+         },
+     }
+diff --git a/compiler/rustc_target/src/spec/riscv64gc_unknown_fuchsia.rs b/compiler/rustc_target/src/spec/riscv64gc_unknown_fuchsia.rs
+index 0585ed76fe..69d11081ac 100644
+--- a/compiler/rustc_target/src/spec/riscv64gc_unknown_fuchsia.rs
++++ b/compiler/rustc_target/src/spec/riscv64gc_unknown_fuchsia.rs
+@@ -1,4 +1,5 @@
+-use crate::spec::{CodeModel, SanitizerSet, Target, TargetOptions};
++use crate::spec::{CodeModel, SanitizerSet, SplitDebuginfo, Target, TargetOptions};
++use std::borrow::Cow;
+ 
+ pub fn target() -> Target {
+     Target {
+@@ -13,6 +14,7 @@ pub fn target() -> Target {
+             llvm_abiname: "lp64d".into(),
+             max_atomic_width: Some(64),
+             supported_sanitizers: SanitizerSet::SHADOWCALLSTACK,
++            supported_split_debuginfo: Cow::Borrowed(&[SplitDebuginfo::Off]),
+             ..super::fuchsia_base::opts()
+         },
+     }
+diff --git a/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_gnu.rs b/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_gnu.rs
+index 90dccb2806..8114e024d1 100644
+--- a/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_gnu.rs
++++ b/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_gnu.rs
+@@ -1,4 +1,5 @@
+-use crate::spec::{CodeModel, Target, TargetOptions};
++use crate::spec::{CodeModel, SplitDebuginfo, Target, TargetOptions};
++use std::borrow::Cow;
+ 
+ pub fn target() -> Target {
+     Target {
+@@ -12,6 +13,7 @@ pub fn target() -> Target {
+             features: "+m,+a,+f,+d,+c".into(),
+             llvm_abiname: "lp64d".into(),
+             max_atomic_width: Some(64),
++            supported_split_debuginfo: Cow::Borrowed(&[SplitDebuginfo::Off]),
+             ..super::linux_gnu_base::opts()
+         },
+     }
+diff --git a/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_musl.rs b/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_musl.rs
+index 1a56c78e68..67dbd2f740 100644
+--- a/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_musl.rs
++++ b/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_musl.rs
+@@ -1,4 +1,5 @@
+-use crate::spec::{CodeModel, Target, TargetOptions};
++use crate::spec::{CodeModel, SplitDebuginfo, Target, TargetOptions};
++use std::borrow::Cow;
+ 
+ pub fn target() -> Target {
+     Target {
+@@ -12,6 +13,7 @@ pub fn target() -> Target {
+             features: "+m,+a,+f,+d,+c".into(),
+             llvm_abiname: "lp64d".into(),
+             max_atomic_width: Some(64),
++            supported_split_debuginfo: Cow::Borrowed(&[SplitDebuginfo::Off]),
+             ..super::linux_musl_base::opts()
+         },
+     }
+diff --git a/compiler/rustc_target/src/spec/riscv64gc_unknown_none_elf.rs b/compiler/rustc_target/src/spec/riscv64gc_unknown_none_elf.rs
+index ab3c14e3fe..a47b63dc94 100644
+--- a/compiler/rustc_target/src/spec/riscv64gc_unknown_none_elf.rs
++++ b/compiler/rustc_target/src/spec/riscv64gc_unknown_none_elf.rs
+@@ -1,5 +1,6 @@
+ use crate::spec::{Cc, CodeModel, LinkerFlavor, Lld, PanicStrategy};
+-use crate::spec::{RelocModel, Target, TargetOptions};
++use crate::spec::{RelocModel, SplitDebuginfo, Target, TargetOptions};
++use std::borrow::Cow;
+ 
+ use super::SanitizerSet;
+ 
+@@ -23,6 +24,7 @@ pub fn target() -> Target {
+             emit_debug_gdb_scripts: false,
+             eh_frame_header: false,
+             supported_sanitizers: SanitizerSet::KERNELADDRESS,
++            supported_split_debuginfo: Cow::Borrowed(&[SplitDebuginfo::Off]),
+             ..Default::default()
+         },
+     }
+diff --git a/compiler/rustc_target/src/spec/riscv64gc_unknown_openbsd.rs b/compiler/rustc_target/src/spec/riscv64gc_unknown_openbsd.rs
+index ade9d77624..b04cea8850 100644
+--- a/compiler/rustc_target/src/spec/riscv64gc_unknown_openbsd.rs
++++ b/compiler/rustc_target/src/spec/riscv64gc_unknown_openbsd.rs
+@@ -1,4 +1,5 @@
+-use crate::spec::{CodeModel, Target, TargetOptions};
++use crate::spec::{CodeModel, SplitDebuginfo, Target, TargetOptions};
++use std::borrow::Cow;
+ 
+ pub fn target() -> Target {
+     Target {
+@@ -12,6 +13,7 @@ pub fn target() -> Target {
+             features: "+m,+a,+f,+d,+c".into(),
+             llvm_abiname: "lp64d".into(),
+             max_atomic_width: Some(64),
++            supported_split_debuginfo: Cow::Borrowed(&[SplitDebuginfo::Off]),
+             ..super::openbsd_base::opts()
+         },
+     }
+diff --git a/compiler/rustc_target/src/spec/riscv64imac_unknown_none_elf.rs b/compiler/rustc_target/src/spec/riscv64imac_unknown_none_elf.rs
+index 0f1821c998..1bec356dcd 100644
+--- a/compiler/rustc_target/src/spec/riscv64imac_unknown_none_elf.rs
++++ b/compiler/rustc_target/src/spec/riscv64imac_unknown_none_elf.rs
+@@ -1,5 +1,6 @@
+ use crate::spec::{Cc, CodeModel, LinkerFlavor, Lld, PanicStrategy};
+-use crate::spec::{RelocModel, SanitizerSet, Target, TargetOptions};
++use crate::spec::{RelocModel, SanitizerSet, SplitDebuginfo, Target, TargetOptions};
++use std::borrow::Cow;
+ 
+ pub fn target() -> Target {
+     Target {
+@@ -20,6 +21,7 @@ pub fn target() -> Target {
+             emit_debug_gdb_scripts: false,
+             eh_frame_header: false,
+             supported_sanitizers: SanitizerSet::KERNELADDRESS,
++            supported_split_debuginfo: Cow::Borrowed(&[SplitDebuginfo::Off]),
+             ..Default::default()
+         },
+     }
