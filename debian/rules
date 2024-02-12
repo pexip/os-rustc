@@ -44,14 +44,14 @@ export LD_LIBRARY_PATH
 endif
 
 # Required for profiler builtin
-CLANG_RT_ARCH := $(DEB_TARGET_GNU_CPU)
-ifeq (i386,$(DEB_TARGET_ARCH))
-CLANG_RT_ARCH = i386
-endif
-ifeq (armhf,$(DEB_TARGET_ARCH))
-CLANG_RT_ARCH = armhf
-endif
-export LLVM_PROFILER_RT_LIB=/usr/lib/llvm-$(LLVM_VERSION)/lib/clang/$(LLVM_VERSION)/lib/linux/libclang_rt.profile-$(CLANG_RT_ARCH).a
+#CLANG_RT_ARCH := $(DEB_TARGET_GNU_CPU)
+#ifeq (i386,$(DEB_TARGET_ARCH))
+#CLANG_RT_ARCH = i386
+#endif
+#ifeq (armhf,$(DEB_TARGET_ARCH))
+#CLANG_RT_ARCH = armhf
+#endif
+#export LLVM_PROFILER_RT_LIB=/usr/lib/llvm-$(LLVM_VERSION)/lib/clang/$(LLVM_VERSION)/lib/linux/libclang_rt.profile-$(CLANG_RT_ARCH).a
 
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
 NJOBS := -j $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))

@@ -1,6 +1,8 @@
 rustc (1.70.0+dfsg1-5+pexip24u1) pexip; urgency=medium
 
   * New upstream release
+  * Revert upstream addition of profiler builtin as it needs a newer llvm than
+    in bookworm.
 
  -- Mark Hymers <mark.hymers@pexip.com>  Mon, 12 Feb 2024 09:36:54 +0000
 
