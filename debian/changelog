@@ -1,3 +1,28 @@
+rustc (1.70.0+dfsg1-7) unstable; urgency=medium
+
+  * profiler: disable on mips64el for now, it's buggy
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Thu, 15 Feb 2024 06:52:19 +0100
+
+rustc (1.70.0+dfsg1-6) unstable; urgency=medium
+
+  [ Fabian Grünbichler ]
+  * fix bootstrap helpers (Closes: #1060808)
+  * rustix: patch both versions to fix racy build
+
+  [ Andres Salomon ]
+  * Fix source_orig-stage0 bootstrapping process to actually include all
+    architectures (closes: #1021711).
+  * Run 'd/rules clean' after running make_orig-stage0_tarball.sh so that the
+    suggestion to rebuild the .dsc actually works.
+  * Don't allow upstream's bootstrap.py to delete .cargo/ directory.
+
+  [ Fabian Grünbichler ]
+  * stage0: use current release architectures as default
+  * disable LLVM profiler support on sparc64 (Closes: #1061125)
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Sun, 11 Feb 2024 20:59:19 +0100
+
 rustc (1.70.0+dfsg1-5) unstable; urgency=medium
 
   * adapt LLVM_PROFILER_RT_LIB path

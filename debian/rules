@@ -51,7 +51,16 @@ endif
 ifeq (armhf,$(DEB_TARGET_ARCH))
 CLANG_RT_ARCH = armhf
 endif
+
+ifneq (,$(filter $(DEB_TARGET_ARCH), sparc64 mips64el)))
+# sparc64: see https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1061125
+# mips64el: has profiler, but buggy atm (32-bit overflow in some counter?)
+CLANG_RT_ARCH =
+PROFILER = "false"
+else
 export LLVM_PROFILER_RT_LIB=/usr/lib/llvm-$(LLVM_VERSION)/lib/clang/$(LLVM_VERSION)/lib/linux/libclang_rt.profile-$(CLANG_RT_ARCH).a
+PROFILER = "true"
+endif
 
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
 NJOBS := -j $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
@@ -219,6 +228,7 @@ debian/config.toml: debian/config.toml.in debian/rules
 		-DLLVM_DESTDIR="$(LLVM_DESTDIR)" \
 		-DLLVM_VERSION="$(LLVM_VERSION)" \
 		-DRUST_DESTDIR="$(RUST_DESTDIR)" \
+		-DPROFILER="$(PROFILER)" \
 		"$<" > "$@"
 	if $(DOWNLOAD_BOOTSTRAP) || [ $(HAVE_BINARY_TARBALL) != 0 ]; \
 	  then sed -i -e '/^rustc = /d' -e '/^cargo = /d' "$@"; fi
@@ -491,6 +501,7 @@ source_orig-stage0:
 	QUILT_PATCHES=debian/patches quilt push -aq; $(QUILT_SPECIAL_SNOWFLAKE_RETURN_CODE)
 	$(MAKE) -f debian/rules clean
 	debian/make_orig-stage0_tarball.sh
+	$(MAKE) -f debian/rules clean
 	QUILT_PATCHES=debian/patches quilt pop -aq; $(QUILT_SPECIAL_SNOWFLAKE_RETURN_CODE)
 	rm -rf .pc
 

@@ -7,7 +7,7 @@
 set -e
 
 upstream_version="$(dpkg-parsechangelog -SVersion | sed -e 's/\(.*\)-.*/\1/g')"
-upstream_bootstrap_arch="${upstream_bootstrap_arch:-amd64 arm64 armhf i386 mips64 mips64el powerpc ppc64 ppc64el s390x}"
+upstream_bootstrap_arch="${upstream_bootstrap_arch:-amd64 arm64 armhf i386 mips64el ppc64el riscv64 s390x}"
 
 rm -f stage0/*/*.sha256
 mkdir -p stage0 build && ln -sf ../stage0 build/cache
