@@ -9,9 +9,11 @@ Subject: d-rustdoc-disable-embedded-fonts
  src/librustdoc/html/static_files.rs        | 23 -----------------------
  3 files changed, 33 deletions(-)
 
---- a/src/librustdoc/html/static/css/rustdoc.css
-+++ b/src/librustdoc/html/static/css/rustdoc.css
-@@ -67,14 +67,6 @@
+Index: rust/src/librustdoc/html/static/css/rustdoc.css
+===================================================================
+--- rust.orig/src/librustdoc/html/static/css/rustdoc.css
++++ rust/src/librustdoc/html/static/css/rustdoc.css
+@@ -79,14 +79,6 @@
  	font-display: swap;
  }
  
@@ -26,9 +28,11 @@ Subject: d-rustdoc-disable-embedded-fonts
  * {
  	box-sizing: border-box;
  }
---- a/src/librustdoc/html/static_files.rs
-+++ b/src/librustdoc/html/static_files.rs
-@@ -126,8 +126,6 @@
+Index: rust/src/librustdoc/html/static_files.rs
+===================================================================
+--- rust.orig/src/librustdoc/html/static_files.rs
++++ rust/src/librustdoc/html/static_files.rs
+@@ -123,8 +123,6 @@ static_files! {
      source_code_pro_semibold => "static/fonts/SourceCodePro-Semibold.ttf.woff2",
      source_code_pro_italic => "static/fonts/SourceCodePro-It.ttf.woff2",
      source_code_pro_license => "static/fonts/SourceCodePro-LICENSE.txt",

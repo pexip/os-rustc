@@ -7,9 +7,11 @@ Subject: d-bootstrap-read-beta-version-from-file
  src/bootstrap/lib.rs | 14 ++++++--------
  1 file changed, 6 insertions(+), 8 deletions(-)
 
---- a/src/bootstrap/lib.rs
-+++ b/src/bootstrap/lib.rs
-@@ -1296,14 +1296,15 @@
+Index: rust/src/bootstrap/lib.rs
+===================================================================
+--- rust.orig/src/bootstrap/lib.rs
++++ rust/src/bootstrap/lib.rs
+@@ -1264,14 +1264,15 @@ impl Build {
              return s;
          }
  

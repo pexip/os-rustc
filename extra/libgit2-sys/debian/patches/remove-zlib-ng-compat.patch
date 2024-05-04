@@ -1,0 +1,15 @@
+Index: libgit2-sys/Cargo.toml
+===================================================================
+--- libgit2-sys.orig/Cargo.toml
++++ libgit2-sys/Cargo.toml
+@@ -59,10 +59,6 @@ ssh = ["libssh2-sys"]
+ ssh_key_from_memory = []
+ vendored = []
+ vendored-openssl = ["openssl-sys/vendored"]
+-zlib-ng-compat = [
+-    "libz-sys/zlib-ng",
+-    "libssh2-sys?/zlib-ng-compat",
+-]
+ 
+ [target."cfg(unix)".dependencies.openssl-sys]
+ version = "0.9.45"

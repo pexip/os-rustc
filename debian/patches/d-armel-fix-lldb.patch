@@ -1,10 +1,10 @@
 run panics if lldb is not installed and no output is produced..
 
-diff --git a/src/bootstrap/test.rs b/src/bootstrap/test.rs
-index c0fa8c9acb..2b5559efc7 100644
---- a/src/bootstrap/test.rs
-+++ b/src/bootstrap/test.rs
-@@ -1524,7 +1524,11 @@
+Index: rust/src/bootstrap/test.rs
+===================================================================
+--- rust.orig/src/bootstrap/test.rs
++++ rust/src/bootstrap/test.rs
+@@ -1619,7 +1619,11 @@ note: if you're sure you want to do this
              .ok();
          if let Some(ref vers) = lldb_version {
              cmd.arg("--lldb-version").arg(vers);

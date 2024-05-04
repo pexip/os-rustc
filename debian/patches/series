@@ -1,3 +1,11 @@
+# Cargo patches
+c-2002_disable-net-tests.patch
+c-2003-workaround-qemu-vfork-command-not-found.patch
+
+c-2200-workaround-x32-test.patch
+c-disable-fs-specific-test.patch
+c-0003-tests-add-missing-cross-disabled-checks.patch
+
 # Patches for upstream
 
 # pending, or forwarded
@@ -23,8 +31,12 @@ d-0000-ignore-removed-submodules.patch
 d-0001-pkg-config-no-special-snowflake.patch
 d-0002-mdbook-strip-embedded-libs.patch
 d-0003-cc-psm-rebuild-wasm32.patch
-d-0004-clippy-feature-sync.patch
+#d-0004-clippy-feature-sync.patch
 d-0005-no-jemalloc.patch
+# cargo
+d-0010-cargo-remove-vendored-c-crates.patch
+d-0011-cargo-remove-nghttp2.patch
+d-0012-cargo-always-return-dev-channel.patch
 
 ## Patches to the build process, including doc path tweaks
 ## Should not change resulting rustc behaviour
@@ -62,3 +74,6 @@ d-rustdoc-disable-embedded-fonts.patch
 # cherry-picked from ubuntu
 ubuntu-disable-ppc64el-asm-tests.patch
 ubuntu-ignore-arm-doctest.patch
+d-0020-remove-windows-dependencies.patch
+d-0021-vendor-remove-windows-dependencies.patch
+c-update-libgit2.patch

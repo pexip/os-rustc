@@ -1,3 +1,63 @@
+rustc (1.70.0+dfsg2-1) unstable; urgency=medium
+
+  * upload to unstable
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Sat, 04 May 2024 13:38:10 +0200
+
+rustc (1.70.0+dfsg2-1~exp3) experimental; urgency=medium
+
+  * d/rules: fix last package cache removal
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Fri, 03 May 2024 17:02:14 +0200
+
+rustc (1.70.0+dfsg2-1~exp2) experimental; urgency=medium
+
+  * d/rules: allow removal of package cache to fail
+  * autopkgtest: disable full build test
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Fri, 03 May 2024 15:10:49 +0200
+
+rustc (1.70.0+dfsg2-1~exp1) experimental; urgency=medium
+
+  [ liushuyu ]
+  * d/*: initial merge of cargo into rustc source package (Closes: #1054658)
+
+  [ Fabian Grünbichler ]
+  * update libgit2
+  * cargo: sync test disabling changes
+  * adapt to current rustc/cargo version
+  * cargo: actually install, not just  build
+  * add extra component tarball
+  * scripts/guess-crate-copyright: switch to python3-toml
+  * d/check-orig-suspicious.sh: remove duplicate comment stripping
+  * d/check-orig-suspicious.sh: support extra tar ball
+  * fix autopkgtest control file
+  * update d/copyright
+  * extend lintian overrides
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Fri, 03 May 2024 09:27:25 +0200
+
+rustc (1.70.0+dfsg1-9) unstable; urgency=medium
+
+  * temporarily skip git(-cli) tests
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Mon, 25 Mar 2024 17:47:08 +0100
+
+rustc (1.70.0+dfsg1-8.1) unstable; urgency=medium
+
+  * Non-maintainer upload
+  * Binary upload to rebootstrap on armel
+
+ -- Emanuele Rocca <ema@debian.org>  Thu, 21 Mar 2024 10:52:23 +0000
+
+rustc (1.70.0+dfsg1-8) unstable; urgency=medium
+
+  * d/control: switch to libllvm16t64
+  * d/control: switch to pkgconf
+  * d/rules: fix make warning in filter invocation
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Fri, 15 Mar 2024 17:18:37 +0100
+
 rustc (1.70.0+dfsg1-7) unstable; urgency=medium
 
   * profiler: disable on mips64el for now, it's buggy

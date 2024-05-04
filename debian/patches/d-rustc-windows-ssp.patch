@@ -7,9 +7,11 @@ Bug: https://github.com/rust-lang/rust/issues/68973
  compiler/rustc_target/src/spec/windows_gnu_base.rs | 2 ++
  1 file changed, 2 insertions(+)
 
---- a/compiler/rustc_target/src/spec/windows_gnu_base.rs
-+++ b/compiler/rustc_target/src/spec/windows_gnu_base.rs
-@@ -41,6 +41,8 @@
+Index: rust/compiler/rustc_target/src/spec/windows_gnu_base.rs
+===================================================================
+--- rust.orig/compiler/rustc_target/src/spec/windows_gnu_base.rs
++++ rust/compiler/rustc_target/src/spec/windows_gnu_base.rs
+@@ -41,6 +41,8 @@ pub fn opts() -> TargetOptions {
          "-lmsvcrt",
          "-luser32",
          "-lkernel32",

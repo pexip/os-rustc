@@ -7,9 +7,11 @@ Subject: d-bootstrap-rustflags
  src/bootstrap/builder.rs | 12 ++++++++++++
  1 file changed, 12 insertions(+)
 
---- a/src/bootstrap/builder.rs
-+++ b/src/bootstrap/builder.rs
-@@ -1268,6 +1268,18 @@
+Index: rust/src/bootstrap/builder.rs
+===================================================================
+--- rust.orig/src/bootstrap/builder.rs
++++ rust/src/bootstrap/builder.rs
+@@ -1377,6 +1377,18 @@ impl<'a> Builder<'a> {
              }
          }
  

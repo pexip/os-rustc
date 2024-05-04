@@ -9,11 +9,11 @@ doesn't affect anything else that's already generated.
  src/tools/rust-installer/install-template.sh | 7 +++++--
  1 file changed, 5 insertions(+), 2 deletions(-)
 
-diff --git a/src/tools/rust-installer/install-template.sh b/src/tools/rust-installer/install-template.sh
-index e68be89..a19997b 100644
---- a/src/tools/rust-installer/install-template.sh
-+++ b/src/tools/rust-installer/install-template.sh
-@@ -625,7 +625,10 @@ install_components() {
+Index: rust/src/tools/rust-installer/install-template.sh
+===================================================================
+--- rust.orig/src/tools/rust-installer/install-template.sh
++++ rust/src/tools/rust-installer/install-template.sh
+@@ -616,7 +616,10 @@ install_components() {
  
  		    maybe_backup_path "$_file_install_path"
  
@@ -25,7 +25,7 @@ index e68be89..a19997b 100644
  		    then
  			run cp "$_src_dir/$_component/$_file" "$_file_install_path"
  			run chmod 755 "$_file_install_path"
-@@ -647,7 +650,7 @@ install_components() {
+@@ -638,7 +641,7 @@ install_components() {
  
  		    maybe_backup_path "$_file_install_path"
  
