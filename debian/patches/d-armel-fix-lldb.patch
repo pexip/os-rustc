@@ -4,7 +4,7 @@ Index: rust/src/bootstrap/test.rs
 ===================================================================
 --- rust.orig/src/bootstrap/test.rs
 +++ rust/src/bootstrap/test.rs
-@@ -1619,7 +1619,11 @@ note: if you're sure you want to do this
+@@ -1516,7 +1516,11 @@ note: if you're sure you want to do this
              .ok();
          if let Some(ref vers) = lldb_version {
              cmd.arg("--lldb-version").arg(vers);

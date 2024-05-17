@@ -2,7 +2,7 @@ Index: rust/src/tools/cargo/tests/testsuite/metadata.rs
 ===================================================================
 --- rust.orig/src/tools/cargo/tests/testsuite/metadata.rs
 +++ rust/src/tools/cargo/tests/testsuite/metadata.rs
-@@ -3935,7 +3935,7 @@ fn dep_kinds_workspace() {
+@@ -3988,7 +3988,7 @@ fn dep_kinds_workspace() {
  // Creating non-utf8 path is an OS-specific pain, so let's run this only on
  // linux, where arbitrary bytes work.
  #[cfg(target_os = "linux")]

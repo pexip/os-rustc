@@ -28,7 +28,7 @@ Index: rust/compiler/rustc_codegen_ssa/src/back/link.rs
 ===================================================================
 --- rust.orig/compiler/rustc_codegen_ssa/src/back/link.rs
 +++ rust/compiler/rustc_codegen_ssa/src/back/link.rs
-@@ -2216,6 +2216,13 @@ fn add_order_independent_options(
+@@ -2359,6 +2359,13 @@ fn add_order_independent_options(
      }
  
      add_rpath_args(cmd, sess, codegen_results, out_filename);

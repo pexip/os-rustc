@@ -15,5 +15,8 @@ rustc source: mismatched-override missing-license-paragraph-in-dep5-copyright de
 rustc source: missing-license-paragraph-in-dep5-copyright mpl-2.0+ [debian/copyright:*]
 rustc source: missing-license-paragraph-in-dep5-copyright debian/copyright mpl-2.0+ (*)
 
+# see d/copyright
+rustc source: source-contains-prebuilt-windows-binary [vendor/windows-metadata/default/*.winmd]
+
 # lintian is superfluous
 rustc source: superfluous-file-pattern debian/copyright * (*)

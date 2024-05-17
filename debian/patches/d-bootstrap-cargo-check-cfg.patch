@@ -5,7 +5,7 @@ Index: rust/src/bootstrap/builder.rs
 ===================================================================
 --- rust.orig/src/bootstrap/builder.rs
 +++ rust/src/bootstrap/builder.rs
-@@ -1350,9 +1350,9 @@ impl<'a> Builder<'a> {
+@@ -1382,9 +1382,9 @@ impl<'a> Builder<'a> {
          // complete list of features, so for that reason we don't enable checking of
          // features for std crates.
          cargo.arg(if mode != Mode::Std {

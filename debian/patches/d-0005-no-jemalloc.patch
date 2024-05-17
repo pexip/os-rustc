@@ -7,11 +7,11 @@ Subject: d-0005-no-jemalloc
  src/tools/rust-analyzer/crates/profile/Cargo.toml | 2 --
  2 files changed, 8 deletions(-)
 
-Index: rust/compiler/rustc/Cargo.toml
-===================================================================
---- rust.orig/compiler/rustc/Cargo.toml
-+++ rust/compiler/rustc/Cargo.toml
-@@ -14,13 +14,7 @@ rustc_codegen_ssa = { path = "../rustc_c
+diff --git a/compiler/rustc/Cargo.toml b/compiler/rustc/Cargo.toml
+index 41003ad..0578f7b 100644
+--- a/compiler/rustc/Cargo.toml
++++ b/compiler/rustc/Cargo.toml
+@@ -14,13 +14,7 @@ rustc_codegen_ssa = { path = "../rustc_codegen_ssa" }
  # crate is intended to be used by stable MIR consumers, which are not in-tree
  rustc_smir = { path = "../rustc_smir" }
  
@@ -25,10 +25,10 @@ Index: rust/compiler/rustc/Cargo.toml
  llvm = ['rustc_driver_impl/llvm']
  max_level_info = ['rustc_driver_impl/max_level_info']
  rustc_use_parallel_compiler = ['rustc_driver_impl/rustc_use_parallel_compiler']
-Index: rust/src/tools/rust-analyzer/crates/profile/Cargo.toml
-===================================================================
---- rust.orig/src/tools/rust-analyzer/crates/profile/Cargo.toml
-+++ rust/src/tools/rust-analyzer/crates/profile/Cargo.toml
+diff --git a/src/tools/rust-analyzer/crates/profile/Cargo.toml b/src/tools/rust-analyzer/crates/profile/Cargo.toml
+index 6273ea5..642fb05 100644
+--- a/src/tools/rust-analyzer/crates/profile/Cargo.toml
++++ b/src/tools/rust-analyzer/crates/profile/Cargo.toml
 @@ -17,7 +17,6 @@ cfg-if = "1.0.0"
  libc = "0.2.135"
  la-arena = { version = "0.3.0", path = "../../lib/la-arena" }
@@ -37,7 +37,7 @@ Index: rust/src/tools/rust-analyzer/crates/profile/Cargo.toml
  
  [target.'cfg(target_os = "linux")'.dependencies]
  perf-event = "0.4.7"
-@@ -27,7 +26,6 @@ winapi = { version = "0.3.9", features =
+@@ -27,7 +26,6 @@ winapi = { version = "0.3.9", features = ["processthreadsapi", "psapi"] }
  
  [features]
  cpu_profiler = []

@@ -7,11 +7,11 @@ Subject: d-0003-cc-psm-rebuild-wasm32
  vendor/psm/build.rs  | 7 ++-----
  2 files changed, 3 insertions(+), 6 deletions(-)
 
-Index: rust/vendor/cc/src/lib.rs
-===================================================================
---- rust.orig/vendor/cc/src/lib.rs
-+++ rust/vendor/cc/src/lib.rs
-@@ -2389,7 +2389,7 @@ impl Build {
+diff --git a/vendor/cc/src/lib.rs b/vendor/cc/src/lib.rs
+index abc5d7a..cc1cecc 100644
+--- a/vendor/cc/src/lib.rs
++++ b/vendor/cc/src/lib.rs
+@@ -2407,7 +2407,7 @@ impl Build {
                      || target == "wasm32-unknown-wasi"
                      || target == "wasm32-unknown-unknown"
                  {
@@ -20,10 +20,10 @@ Index: rust/vendor/cc/src/lib.rs
                  } else if target.contains("vxworks") {
                      if self.cpp {
                          "wr-c++".to_string()
-Index: rust/vendor/psm/build.rs
-===================================================================
---- rust.orig/vendor/psm/build.rs
-+++ rust/vendor/psm/build.rs
+diff --git a/vendor/psm/build.rs b/vendor/psm/build.rs
+index 9d40212..e39549d 100644
+--- a/vendor/psm/build.rs
++++ b/vendor/psm/build.rs
 @@ -50,7 +50,7 @@ fn find_assembly(
          ("sparc", _, _, _) => Some(("src/arch/sparc_sysv.s", true)),
          ("riscv32", _, _, _) => Some(("src/arch/riscv.s", true)),
