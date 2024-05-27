@@ -145,7 +145,7 @@ $ git diff
 # pulled in new unnecessary dependencies in this newer version. See if you can
 # drop them by amending the patch "d-0000-ignore-removed-submodules.patch".
 # Rerun the above "tar ..." commands again and check that your patch works.
-# For example, there is absolutely no reason why rustc should need openssl.
+# For example, there is absolutely no reason to pull in windows-sys/windows.
 
 $ git commit -m "Update Files-Excluded for new upstream version ${ver/\~/-}" debian/copyright
 $ uscan --verbose                       # yes, again, to pick up the new Files-Excluded stuff

@@ -3,18 +3,18 @@ Date: Sat, 2 Oct 2021 01:07:59 +0100
 Subject: d-0000-ignore-removed-submodules
 
 ---
- Cargo.toml                         | 11 +++-----
- src/bootstrap/bootstrap.py         |  4 ---
+ Cargo.toml                         |  7 -----
+ src/bootstrap/bootstrap.py         |  6 +----
  src/bootstrap/builder.rs           | 54 +++++++++-----------------------------
  src/bootstrap/test.rs              | 12 +--------
  src/tools/rust-analyzer/Cargo.toml | 11 +++++++-
- 5 files changed, 28 insertions(+), 64 deletions(-)
+ 5 files changed, 25 insertions(+), 65 deletions(-)
 
 diff --git a/Cargo.toml b/Cargo.toml
-index 8eb378a..70487ec 100644
+index 20b1c65..16d4ebe 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -18,22 +18,15 @@ members = [
+@@ -20,22 +20,15 @@ members = [
    "src/tools/tidy",
    "src/tools/tier-check",
    "src/tools/build-manifest",
@@ -38,13 +38,13 @@ index 8eb378a..70487ec 100644
    "src/tools/lld-wrapper",
    "src/tools/collect-license-metadata",
 diff --git a/src/bootstrap/bootstrap.py b/src/bootstrap/bootstrap.py
-index 58d1926..527282d 100644
+index 149350e..2813c89 100644
 --- a/src/bootstrap/bootstrap.py
 +++ b/src/bootstrap/bootstrap.py
-@@ -899,10 +899,6 @@ class RustBuild(object):
+@@ -946,10 +946,6 @@ class RustBuild(object):
          args = [self.cargo(), "build", "--manifest-path",
                  os.path.join(self.rust_root, "src/bootstrap/Cargo.toml")]
-         args.extend("--verbose" for _ in range(verbose_count))
+         args.extend("--verbose" for _ in range(self.verbose))
 -        if self.use_locked_deps:
 -            args.append("--locked")
 -        if self.use_vendored_sources:
@@ -53,10 +53,10 @@ index 58d1926..527282d 100644
              args.append("--features")
              args.append("build-metrics")
 diff --git a/src/bootstrap/builder.rs b/src/bootstrap/builder.rs
-index 2fa4455..3f3e5ec 100644
+index 05b66f9..ff1f0eb 100644
 --- a/src/bootstrap/builder.rs
 +++ b/src/bootstrap/builder.rs
-@@ -492,20 +492,20 @@ impl<'a> ShouldRun<'a> {
+@@ -459,20 +459,20 @@ impl<'a> ShouldRun<'a> {
          static SUBMODULES_PATHS: OnceCell<Vec<String>> = OnceCell::new();
  
          let init_submodules_paths = |src: &PathBuf| {
@@ -89,7 +89,7 @@ index 2fa4455..3f3e5ec 100644
  
              submodules_paths
          };
-@@ -672,25 +672,14 @@ impl<'a> Builder<'a> {
+@@ -646,25 +646,14 @@ impl<'a> Builder<'a> {
                  tool::Linkchecker,
                  tool::CargoTest,
                  tool::Compiletest,
@@ -115,7 +115,7 @@ index 2fa4455..3f3e5ec 100644
              ),
              Kind::Check | Kind::Clippy | Kind::Fix => describe!(
                  check::Std,
-@@ -698,11 +687,6 @@ impl<'a> Builder<'a> {
+@@ -672,12 +661,7 @@ impl<'a> Builder<'a> {
                  check::Rustdoc,
                  check::CodegenBackend,
                  check::Clippy,
@@ -123,11 +123,12 @@ index 2fa4455..3f3e5ec 100644
 -                check::CargoMiri,
 -                check::MiroptTestTools,
 -                check::Rls,
--                check::RustAnalyzer,
                  check::Rustfmt,
+-                check::RustAnalyzer,
                  check::Bootstrap
              ),
-@@ -730,7 +714,6 @@ impl<'a> Builder<'a> {
+             Kind::Test => describe!(
+@@ -706,7 +690,6 @@ impl<'a> Builder<'a> {
                  test::TierCheck,
                  test::Cargotest,
                  test::Cargo,
@@ -135,7 +136,7 @@ index 2fa4455..3f3e5ec 100644
                  test::ErrorIndex,
                  test::Distcheck,
                  test::RunMakeFullDeps,
-@@ -746,7 +729,6 @@ impl<'a> Builder<'a> {
+@@ -722,7 +705,6 @@ impl<'a> Builder<'a> {
                  test::EmbeddedBook,
                  test::EditionGuide,
                  test::Rustfmt,
@@ -143,7 +144,7 @@ index 2fa4455..3f3e5ec 100644
                  test::Clippy,
                  test::RustDemangler,
                  test::CompiletestTest,
-@@ -783,7 +765,6 @@ impl<'a> Builder<'a> {
+@@ -759,7 +741,6 @@ impl<'a> Builder<'a> {
                  doc::CargoBook,
                  doc::Clippy,
                  doc::ClippyBook,
@@ -151,7 +152,7 @@ index 2fa4455..3f3e5ec 100644
                  doc::EmbeddedBook,
                  doc::EditionGuide,
                  doc::StyleGuide,
-@@ -801,12 +782,9 @@ impl<'a> Builder<'a> {
+@@ -777,12 +758,9 @@ impl<'a> Builder<'a> {
                  dist::Analysis,
                  dist::Src,
                  dist::Cargo,
@@ -164,7 +165,7 @@ index 2fa4455..3f3e5ec 100644
                  dist::LlvmTools,
                  dist::RustDev,
                  dist::Bootstrap,
-@@ -823,11 +801,9 @@ impl<'a> Builder<'a> {
+@@ -799,11 +777,9 @@ impl<'a> Builder<'a> {
                  install::Docs,
                  install::Std,
                  install::Cargo,
@@ -176,7 +177,7 @@ index 2fa4455..3f3e5ec 100644
                  install::LlvmTools,
                  install::Src,
                  install::Rustc
-@@ -837,7 +813,6 @@ impl<'a> Builder<'a> {
+@@ -813,7 +789,6 @@ impl<'a> Builder<'a> {
                  run::BuildManifest,
                  run::BumpStage0,
                  run::ReplaceVersionPlaceholder,
@@ -184,7 +185,7 @@ index 2fa4455..3f3e5ec 100644
                  run::CollectLicenseMetadata,
                  run::GenerateCopyright,
                  run::GenerateWindowsSys,
-@@ -1979,10 +1954,7 @@ impl<'a> Builder<'a> {
+@@ -1965,10 +1940,7 @@ impl<'a> Builder<'a> {
              }
          }
  
@@ -197,10 +198,10 @@ index 2fa4455..3f3e5ec 100644
          }
  
 diff --git a/src/bootstrap/test.rs b/src/bootstrap/test.rs
-index 44cd84b..9b37d5d 100644
+index eed7a58..c3bf972 100644
 --- a/src/bootstrap/test.rs
 +++ b/src/bootstrap/test.rs
-@@ -2004,17 +2004,7 @@ impl Step for RustcGuide {
+@@ -2129,17 +2129,7 @@ impl Step for RustcGuide {
      }
  
      fn run(self, builder: &Builder<'_>) {
@@ -209,7 +210,7 @@ index 44cd84b..9b37d5d 100644
 -
 -        let src = builder.src.join(relative_path);
 -        let mut rustbook_cmd = builder.tool_cmd(Tool::Rustbook);
--        let toolstate = if try_run(builder, rustbook_cmd.arg("linkcheck").arg(&src)) {
+-        let toolstate = if try_run(builder, rustbook_cmd.arg("linkcheck").arg(&src)).is_ok() {
 -            ToolState::TestPass
 -        } else {
 -            ToolState::TestFail
@@ -220,7 +221,7 @@ index 44cd84b..9b37d5d 100644
  }
  
 diff --git a/src/tools/rust-analyzer/Cargo.toml b/src/tools/rust-analyzer/Cargo.toml
-index 333f03c..2a0faa2 100644
+index 3050cf7..174e1f0 100644
 --- a/src/tools/rust-analyzer/Cargo.toml
 +++ b/src/tools/rust-analyzer/Cargo.toml
 @@ -1,5 +1,14 @@
@@ -237,5 +238,5 @@ index 333f03c..2a0faa2 100644
 +  "crates/proc-macro-api",
 +]
  exclude = ["crates/proc-macro-test/imp"]
+ resolver = "2"
  
- [workspace.package]

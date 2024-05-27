@@ -26,7 +26,7 @@ index 41003ad..0578f7b 100644
  max_level_info = ['rustc_driver_impl/max_level_info']
  rustc_use_parallel_compiler = ['rustc_driver_impl/rustc_use_parallel_compiler']
 diff --git a/src/tools/rust-analyzer/crates/profile/Cargo.toml b/src/tools/rust-analyzer/crates/profile/Cargo.toml
-index 6273ea5..642fb05 100644
+index 602e742..5faecc5 100644
 --- a/src/tools/rust-analyzer/crates/profile/Cargo.toml
 +++ b/src/tools/rust-analyzer/crates/profile/Cargo.toml
 @@ -17,7 +17,6 @@ cfg-if = "1.0.0"
@@ -36,7 +36,7 @@ index 6273ea5..642fb05 100644
 -jemalloc-ctl = { version = "0.5.0", package = "tikv-jemalloc-ctl", optional = true }
  
  [target.'cfg(target_os = "linux")'.dependencies]
- perf-event = "0.4.7"
+ perf-event = "=0.4.7"
 @@ -27,7 +26,6 @@ winapi = { version = "0.3.9", features = ["processthreadsapi", "psapi"] }
  
  [features]

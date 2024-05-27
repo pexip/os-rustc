@@ -10,7 +10,7 @@ Index: rust/src/bootstrap/config.rs
 ===================================================================
 --- rust.orig/src/bootstrap/config.rs
 +++ rust/src/bootstrap/config.rs
-@@ -931,9 +931,32 @@ impl Config {
+@@ -1040,9 +1040,32 @@ impl Config {
  
      pub fn parse(args: &[String]) -> Config {
          #[cfg(test)]

@@ -4,14 +4,14 @@ Subject: d-0010-cargo-remove-vendored-c-crates
 
 Last-Update: 2023-05-17
 ---
- src/tools/cargo/Cargo.toml | 3 +--
- 1 file changed, 1 insertion(+), 2 deletions(-)
+ src/tools/cargo/Cargo.toml | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
 
 diff --git a/src/tools/cargo/Cargo.toml b/src/tools/cargo/Cargo.toml
-index 05c95c7..a7475f6 100644
+index 7e383be..384fe45 100644
 --- a/src/tools/cargo/Cargo.toml
 +++ b/src/tools/cargo/Cargo.toml
-@@ -206,8 +206,6 @@ test = false
+@@ -203,8 +203,6 @@ test = false
  doc = false
  
  [features]

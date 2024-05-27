@@ -12,7 +12,6 @@ src/doc/reference/src/items/modules.md
 src/doc/reference/src/types-redirect.html
 src/tools/cargo/src/doc/src/reference/registries.md
 src/tools/clippy/book/src/lint_configuration.md
-vendor/chalk-solve-0.87.0/src/infer/test.rs
 vendor/fiat-crypto/src/p448_solinas_32.rs
 vendor/itertools*/examples/iris.data
 vendor/minifier/src/js/tools.rs
@@ -61,6 +60,7 @@ src/doc/rustc/src/platform-support/armv7-unknown-linux-uclibceabi.md
 src/doc/rustc/src/platform-support/armv7-unknown-linux-uclibceabihf.md
 src/doc/rustc/src/targets/known-issues.md
 src/doc/rustdoc/src/*.md
+src/doc/style-guide/src/nightly.md
 src/doc/unstable-book/src/*/*.md
 src/etc/completions/x.py.sh
 src/etc/third-party/README.txt
@@ -69,13 +69,13 @@ src/librustdoc/html/static/scrape-examples-help.md
 src/tools/cargo/src/cargo/sources/git/known_hosts.rs
 src/tools/cargo/src/doc/src/guide/continuous-integration.md
 src/tools/cargo/src/doc/src/reference/features.md
+src/tools/rust-analyzer/crates/hir-def/src/macro_expansion_tests/builtin_fn_macro.rs
 src/tools/rust-analyzer/crates/ide-completion/src/completions/env_vars.rs
 src/tools/rust-analyzer/crates/rust-analyzer/src/diagnostics/to_proto.rs
 src/tools/rust-analyzer/docs/user/manual.adoc
 src/tools/rustfmt/*.md
 tests/mir-opt/building/*.mir
 tests/mir-opt/coverage_graphviz.*.InstrumentCoverage.0.dot
-tests/mir-opt/inline/inline_generator.main.Inline.diff
 tests/rustdoc/inline_cross/assoc_item_trait_bounds.out*.html
 tests/rustdoc/notable-trait/doc-notable_trait*.html
 tests/rustdoc/notable-trait/spotlight-from-dependency.odd.html
@@ -100,8 +100,6 @@ vendor/anstyle-parse/src/state/table.rs
 vendor/base64ct/tests/proptests.proptest-regressions
 vendor/chrono/src/offset/local/tz_info/rule.rs
 vendor/chrono/src/offset/local/tz_info/timezone.rs
-vendor/clap-*/examples/demo.md
-vendor/clap-*/examples/tutorial_*/*.md
 vendor/elliptic-curve/src/hash2curve/hash2field/expand_msg/xmd.rs
 vendor/elliptic-curve/src/hash2curve/hash2field/expand_msg/xof.rs
 vendor/elliptic-curve/src/jwk.rs
@@ -155,15 +153,13 @@ src/tools/rustdoc-gui/.eslintrc.js
 src/tools/rustdoc-gui/tester.js
 src/tools/rustdoc-js/.eslintrc.js
 src/tools/rustdoc-js/tester.js
-vendor/cxx/book/build.js
-vendor/cxx/book/package-lock.json
-vendor/cxx/book/package.json
 vendor/libz-sys/src/smoke.c
 vendor/openssl-sys/build/expando.c
 vendor/signal-hook/src/low_level/extract.c
 vendor/wasm-bindgen-macro/src/worker.js
 vendor/wasm-bindgen/_package.json
 vendor/wasm-bindgen/examples/import_js/package.json
+vendor/wasm-bindgen/webdriver.json
 
 # Embedded libraries, justified in README.source
 vendor/dlmalloc/src/dlmalloc.c
@@ -179,6 +175,7 @@ vendor/stacker/src/arch/windows.c
 
 # False-positive, misc
 src/ci/github-actions/problem_matchers.json
+src/doc/book/listings/ch14-more-about-cargo/output-only-01-adder-crate/add/rustfmt-ignore
 src/doc/rustc-dev-guide/src/queries/example-0.counts.txt
 src/etc/rust_analyzer_settings.json
 src/stage0.json
@@ -205,10 +202,10 @@ src/doc/nomicon/src/img/safeandunsafe.svg
 src/doc/rustc-dev-guide/src/img/*.png
 src/doc/rustc-dev-guide/src/queries/example-0.png
 src/doc/rustc/src/images/*.png
-src/etc/installer/gfx/
-src/librustdoc/html/static/images/*.svg
 src/doc/rustdoc/src/images/collapsed-long-item.png
 src/doc/rustdoc/src/images/collapsed-trait-impls.png
+src/etc/installer/gfx/
+src/librustdoc/html/static/images/*.svg
 src/librustdoc/html/static/images/favicon-*.png
 src/tools/cargo/src/doc/src/images/Cargo-Logo-Small.png
 src/tools/cargo/src/doc/src/images/auth-level-acl.png
@@ -219,8 +216,12 @@ src/tools/cargo/src/doc/src/images/org-level-acl.png
 src/tools/cargo/src/doc/src/images/winapi-features.svg
 src/tools/cargo/src/doc/theme/favicon.png
 src/tools/rust-analyzer/assets/logo-*.svg
-vendor/cxx/book/src/cxx.png
-vendor/cxx/book/src/overview.svg
+vendor/color-eyre/pictures/custom_section.png
+vendor/color-eyre/pictures/full.png
+vendor/color-eyre/pictures/minimal.png
+vendor/color-eyre/pictures/short.png
+vendor/color-spantrace/pictures/full.png
+vendor/color-spantrace/pictures/minimal.png
 vendor/imara-diff/plots/*.svg
 vendor/mdbook/src/theme/favicon.png
 vendor/mdbook/src/theme/favicon.svg
@@ -239,8 +240,8 @@ library/portable-simd/crates/core_simd/webdriver.json
 library/std/src/sys/windows/path/tests.rs
 library/stdarch/ci/gba.json
 library/stdarch/crates/std_detect/src/detect/test_data/*.auxv
-library/stdarch/crates/stdarch-verify/arm-intrinsics.html
 library/stdarch/crates/stdarch-verify/x86-intel.xml
+library/stdarch/intrinsics_data/arm_intrinsics.json
 src/tools/*/tests/*/*.stderr
 src/tools/cargo/benches/workspaces/*.tgz
 src/tools/cargo/crates/mdman/tests/compare/expected/formatting.txt
@@ -280,19 +281,19 @@ tests/rustdoc-gui/src/huge_logo/src/lib.rs
 tests/rustdoc-gui/src/scrape_examples/examples/check-many-*.rs
 tests/rustdoc-js-std/*.js
 tests/rustdoc-js/*.js
+tests/ui/higher-ranked/trait-bounds/hang-on-deeply-nested-dyn.stderr
 tests/ui/macros/not-utf8.bin
 tests/ui/nll/*/*.stderr
 tests/ui/parser/issues/*.stderr
 tests/ui/proc-macro/debug/*.stderr
 tests/ui/rfcs/rfc-3348-c-string-literals/no-nuls.stderr
+tests/ui/traits/object/print_vtable_sizes.stdout
 vendor/annotate-snippets/tests/fixtures/no-color/strip_line_non_ws.toml
 vendor/basic-toml/tests/invalid-encoder/array-mixed-types-ints-and-floats.json
 vendor/basic-toml/tests/valid/*.json
 vendor/basic-toml/tests/valid/table-whitespace.toml
 vendor/bstr/src/unicode/fsm/*.dfa
 vendor/cargo_metadata*/tests/test_samples.rs
-vendor/codespan-reporting/tests/snapshots/term__position_indicator__rich_ascii_no_color.snap
-vendor/codespan-reporting/tests/snapshots/term__position_indicator__rich_no_color.snap
 vendor/content_inspector/testdata/*
 vendor/csv/examples/data/*.csv
 vendor/csv/examples/data/bench/*.csv
@@ -303,11 +304,13 @@ vendor/elasticlunr-rs/tests/data/*.in.txt
 vendor/elasticlunr-rs/tests/searchindex_fixture_*.json
 vendor/elliptic-curve/tests/examples/*.der
 vendor/elliptic-curve/tests/examples/*.pem
+vendor/flate2/examples/hello_world.txt.gz
 vendor/flate2/tests/*.gz
 vendor/flate2/tests/corrupt-gz-file.bin
 vendor/fluent-syntax/benches/parser.rs
 vendor/gimli*/fixtures/self/*
 vendor/gix-glob/tests/fixtures/generated-archives/make_baseline.tar.xz
+vendor/gix-negotiate/tests/fixtures/generated-archives/make_repos.tar.xz
 vendor/gsgdt/tests/*.json
 vendor/handlebars/tests/helper_with_space.rs
 vendor/hkdf/tests/data/*.blb
@@ -344,7 +347,6 @@ vendor/pasetors/test_vectors/*.json
 vendor/pasetors/test_vectors/*/*.json
 vendor/pem-rfc7468/tests/examples/*.der
 vendor/pem-rfc7468/tests/examples/*.pem
-vendor/petgraph/tests/res/*.txt
 vendor/pkcs8/tests/examples/*.der
 vendor/pkcs8/tests/examples/*.pem
 vendor/pkcs8/tests/private_key.rs
@@ -353,6 +355,8 @@ vendor/proptest/src/regex-contrib/crates_regex.rs
 vendor/regex-automata-0.1.10/data/fowler-tests/basic.dat
 vendor/regex-automata-0.1.10/data/tests/fowler/basic.dat
 vendor/regex-automata/tests/data/fowler/dat/basic.dat
+vendor/regex/record/compile-test/2023-04-19_1.7.3.csv
+vendor/regex/record/compile-test/2023-04-20_master.csv
 vendor/regex/src/testdata/basic.dat
 vendor/regex/tests/crates_regex.rs
 vendor/regex/tests/fowler.rs
@@ -379,6 +383,7 @@ vendor/vte/tests/demo.vte
 vendor/walkdir/compare/nftw.c
 vendor/wasm-bindgen/tests/headless/*
 vendor/wasm-bindgen/tests/wasm/*
+vendor/wasm-bindgen/tests/worker/modules.js
 vendor/web-sys/tests/wasm/*.js
 vendor/zerovec/benches/testdata/*.postcard
 vendor/zip/tests/data/*.zip
@@ -429,12 +434,13 @@ src/tools/rustfmt/src/formatting.rs
 src/tools/rustfmt/src/lib.rs
 src/tools/rustfmt/src/parse/parser.rs
 src/tools/rustfmt/src/string.rs
-vendor/ahash-0.7.4/src/hash_quality_test.rs
-vendor/ahash-0.7.4/src/lib.rs
+vendor/ahash-0.7.6/src/hash_quality_test.rs
+vendor/ahash-0.7.6/src/lib.rs
 vendor/ahash/src/fallback_hash.rs
 vendor/ahash/src/hash_quality_test.rs
 vendor/ahash/src/lib.rs
-vendor/aho-corasick/src/nfa.rs
+vendor/aho-corasick-0.7.20/src/nfa.rs
+vendor/aho-corasick/src/ahocorasick.rs
 vendor/base16ct/benches/mod.rs
 vendor/base16ct/src/lower.rs
 vendor/base16ct/src/mixed.rs
@@ -443,6 +449,7 @@ vendor/base64/src/decode.rs
 vendor/base64/src/encode.rs
 vendor/base64ct/src/*.rs
 vendor/base64ct/tests/*.rs
+vendor/bitflags/src/traits.rs
 vendor/block-buffer/tests/mod.rs
 vendor/camino/src/serde_impls.rs
 vendor/clap*/src/derive.rs
@@ -453,9 +460,6 @@ vendor/clap_derive/src/derives/value_enum.rs
 vendor/compiler_builtins/libm/src/math/atan.rs
 vendor/csv-core/src/reader.rs
 vendor/csv-core/src/writer.rs
-vendor/cxx-build/src/gen/file.rs
-vendor/cxx-build/src/syntax/qualified.rs
-vendor/cxxbridge-macro/src/syntax/qualified.rs
 vendor/datafrog/src/lib.rs
 vendor/derive_more/src/*.rs
 vendor/digest/src/core_api/rt_variable.rs
@@ -537,6 +541,7 @@ vendor/rayon/tests/sort-panic-safe.rs
 vendor/regex-automata-0.1.10/src/regex.rs
 vendor/rustc-rayon/tests/sort-panic-safe.rs
 vendor/rustversion/src/attr.rs
+vendor/rustversion/src/expand.rs
 vendor/rustversion/src/lib.rs
 vendor/semver/src/parse.rs
 vendor/serde_cbor/tests/de.rs
@@ -587,18 +592,17 @@ vendor/winnow/examples/json/parser_dispatch.rs
 vendor/winnow/examples/json/parser_partial.rs
 vendor/winnow/examples/ndjson/example.ndjson
 vendor/winnow/examples/ndjson/parser.rs
-vendor/winnow/src/bits/mod.rs
-vendor/winnow/src/bits/tests.rs
-vendor/winnow/src/branch/mod.rs
-vendor/winnow/src/branch/tests.rs
-vendor/winnow/src/bytes/mod.rs
-vendor/winnow/src/character/mod.rs
-vendor/winnow/src/combinator/mod.rs
+vendor/winnow/src/ascii/mod.rs
+vendor/winnow/src/binary/mod.rs
+vendor/winnow/src/binary/bits/mod.rs
+vendor/winnow/src/binary/bits/tests.rs
+vendor/winnow/src/combinator/branch.rs
+vendor/winnow/src/combinator/core.rs
+vendor/winnow/src/combinator/parser.rs
+vendor/winnow/src/combinator/sequence.rs
 vendor/winnow/src/combinator/tests.rs
 vendor/winnow/src/error.rs
-vendor/winnow/src/multi/tests.rs
-vendor/winnow/src/number/mod.rs
-vendor/winnow/src/sequence/mod.rs
+vendor/winnow/src/token/mod.rs
 vendor/xz2/src/bufread.rs
 vendor/xz2/src/stream.rs
 vendor/yansi/src/tests.rs

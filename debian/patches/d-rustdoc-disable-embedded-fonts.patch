@@ -13,7 +13,7 @@ Index: rust/src/librustdoc/html/static/css/rustdoc.css
 ===================================================================
 --- rust.orig/src/librustdoc/html/static/css/rustdoc.css
 +++ rust/src/librustdoc/html/static/css/rustdoc.css
-@@ -79,14 +79,6 @@
+@@ -80,14 +80,6 @@
  	font-display: swap;
  }
  

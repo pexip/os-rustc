@@ -1,0 +1,2 @@
+# normally added by dh_makeshlibs, but fails for our versioning scheme
+activate-noawait ldconfig

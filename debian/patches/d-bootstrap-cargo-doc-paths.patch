@@ -106,7 +106,7 @@ Index: rust/src/doc/reference/src/conditional-compilation.md
 ===================================================================
 --- rust.orig/src/doc/reference/src/conditional-compilation.md
 +++ rust/src/doc/reference/src/conditional-compilation.md
-@@ -370,6 +370,6 @@ println!("I'm running on a {} machine!",
+@@ -376,6 +376,6 @@ println!("I'm running on a {} machine!",
  [`target_feature` attribute]: attributes/codegen.md#the-target_feature-attribute
  [attribute]: attributes.md
  [attributes]: attributes.md
@@ -302,7 +302,7 @@ Index: rust/src/doc/unstable-book/src/compiler-flags/sanitizer.md
 ===================================================================
 --- rust.orig/src/doc/unstable-book/src/compiler-flags/sanitizer.md
 +++ rust/src/doc/unstable-book/src/compiler-flags/sanitizer.md
-@@ -793,7 +793,7 @@ It is strongly recommended to combine sa
+@@ -804,7 +804,7 @@ It is strongly recommended to combine sa
  instrumented standard library, for example using [cargo `-Zbuild-std`
  functionality][build-std].
  
@@ -353,7 +353,7 @@ Index: rust/src/doc/rustc/src/platform-support/fuchsia.md
 ===================================================================
 --- rust.orig/src/doc/rustc/src/platform-support/fuchsia.md
 +++ rust/src/doc/rustc/src/platform-support/fuchsia.md
-@@ -932,7 +932,7 @@ attach and load any relevant debug symbo
+@@ -929,7 +929,7 @@ attach and load any relevant debug symbo
  [Fuchsia]: https://fuchsia.dev/
  [source tree]: https://fuchsia.dev/fuchsia-src/get-started/learn/build
  [rustup]: https://rustup.rs/
