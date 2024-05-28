@@ -12,12 +12,12 @@ Index: rust/src/bootstrap/lib.rs
 ===================================================================
 --- rust.orig/src/bootstrap/lib.rs
 +++ rust/src/bootstrap/lib.rs
-@@ -1110,10 +1110,9 @@ impl Build {
+@@ -1145,10 +1145,9 @@ impl Build {
  
          match which {
              GitRepo::Rustc => {
 -                let sha = self.rust_sha().unwrap_or(&self.version);
--                Some(format!("/rustc/{}", sha))
+-                Some(format!("/rustc/{sha}"))
 +                Some(format!("/usr/src/rustc-{}", &self.version))
              }
 -            GitRepo::Llvm => Some(String::from("/rustc/llvm")),

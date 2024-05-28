@@ -14,7 +14,7 @@ Comment: Use https://github.com/infinity0/mdBook/tree/debian to help you rebase 
  7 files changed, 47 insertions(+), 234 deletions(-)
 
 diff --git a/src/tools/linkchecker/main.rs b/src/tools/linkchecker/main.rs
-index c8a3700..4095c03 100644
+index 7f73cac..e4805cc 100644
 --- a/src/tools/linkchecker/main.rs
 +++ b/src/tools/linkchecker/main.rs
 @@ -159,7 +159,17 @@ impl Checker {

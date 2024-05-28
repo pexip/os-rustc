@@ -47,6 +47,7 @@ src/doc/embedded-book/src/*/*.md
 src/doc/nomicon/src/intro.md
 src/doc/reference/src/expressions/closure-expr.md
 src/doc/reference/src/inline-assembly.md
+src/doc/reference/src/unsafe-keyword.md
 src/doc/rust-by-example/src/flow_control/if_let.md
 src/doc/rust-by-example/src/std/arc.md
 src/doc/rust-by-example/src/trait/dyn.md
@@ -58,6 +59,7 @@ src/doc/rustc/src/lints/groups.md
 src/doc/rustc/src/platform-support/armeb-unknown-linux-gnueabi.md
 src/doc/rustc/src/platform-support/armv7-unknown-linux-uclibceabi.md
 src/doc/rustc/src/platform-support/armv7-unknown-linux-uclibceabihf.md
+src/doc/rustc/src/platform-support/wasm32-wasi-preview1-threads.md
 src/doc/rustc/src/targets/known-issues.md
 src/doc/rustdoc/src/*.md
 src/doc/style-guide/src/nightly.md
@@ -69,6 +71,7 @@ src/librustdoc/html/static/scrape-examples-help.md
 src/tools/cargo/src/cargo/sources/git/known_hosts.rs
 src/tools/cargo/src/doc/src/guide/continuous-integration.md
 src/tools/cargo/src/doc/src/reference/features.md
+src/tools/cargo/src/doc/src/reference/semver.md
 src/tools/rust-analyzer/crates/hir-def/src/macro_expansion_tests/builtin_fn_macro.rs
 src/tools/rust-analyzer/crates/ide-completion/src/completions/env_vars.rs
 src/tools/rust-analyzer/crates/rust-analyzer/src/diagnostics/to_proto.rs
@@ -103,6 +106,8 @@ vendor/chrono/src/offset/local/tz_info/timezone.rs
 vendor/elliptic-curve/src/hash2curve/hash2field/expand_msg/xmd.rs
 vendor/elliptic-curve/src/hash2curve/hash2field/expand_msg/xof.rs
 vendor/elliptic-curve/src/jwk.rs
+vendor/encoding_rs/src/ascii.rs
+vendor/encoding_rs/src/utf_16.rs
 vendor/fiat-crypto/src/secp256k1_dettman_64.rs
 vendor/git2/src/cred.rs
 vendor/half/LICENSES/Apache-2.0.txt
@@ -110,6 +115,8 @@ vendor/half/LICENSES/MIT.txt
 vendor/handlebars/src/lib.rs
 vendor/handlebars/src/render.rs
 vendor/handlebars/src/template.rs
+vendor/humansize/src/lib.rs
+vendor/ipnet/RELEASES.md
 vendor/kstring/benches/clone.rs
 vendor/lazy_static/src/lib.rs
 vendor/maplit/README.rst
@@ -130,7 +137,6 @@ vendor/tinyvec/LICENSE-*.md
 vendor/tracing-subscriber/src/fmt/format/json.rs
 vendor/unicase/src/lib.rs
 vendor/unicode-normalization/src/stream_safe.rs
-vendor/vcpkg/notes.md
 vendor/web-sys/src/features/gen_SvgTextElement.rs
 vendor/web-sys/src/features/gen_SvgtSpanElement.rs
 vendor/winnow/benches/contains_token.rs
@@ -156,10 +162,12 @@ src/tools/rustdoc-js/tester.js
 vendor/libz-sys/src/smoke.c
 vendor/openssl-sys/build/expando.c
 vendor/signal-hook/src/low_level/extract.c
+vendor/sysinfo-0.26.7/examples/simple.c
 vendor/wasm-bindgen-macro/src/worker.js
 vendor/wasm-bindgen/_package.json
 vendor/wasm-bindgen/examples/import_js/package.json
 vendor/wasm-bindgen/webdriver.json
+vendor/wasm-bindgen-futures/src/task/worker.js
 
 # Embedded libraries, justified in README.source
 vendor/dlmalloc/src/dlmalloc.c
@@ -275,6 +283,7 @@ tests/debuginfo/type-names.cdb.js
 tests/run-make/*/*.c
 tests/run-make/libtest-junit/output-default.xml
 tests/run-make/libtest-junit/output-stdout-success.xml
+tests/run-make/wasm-exceptions-nostd/verify.mjs
 tests/run-make/x86_64-fortanix-unknown-sgx-lvi/enclave/foo.c
 tests/run-make/x86_64-fortanix-unknown-sgx-lvi/enclave/libcmake_foo/src/foo.c
 tests/rustdoc-gui/src/huge_logo/src/lib.rs
@@ -295,8 +304,6 @@ vendor/basic-toml/tests/valid/table-whitespace.toml
 vendor/bstr/src/unicode/fsm/*.dfa
 vendor/cargo_metadata*/tests/test_samples.rs
 vendor/content_inspector/testdata/*
-vendor/csv/examples/data/*.csv
-vendor/csv/examples/data/bench/*.csv
 vendor/der/tests/examples/spki.der
 vendor/diff/tests/data/gitignores.chars.diff
 vendor/dissimilar/benches/*.txt
@@ -304,11 +311,12 @@ vendor/elasticlunr-rs/tests/data/*.in.txt
 vendor/elasticlunr-rs/tests/searchindex_fixture_*.json
 vendor/elliptic-curve/tests/examples/*.der
 vendor/elliptic-curve/tests/examples/*.pem
+vendor/encoding_rs/src/test_data/euc_kr_in.txt
+vendor/encoding_rs/src/test_data/euc_kr_in_ref.txt
 vendor/flate2/examples/hello_world.txt.gz
 vendor/flate2/tests/*.gz
 vendor/flate2/tests/corrupt-gz-file.bin
 vendor/fluent-syntax/benches/parser.rs
-vendor/gimli*/fixtures/self/*
 vendor/gix-glob/tests/fixtures/generated-archives/make_baseline.tar.xz
 vendor/gix-negotiate/tests/fixtures/generated-archives/make_repos.tar.xz
 vendor/gsgdt/tests/*.json
@@ -328,7 +336,6 @@ vendor/im-rc/proptest-regressions/ord/map
 vendor/js-sys/tests/headless.js
 vendor/js-sys/tests/wasm/*.js
 vendor/js-sys/tests/wasm/global_fns.rs
-vendor/libloading/tests/*.dll
 vendor/litemap/benches/testdata/large_litemap.postcard
 vendor/lsp-types/tests/tsc-unix.lsif
 vendor/md-5/tests/data/*.blb
@@ -364,21 +371,20 @@ vendor/rustc-demangle/src/lib.rs
 vendor/rustc-demangle/src/v0-large-test-symbols/early-recursion-limit
 vendor/sec1/tests/examples/p256-priv.der
 vendor/sec1/tests/examples/p256-priv.pem
-vendor/serde_cbor/examples/tux.cbor
-vendor/serde_cbor/tests/crash.cbor
-vendor/serde_cbor/tests/kietaub.cbor
 vendor/serde_json/tests/lexical/parse.rs
 vendor/sha1/tests/data/sha1.blb
 vendor/sha2/tests/data/*.blb
 vendor/spki/tests/examples/*.der
 vendor/term/tests/data/*
+vendor/tokio-native-tls/examples/identity.p12
+vendor/tokio-native-tls/tests/cert.der
+vendor/tokio-native-tls/tests/identity.p12
+vendor/tokio-native-tls/tests/root-ca.der
 vendor/toml_edit/tests/fixtures/invalid/*/*.stderr
 vendor/unicode-ident/tests/fst/*.fst
 vendor/unicode-segmentation/src/testdata.rs
 vendor/url/tests/*.json
 vendor/varisat/proptest-regressions/solver.txt
-vendor/vcpkg/test-data/no-status/installed/vcpkg/updates/*
-vendor/vcpkg/test-data/normalized/installed/vcpkg/updates/status
 vendor/vte/tests/demo.vte
 vendor/walkdir/compare/nftw.c
 vendor/wasm-bindgen/tests/headless/*
@@ -413,7 +419,7 @@ compiler/rustc_baked_icu_data/src/data/fallback/parents_v1/und.rs.data
 src/librustdoc/html/static/fonts/*.woff2
 
 # file brokenness (detected as Algol source code)
-compiler/rustc_apfloat/src/lib.rs
+compiler/rustc_builtin_macros/src/global_allocator.rs
 compiler/rustc_driver/src/lib.rs
 compiler/rustc_expand/src/mbe/quoted.rs
 compiler/rustc_macros/src/symbols/tests.rs
@@ -434,8 +440,6 @@ src/tools/rustfmt/src/formatting.rs
 src/tools/rustfmt/src/lib.rs
 src/tools/rustfmt/src/parse/parser.rs
 src/tools/rustfmt/src/string.rs
-vendor/ahash-0.7.6/src/hash_quality_test.rs
-vendor/ahash-0.7.6/src/lib.rs
 vendor/ahash/src/fallback_hash.rs
 vendor/ahash/src/hash_quality_test.rs
 vendor/ahash/src/lib.rs
@@ -452,14 +456,13 @@ vendor/base64ct/tests/*.rs
 vendor/bitflags/src/traits.rs
 vendor/block-buffer/tests/mod.rs
 vendor/camino/src/serde_impls.rs
+vendor/ciborium/tests/codec.rs
 vendor/clap*/src/derive.rs
 vendor/clap_derive/src/derives/args.rs
 vendor/clap_derive/src/derives/parser.rs
 vendor/clap_derive/src/derives/subcommand.rs
 vendor/clap_derive/src/derives/value_enum.rs
 vendor/compiler_builtins/libm/src/math/atan.rs
-vendor/csv-core/src/reader.rs
-vendor/csv-core/src/writer.rs
 vendor/datafrog/src/lib.rs
 vendor/derive_more/src/*.rs
 vendor/digest/src/core_api/rt_variable.rs
@@ -493,6 +496,7 @@ vendor/gix-protocol/src/fetch/delegate.rs
 vendor/gix-ref/src/store/packed/decode.rs
 vendor/gix-ref/src/store/packed/decode/tests.rs
 vendor/gix-revision/src/spec/parse/function.rs
+vendor/humansize/src/allocating.rs
 vendor/icu_locid/tests/langid.rs
 vendor/icu_locid/tests/locale.rs
 vendor/indoc/src/lib.rs
@@ -540,11 +544,11 @@ vendor/pulldown-cmark/tests/lib.rs
 vendor/rayon/tests/sort-panic-safe.rs
 vendor/regex-automata-0.1.10/src/regex.rs
 vendor/rustc-rayon/tests/sort-panic-safe.rs
+vendor/rustc_apfloat/src/lib.rs
 vendor/rustversion/src/attr.rs
 vendor/rustversion/src/expand.rs
 vendor/rustversion/src/lib.rs
 vendor/semver/src/parse.rs
-vendor/serde_cbor/tests/de.rs
 vendor/sha2/src/sha256.rs
 vendor/sha2/src/sha512.rs
 vendor/shlex/src/lib.rs
@@ -564,11 +568,13 @@ vendor/syn*/src/stmt.rs
 vendor/syn*/src/token.rs
 vendor/syn*/src/ty.rs
 vendor/syn*/tests/test_meta.rs
+vendor/thiserror-core-impl/src/attr.rs
 vendor/thiserror-impl/src/attr.rs
 vendor/time/src/parsing/*.rs
 vendor/time/src/parsing/combinator/mod.rs
 vendor/time/src/parsing/combinator/rfc/*.rs
 vendor/time/src/primitive_date_time.rs
+vendor/toml_edit/src/parser/document.rs
 vendor/toml_edit/src/parser/key.rs
 vendor/toml_edit/src/parser/mod.rs
 vendor/toml_edit/src/parser/numbers.rs
@@ -584,6 +590,7 @@ vendor/varisat/src/clause/alloc.rs
 vendor/varisat/src/solver.rs
 vendor/vec_mut_scan/src/lib.rs
 vendor/windows-bindgen/src/constants.rs
+vendor/winnow/benches/number.rs
 vendor/winnow/examples/css/parser.rs
 vendor/winnow/examples/http/parser.rs
 vendor/winnow/examples/http/parser_streaming.rs
@@ -593,15 +600,16 @@ vendor/winnow/examples/json/parser_partial.rs
 vendor/winnow/examples/ndjson/example.ndjson
 vendor/winnow/examples/ndjson/parser.rs
 vendor/winnow/src/ascii/mod.rs
-vendor/winnow/src/binary/mod.rs
 vendor/winnow/src/binary/bits/mod.rs
 vendor/winnow/src/binary/bits/tests.rs
+vendor/winnow/src/binary/mod.rs
 vendor/winnow/src/combinator/branch.rs
 vendor/winnow/src/combinator/core.rs
 vendor/winnow/src/combinator/parser.rs
 vendor/winnow/src/combinator/sequence.rs
 vendor/winnow/src/combinator/tests.rs
 vendor/winnow/src/error.rs
+vendor/winnow/src/parser.rs
 vendor/winnow/src/token/mod.rs
 vendor/xz2/src/bufread.rs
 vendor/xz2/src/stream.rs
@@ -611,3 +619,6 @@ vendor/yansi/src/tests.rs
 vendor/clap/examples/demo.md
 vendor/clap/examples/tutorial_builder/*.md
 vendor/clap/examples/tutorial_derive/*.md
+vendor/clap-4.*/examples/demo.md
+vendor/clap-4.*/examples/tutorial_builder/*.md
+vendor/clap-4.*/examples/tutorial_derive/*.md

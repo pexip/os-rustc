@@ -26,12 +26,12 @@ index 41003ad..0578f7b 100644
  max_level_info = ['rustc_driver_impl/max_level_info']
  rustc_use_parallel_compiler = ['rustc_driver_impl/rustc_use_parallel_compiler']
 diff --git a/src/tools/rust-analyzer/crates/profile/Cargo.toml b/src/tools/rust-analyzer/crates/profile/Cargo.toml
-index 602e742..5faecc5 100644
+index 937834a..fd98d85 100644
 --- a/src/tools/rust-analyzer/crates/profile/Cargo.toml
 +++ b/src/tools/rust-analyzer/crates/profile/Cargo.toml
 @@ -17,7 +17,6 @@ cfg-if = "1.0.0"
  libc = "0.2.135"
- la-arena = { version = "0.3.0", path = "../../lib/la-arena" }
+ la-arena.workspace = true
  countme = { version = "3.0.1", features = ["enable"] }
 -jemalloc-ctl = { version = "0.5.0", package = "tikv-jemalloc-ctl", optional = true }
  

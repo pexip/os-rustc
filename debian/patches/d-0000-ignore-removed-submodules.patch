@@ -4,17 +4,17 @@ Subject: d-0000-ignore-removed-submodules
 
 ---
  Cargo.toml                         |  7 -----
- src/bootstrap/bootstrap.py         |  6 +----
+ src/bootstrap/bootstrap.py         |  4 ---
  src/bootstrap/builder.rs           | 54 +++++++++-----------------------------
  src/bootstrap/test.rs              | 12 +--------
  src/tools/rust-analyzer/Cargo.toml | 11 +++++++-
- 5 files changed, 25 insertions(+), 65 deletions(-)
+ 5 files changed, 24 insertions(+), 64 deletions(-)
 
 diff --git a/Cargo.toml b/Cargo.toml
-index 20b1c65..16d4ebe 100644
+index d2e84d5..a852385 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -20,22 +20,15 @@ members = [
+@@ -19,22 +19,15 @@ members = [
    "src/tools/tidy",
    "src/tools/tier-check",
    "src/tools/build-manifest",
@@ -38,10 +38,10 @@ index 20b1c65..16d4ebe 100644
    "src/tools/lld-wrapper",
    "src/tools/collect-license-metadata",
 diff --git a/src/bootstrap/bootstrap.py b/src/bootstrap/bootstrap.py
-index 149350e..2813c89 100644
+index f44a05a..27da09c 100644
 --- a/src/bootstrap/bootstrap.py
 +++ b/src/bootstrap/bootstrap.py
-@@ -946,10 +946,6 @@ class RustBuild(object):
+@@ -944,10 +944,6 @@ class RustBuild(object):
          args = [self.cargo(), "build", "--manifest-path",
                  os.path.join(self.rust_root, "src/bootstrap/Cargo.toml")]
          args.extend("--verbose" for _ in range(self.verbose))
@@ -53,10 +53,10 @@ index 149350e..2813c89 100644
              args.append("--features")
              args.append("build-metrics")
 diff --git a/src/bootstrap/builder.rs b/src/bootstrap/builder.rs
-index 05b66f9..ff1f0eb 100644
+index b366619..8866581 100644
 --- a/src/bootstrap/builder.rs
 +++ b/src/bootstrap/builder.rs
-@@ -459,20 +459,20 @@ impl<'a> ShouldRun<'a> {
+@@ -497,20 +497,20 @@ impl<'a> ShouldRun<'a> {
          static SUBMODULES_PATHS: OnceCell<Vec<String>> = OnceCell::new();
  
          let init_submodules_paths = |src: &PathBuf| {
@@ -89,7 +89,7 @@ index 05b66f9..ff1f0eb 100644
  
              submodules_paths
          };
-@@ -646,25 +646,14 @@ impl<'a> Builder<'a> {
+@@ -684,25 +684,14 @@ impl<'a> Builder<'a> {
                  tool::Linkchecker,
                  tool::CargoTest,
                  tool::Compiletest,
@@ -112,10 +112,10 @@ index 05b66f9..ff1f0eb 100644
 -                llvm::Lld,
 -                llvm::CrtBeginEnd,
 -                tool::RustdocGUITest,
+                 tool::OptimizedDist
              ),
              Kind::Check | Kind::Clippy | Kind::Fix => describe!(
-                 check::Std,
-@@ -672,12 +661,7 @@ impl<'a> Builder<'a> {
+@@ -711,12 +700,7 @@ impl<'a> Builder<'a> {
                  check::Rustdoc,
                  check::CodegenBackend,
                  check::Clippy,
@@ -128,7 +128,7 @@ index 05b66f9..ff1f0eb 100644
                  check::Bootstrap
              ),
              Kind::Test => describe!(
-@@ -706,7 +690,6 @@ impl<'a> Builder<'a> {
+@@ -745,7 +729,6 @@ impl<'a> Builder<'a> {
                  test::TierCheck,
                  test::Cargotest,
                  test::Cargo,
@@ -136,7 +136,7 @@ index 05b66f9..ff1f0eb 100644
                  test::ErrorIndex,
                  test::Distcheck,
                  test::RunMakeFullDeps,
-@@ -722,7 +705,6 @@ impl<'a> Builder<'a> {
+@@ -761,7 +744,6 @@ impl<'a> Builder<'a> {
                  test::EmbeddedBook,
                  test::EditionGuide,
                  test::Rustfmt,
@@ -144,7 +144,7 @@ index 05b66f9..ff1f0eb 100644
                  test::Clippy,
                  test::RustDemangler,
                  test::CompiletestTest,
-@@ -759,7 +741,6 @@ impl<'a> Builder<'a> {
+@@ -798,7 +780,6 @@ impl<'a> Builder<'a> {
                  doc::CargoBook,
                  doc::Clippy,
                  doc::ClippyBook,
@@ -152,7 +152,7 @@ index 05b66f9..ff1f0eb 100644
                  doc::EmbeddedBook,
                  doc::EditionGuide,
                  doc::StyleGuide,
-@@ -777,12 +758,9 @@ impl<'a> Builder<'a> {
+@@ -816,12 +797,9 @@ impl<'a> Builder<'a> {
                  dist::Analysis,
                  dist::Src,
                  dist::Cargo,
@@ -165,7 +165,7 @@ index 05b66f9..ff1f0eb 100644
                  dist::LlvmTools,
                  dist::RustDev,
                  dist::Bootstrap,
-@@ -799,11 +777,9 @@ impl<'a> Builder<'a> {
+@@ -838,11 +816,9 @@ impl<'a> Builder<'a> {
                  install::Docs,
                  install::Std,
                  install::Cargo,
@@ -177,7 +177,7 @@ index 05b66f9..ff1f0eb 100644
                  install::LlvmTools,
                  install::Src,
                  install::Rustc
-@@ -813,7 +789,6 @@ impl<'a> Builder<'a> {
+@@ -852,7 +828,6 @@ impl<'a> Builder<'a> {
                  run::BuildManifest,
                  run::BumpStage0,
                  run::ReplaceVersionPlaceholder,
@@ -185,7 +185,7 @@ index 05b66f9..ff1f0eb 100644
                  run::CollectLicenseMetadata,
                  run::GenerateCopyright,
                  run::GenerateWindowsSys,
-@@ -1965,10 +1940,7 @@ impl<'a> Builder<'a> {
+@@ -1990,10 +1965,7 @@ impl<'a> Builder<'a> {
              }
          }
  
@@ -198,10 +198,10 @@ index 05b66f9..ff1f0eb 100644
          }
  
 diff --git a/src/bootstrap/test.rs b/src/bootstrap/test.rs
-index eed7a58..c3bf972 100644
+index d0d62db..3c4c4e3 100644
 --- a/src/bootstrap/test.rs
 +++ b/src/bootstrap/test.rs
-@@ -2129,17 +2129,7 @@ impl Step for RustcGuide {
+@@ -2143,17 +2143,7 @@ impl Step for RustcGuide {
      }
  
      fn run(self, builder: &Builder<'_>) {
@@ -210,7 +210,7 @@ index eed7a58..c3bf972 100644
 -
 -        let src = builder.src.join(relative_path);
 -        let mut rustbook_cmd = builder.tool_cmd(Tool::Rustbook);
--        let toolstate = if try_run(builder, rustbook_cmd.arg("linkcheck").arg(&src)).is_ok() {
+-        let toolstate = if builder.run_delaying_failure(rustbook_cmd.arg("linkcheck").arg(&src)) {
 -            ToolState::TestPass
 -        } else {
 -            ToolState::TestFail
@@ -221,7 +221,7 @@ index eed7a58..c3bf972 100644
  }
  
 diff --git a/src/tools/rust-analyzer/Cargo.toml b/src/tools/rust-analyzer/Cargo.toml
-index 3050cf7..174e1f0 100644
+index f6a50bf..bd38d4f 100644
 --- a/src/tools/rust-analyzer/Cargo.toml
 +++ b/src/tools/rust-analyzer/Cargo.toml
 @@ -1,5 +1,14 @@

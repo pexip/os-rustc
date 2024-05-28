@@ -8,16 +8,15 @@ Last-Update: 2023-05-17
  1 file changed, 1 insertion(+), 3 deletions(-)
 
 diff --git a/src/tools/cargo/Cargo.toml b/src/tools/cargo/Cargo.toml
-index 7e383be..384fe45 100644
+index 0e189a6..4071e8c 100644
 --- a/src/tools/cargo/Cargo.toml
 +++ b/src/tools/cargo/Cargo.toml
-@@ -203,8 +203,6 @@ test = false
+@@ -217,7 +217,5 @@ test = false
  doc = false
  
  [features]
 -vendored-openssl = ["openssl/vendored"]
 -vendored-libgit2 = ["libgit2-sys/vendored"]
 +# Debian: removed vendoring flags
- pretty-env-logger = ["pretty_env_logger"]
  # This is primarily used by rust-lang/rust distributing cargo the executable.
 -all-static = ['vendored-openssl', 'curl/static-curl', 'curl/force-system-lib-on-osx']
