@@ -4,23 +4,24 @@ Subject: d-0020-remove-windows-dependencies
 
 ===================================================================
 ---
- compiler/rustc_codegen_ssa/Cargo.toml              |  4 ---
- compiler/rustc_data_structures/Cargo.toml          | 10 ------
- compiler/rustc_driver_impl/Cargo.toml              |  6 ----
- compiler/rustc_errors/Cargo.toml                   |  8 -----
- compiler/rustc_session/Cargo.toml                  |  7 ----
- library/backtrace/Cargo.toml                       | 13 -------
- src/bootstrap/Cargo.toml                           | 15 --------
- src/tools/cargo/Cargo.toml                         | 20 ++---------
- .../cargo/crates/cargo-test-support/Cargo.toml     | 41 ++++++++++------------
- src/tools/cargo/crates/cargo-util/Cargo.toml       |  7 ----
- src/tools/cargo/crates/home/Cargo.toml             |  3 --
- .../cargo/credential/cargo-credential/Cargo.toml   |  3 --
- src/tools/compiletest/Cargo.toml                   | 10 ------
- src/tools/rust-analyzer/crates/profile/Cargo.toml  |  3 --
- .../rust-analyzer/crates/rust-analyzer/Cargo.toml  |  6 ----
- src/tools/rust-analyzer/crates/stdx/Cargo.toml     |  4 ---
- 16 files changed, 22 insertions(+), 138 deletions(-)
+ compiler/rustc_codegen_ssa/Cargo.toml               |  4 ----
+ compiler/rustc_data_structures/Cargo.toml           | 10 ----------
+ compiler/rustc_driver_impl/Cargo.toml               |  6 ------
+ compiler/rustc_errors/Cargo.toml                    |  8 --------
+ compiler/rustc_session/Cargo.toml                   |  7 -------
+ library/backtrace/Cargo.toml                        | 13 -------------
+ src/bootstrap/Cargo.toml                            | 15 ---------------
+ src/tools/cargo/Cargo.toml                          | 21 +++------------------
+ .../cargo/crates/cargo-test-support/Cargo.toml      |  3 ---
+ src/tools/cargo/crates/cargo-util/Cargo.toml        |  7 -------
+ src/tools/cargo/crates/home/Cargo.toml              |  3 ---
+ .../cargo/credential/cargo-credential/Cargo.toml    |  3 ---
+ src/tools/cargo/src/cargo/util/auth/mod.rs          |  2 --
+ src/tools/compiletest/Cargo.toml                    | 10 ----------
+ src/tools/rust-analyzer/crates/profile/Cargo.toml   |  3 ---
+ .../rust-analyzer/crates/rust-analyzer/Cargo.toml   |  6 ------
+ src/tools/rust-analyzer/crates/stdx/Cargo.toml      |  4 ----
+ 17 files changed, 3 insertions(+), 122 deletions(-)
 
 diff --git a/compiler/rustc_codegen_ssa/Cargo.toml b/compiler/rustc_codegen_ssa/Cargo.toml
 index 34d0e2d..2cb22f0 100644
@@ -106,10 +107,10 @@ index e26d25d..fe343f8 100644
 -    "Win32_System_LibraryLoader",
 -]
 diff --git a/library/backtrace/Cargo.toml b/library/backtrace/Cargo.toml
-index cff2c9e..ad053f0 100644
+index 6714b3b..71d56b4 100644
 --- a/library/backtrace/Cargo.toml
 +++ b/library/backtrace/Cargo.toml
-@@ -45,9 +45,6 @@ version = "0.31.1"
+@@ -47,9 +47,6 @@ version = "0.32.0"
  default-features = false
  features = ['read_core', 'elf', 'macho', 'pe', 'unaligned', 'archive']
  
@@ -119,7 +120,7 @@ index cff2c9e..ad053f0 100644
  [build-dependencies]
  # Only needed for Android, but cannot be target dependent
  # https://github.com/rust-lang/cargo/issues/4932
-@@ -85,16 +82,6 @@ libbacktrace = []
+@@ -87,16 +84,6 @@ libbacktrace = []
  libunwind = []
  unix-backtrace = []
  verify-winapi = [
@@ -137,7 +138,7 @@ index cff2c9e..ad053f0 100644
  
  [[example]]
 diff --git a/src/bootstrap/Cargo.toml b/src/bootstrap/Cargo.toml
-index 74b9a23..e65e3c2 100644
+index 9bf2694..9fc6f66 100644
 --- a/src/bootstrap/Cargo.toml
 +++ b/src/bootstrap/Cargo.toml
 @@ -62,21 +62,6 @@ semver = "1.0.17"
@@ -160,10 +161,10 @@ index 74b9a23..e65e3c2 100644
 -]
 -
  [dev-dependencies]
- pretty_assertions = "1.2"
+ pretty_assertions = "1.4"
  
 diff --git a/src/tools/cargo/Cargo.toml b/src/tools/cargo/Cargo.toml
-index 4071e8c..1f8164f 100644
+index 23c5cc7..91ecfd0 100644
 --- a/src/tools/cargo/Cargo.toml
 +++ b/src/tools/cargo/Cargo.toml
 @@ -2,7 +2,9 @@
@@ -177,39 +178,36 @@ index 4071e8c..1f8164f 100644
    "benches/benchsuite",
    "benches/capture",
  ]
-@@ -21,8 +23,6 @@ bytesize = "1.2"
+@@ -24,8 +26,6 @@ bytesize = "1.3"
  cargo = { path = "" }
- cargo-credential = { version = "0.3.0", path = "credential/cargo-credential" }
+ cargo-credential = { version = "0.4.0", path = "credential/cargo-credential" }
  cargo-credential-libsecret = { version = "0.3.1", path = "credential/cargo-credential-libsecret" }
 -cargo-credential-wincred = { version = "0.3.0", path = "credential/cargo-credential-wincred" }
 -cargo-credential-macos-keychain = { version = "0.3.0", path = "credential/cargo-credential-macos-keychain" }
  cargo-platform = { path = "crates/cargo-platform", version = "0.1.4" }
  cargo-test-macro = { path = "crates/cargo-test-macro" }
  cargo-test-support = { path = "crates/cargo-test-support" }
-@@ -100,7 +100,6 @@ unicode-xid = "0.2.4"
- url = "2.4.0"
+@@ -101,7 +101,6 @@ unicode-xid = "0.2.4"
+ url = "2.4.1"
  varisat = "0.2.2"
  walkdir = "2.3.3"
 -windows-sys = "0.48"
  
  [package]
  name = "cargo"
-@@ -125,8 +124,6 @@ bytesize.workspace = true
+@@ -128,8 +127,6 @@ bytesize.workspace = true
  cargo-platform.workspace = true
  cargo-credential.workspace = true
  cargo-credential-libsecret.workspace = true
 -cargo-credential-macos-keychain.workspace = true
 -cargo-credential-wincred.workspace = true
  cargo-util.workspace = true
+ color-print.workspace = true
  clap = { workspace = true, features = ["wrap_help"] }
- crates-io.workspace = true
-@@ -186,21 +183,6 @@ walkdir.workspace = true
+@@ -189,18 +186,6 @@ walkdir.workspace = true
  [target.'cfg(not(windows))'.dependencies]
  openssl = { workspace = true, optional = true }
  
--[target.'cfg(windows)'.dependencies]
--fwdansi.workspace = true
--
 -[target.'cfg(windows)'.dependencies.windows-sys]
 -workspace = true
 -features = [
@@ -226,59 +224,21 @@ index 4071e8c..1f8164f 100644
  cargo-test-macro.workspace = true
  cargo-test-support.workspace = true
 diff --git a/src/tools/cargo/crates/cargo-test-support/Cargo.toml b/src/tools/cargo/crates/cargo-test-support/Cargo.toml
-index 085041a..fa0e603 100644
+index fc32e1c..ce5d708 100644
 --- a/src/tools/cargo/crates/cargo-test-support/Cargo.toml
 +++ b/src/tools/cargo/crates/cargo-test-support/Cargo.toml
-@@ -9,25 +9,22 @@ publish = false
- doctest = false
- 
- [dependencies]
--anyhow.workspace = true
--cargo-test-macro.workspace = true
--cargo-util.workspace = true
--crates-io.workspace = true
--filetime.workspace = true
--flate2.workspace = true
--git2.workspace = true
--glob.workspace = true
--itertools.workspace = true
--lazy_static.workspace = true
--pasetors.workspace = true
--serde = { workspace = true, features = ["derive"] }
--serde_json.workspace = true
--snapbox.workspace = true
--tar.workspace = true
--termcolor.workspace = true
--time.workspace = true
--toml.workspace = true
--url.workspace = true
+@@ -29,6 +29,3 @@ tar.workspace = true
+ time.workspace = true
+ toml.workspace = true
+ url.workspace = true
 -
 -[target.'cfg(windows)'.dependencies]
 -windows-sys = { workspace = true, features = ["Win32_Storage_FileSystem"] }
-+anyhow = "1.0.34"
-+cargo-test-macro = { path = "../cargo-test-macro" }
-+cargo-util = { path = "../cargo-util" }
-+crates-io = { path = "../crates-io" }
-+filetime = "0.2"
-+flate2 = { version = "1.0", default-features = false, features = ["zlib"] }
-+git2 = "0.17.0"
-+glob = "0.3"
-+itertools = "0.10.0"
-+lazy_static = "1.0"
-+pasetors = { version = "0.6.4", features = ["v3", "paserk", "std", "serde"] }
-+serde = { version = "1.0.123", features = ["derive"] }
-+serde_json = "1.0"
-+snapbox = { version = "0.4.0", features = ["diff", "path"] }
-+tar = { version = "0.4.38", default-features = false }
-+termcolor = "1.1.2"
-+time = { version = "0.3", features = ["parsing", "formatting"]}
-+toml = "0.7.0"
-+url = "2.2.2"
 diff --git a/src/tools/cargo/crates/cargo-util/Cargo.toml b/src/tools/cargo/crates/cargo-util/Cargo.toml
-index 99a5942..39eb404 100644
+index cba00f9..fb52b6e 100644
 --- a/src/tools/cargo/crates/cargo-util/Cargo.toml
 +++ b/src/tools/cargo/crates/cargo-util/Cargo.toml
-@@ -19,10 +19,3 @@ shell-escape.workspace = true
+@@ -20,10 +20,3 @@ shell-escape.workspace = true
  tempfile.workspace = true
  tracing.workspace = true
  walkdir.workspace = true
@@ -301,10 +261,10 @@ index 03bd555..32fdf26 100644
 -[target.'cfg(windows)'.dependencies]
 -windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_UI_Shell"] }
 diff --git a/src/tools/cargo/credential/cargo-credential/Cargo.toml b/src/tools/cargo/credential/cargo-credential/Cargo.toml
-index 8cd1348..84b30cf 100644
+index c8db996..96aa498 100644
 --- a/src/tools/cargo/credential/cargo-credential/Cargo.toml
 +++ b/src/tools/cargo/credential/cargo-credential/Cargo.toml
-@@ -14,8 +14,5 @@ serde_json.workspace = true
+@@ -15,8 +15,5 @@ serde_json.workspace = true
  thiserror.workspace = true
  time.workspace = true
  
@@ -313,11 +273,24 @@ index 8cd1348..84b30cf 100644
 -
  [dev-dependencies]
  snapbox = { workspace = true, features = ["examples"] }
+diff --git a/src/tools/cargo/src/cargo/util/auth/mod.rs b/src/tools/cargo/src/cargo/util/auth/mod.rs
+index ea82dce..df181db 100644
+--- a/src/tools/cargo/src/cargo/util/auth/mod.rs
++++ b/src/tools/cargo/src/cargo/util/auth/mod.rs
+@@ -529,8 +529,6 @@ fn credential_action(
+             }
+             "cargo:paseto" => bail!("cargo:paseto requires -Zasymmetric-token"),
+             "cargo:token-from-stdout" => Box::new(BasicProcessCredential {}),
+-            "cargo:wincred" => Box::new(cargo_credential_wincred::WindowsCredential {}),
+-            "cargo:macos-keychain" => Box::new(cargo_credential_macos_keychain::MacKeychain {}),
+             "cargo:libsecret" => Box::new(cargo_credential_libsecret::LibSecretCredential {}),
+             process => Box::new(CredentialProcessCredential::new(process)),
+         };
 diff --git a/src/tools/compiletest/Cargo.toml b/src/tools/compiletest/Cargo.toml
-index ff1d5ce..61f7be4 100644
+index bb1fa6e..2735e1e 100644
 --- a/src/tools/compiletest/Cargo.toml
 +++ b/src/tools/compiletest/Cargo.toml
-@@ -27,13 +27,3 @@ anyhow = "1"
+@@ -28,13 +28,3 @@ home = "0.5.5"
  
  [target.'cfg(unix)'.dependencies]
  libc = "0.2"
@@ -346,10 +319,10 @@ index fd98d85..8c1d1379 100644
  cpu_profiler = []
  
 diff --git a/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml b/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml
-index 5bfac7e..04b23a1 100644
+index 7410f0a..d25b922 100644
 --- a/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml
 +++ b/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml
-@@ -72,12 +72,6 @@ toolchain.workspace = true
+@@ -71,12 +71,6 @@ toolchain.workspace = true
  vfs-notify.workspace = true
  vfs.workspace = true
  
@@ -377,16 +350,3 @@ index 536f000..6ed37f5 100644
  [features]
  # Uncomment to enable for the whole crate graph
  # default = [ "backtrace" ]
-Index: rust/src/tools/cargo/src/cargo/util/auth/mod.rs
-===================================================================
---- rust.orig/src/tools/cargo/src/cargo/util/auth/mod.rs
-+++ rust/src/tools/cargo/src/cargo/util/auth/mod.rs
-@@ -456,8 +456,6 @@ fn credential_action(
-             "cargo:token" => Box::new(TokenCredential::new(config)),
-             "cargo:paseto" => Box::new(PasetoCredential::new(config)),
-             "cargo:token-from-stdout" => Box::new(BasicProcessCredential {}),
--            "cargo:wincred" => Box::new(cargo_credential_wincred::WindowsCredential {}),
--            "cargo:macos-keychain" => Box::new(cargo_credential_macos_keychain::MacKeychain {}),
-             "cargo:libsecret" => Box::new(cargo_credential_libsecret::LibSecretCredential {}),
-             process => Box::new(CredentialProcessCredential::new(process)),
-         };

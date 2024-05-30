@@ -30,7 +30,6 @@ RELEASES.md
 compiler/rustc_codegen_cranelift/docs/dwarf.md
 compiler/rustc_codegen_gcc/Readme.md
 compiler/rustc_codegen_ssa/messages.ftl
-extra/git2/src/cred.rs
 library/core/src/ffi/c_*.md
 library/portable-simd/*.md
 library/std/src/sys/sgx/abi/entry.S
@@ -59,6 +58,7 @@ src/doc/rustc/src/lints/groups.md
 src/doc/rustc/src/platform-support/armeb-unknown-linux-gnueabi.md
 src/doc/rustc/src/platform-support/armv7-unknown-linux-uclibceabi.md
 src/doc/rustc/src/platform-support/armv7-unknown-linux-uclibceabihf.md
+src/doc/rustc/src/platform-support/unknown-uefi.md
 src/doc/rustc/src/platform-support/wasm32-wasi-preview1-threads.md
 src/doc/rustc/src/targets/known-issues.md
 src/doc/rustdoc/src/*.md
@@ -78,7 +78,6 @@ src/tools/rust-analyzer/crates/rust-analyzer/src/diagnostics/to_proto.rs
 src/tools/rust-analyzer/docs/user/manual.adoc
 src/tools/rustfmt/*.md
 tests/mir-opt/building/*.mir
-tests/mir-opt/coverage_graphviz.*.InstrumentCoverage.0.dot
 tests/rustdoc/inline_cross/assoc_item_trait_bounds.out*.html
 tests/rustdoc/notable-trait/doc-notable_trait*.html
 tests/rustdoc/notable-trait/spotlight-from-dependency.odd.html
@@ -108,6 +107,7 @@ vendor/elliptic-curve/src/hash2curve/hash2field/expand_msg/xof.rs
 vendor/elliptic-curve/src/jwk.rs
 vendor/encoding_rs/src/ascii.rs
 vendor/encoding_rs/src/utf_16.rs
+vendor/faster-hex/src/serde.rs
 vendor/fiat-crypto/src/secp256k1_dettman_64.rs
 vendor/git2/src/cred.rs
 vendor/half/LICENSES/Apache-2.0.txt
@@ -117,12 +117,13 @@ vendor/handlebars/src/render.rs
 vendor/handlebars/src/template.rs
 vendor/humansize/src/lib.rs
 vendor/ipnet/RELEASES.md
-vendor/kstring/benches/clone.rs
 vendor/lazy_static/src/lib.rs
 vendor/maplit/README.rst
 vendor/mdbook/CONTRIBUTING.md
 vendor/p384/src/arithmetic/hash2curve.rs
 vendor/pasetors/src/token.rs
+vendor/portable-atomic/src/imp/atomic128/README.md
+vendor/portable-atomic/src/lib.rs
 vendor/pulldown-cmark/tests/suite/footnotes.rs
 vendor/rustc-demangle/src/legacy.rs
 vendor/spdx-expression/LICENSES/MIT.txt
@@ -137,9 +138,15 @@ vendor/tinyvec/LICENSE-*.md
 vendor/tracing-subscriber/src/fmt/format/json.rs
 vendor/unicase/src/lib.rs
 vendor/unicode-normalization/src/stream_safe.rs
+vendor/vcpkg/notes.md
 vendor/web-sys/src/features/gen_SvgTextElement.rs
 vendor/web-sys/src/features/gen_SvgtSpanElement.rs
+vendor/windows-bindgen/src/rust/extensions/mod.rs
+vendor/windows-bindgen/src/tokens/mod.rs
+vendor/windows-bindgen/src/winmd/writer/tables.rs
+vendor/windows-metadata/src/lib.rs
 vendor/winnow/benches/contains_token.rs
+vendor/winnow/benches/iter.rs
 vendor/zerovec/src/map2d/map.rs
 
 # False-positive, audit-vendor-source automatically flags JS/C files
@@ -161,7 +168,6 @@ src/tools/rustdoc-js/.eslintrc.js
 src/tools/rustdoc-js/tester.js
 vendor/libz-sys/src/smoke.c
 vendor/openssl-sys/build/expando.c
-vendor/signal-hook/src/low_level/extract.c
 vendor/sysinfo-0.26.7/examples/simple.c
 vendor/wasm-bindgen-macro/src/worker.js
 vendor/wasm-bindgen/_package.json
@@ -230,7 +236,6 @@ vendor/color-eyre/pictures/minimal.png
 vendor/color-eyre/pictures/short.png
 vendor/color-spantrace/pictures/full.png
 vendor/color-spantrace/pictures/minimal.png
-vendor/imara-diff/plots/*.svg
 vendor/mdbook/src/theme/favicon.png
 vendor/mdbook/src/theme/favicon.svg
 vendor/overload/logo.png
@@ -254,6 +259,8 @@ src/tools/*/tests/*/*.stderr
 src/tools/cargo/benches/workspaces/*.tgz
 src/tools/cargo/crates/mdman/tests/compare/expected/formatting.txt
 src/tools/cargo/tests/testsuite/*.rs
+src/tools/cargo/tests/testsuite/cargo_add/features_activated_over_limit/out/Cargo.toml
+src/tools/cargo/tests/testsuite/cargo_add/features_deactivated_over_limit/out/Cargo.toml
 src/tools/clippy/tests/ui-internal/auxiliary/paths.rs
 src/tools/clippy/tests/ui-toml/*/*.stderr
 src/tools/clippy/tests/ui-toml/large_include_file/too_big.txt
@@ -279,6 +286,7 @@ tests/*/*/*.stderr
 tests/*/*/*.stdout
 tests/*/*/*/*.rs
 tests/auxiliary/rust_test_helpers.c
+tests/coverage-map/status-quo/*.cov-map
 tests/debuginfo/type-names.cdb.js
 tests/run-make/*/*.c
 tests/run-make/libtest-junit/output-default.xml
@@ -317,8 +325,11 @@ vendor/flate2/examples/hello_world.txt.gz
 vendor/flate2/tests/*.gz
 vendor/flate2/tests/corrupt-gz-file.bin
 vendor/fluent-syntax/benches/parser.rs
+vendor/gix-filter/tests/fixtures/generated-archives/pipeline_repos.tar.xz
 vendor/gix-glob/tests/fixtures/generated-archives/make_baseline.tar.xz
 vendor/gix-negotiate/tests/fixtures/generated-archives/make_repos.tar.xz
+vendor/gix-pathspec/tests/fixtures/generated-archives/*.tar.xz
+vendor/gix-submodule/tests/fixtures/generated-archives/basic.tar.xz
 vendor/gsgdt/tests/*.json
 vendor/handlebars/tests/helper_with_space.rs
 vendor/hkdf/tests/data/*.blb
@@ -361,7 +372,9 @@ vendor/proptest/proptest-regressions/test_runner/rng.txt
 vendor/proptest/src/regex-contrib/crates_regex.rs
 vendor/regex-automata-0.1.10/data/fowler-tests/basic.dat
 vendor/regex-automata-0.1.10/data/tests/fowler/basic.dat
-vendor/regex-automata/tests/data/fowler/dat/basic.dat
+vendor/regex-automata-0.2.0/tests/data/fowler/dat/basic.dat
+vendor/regex-automata/tests/fuzz/testdata/deserialize_*
+vendor/regex-automata/tests/gen/*/*.dfa
 vendor/regex/record/compile-test/2023-04-19_1.7.3.csv
 vendor/regex/record/compile-test/2023-04-20_master.csv
 vendor/regex/src/testdata/basic.dat
@@ -385,7 +398,8 @@ vendor/unicode-ident/tests/fst/*.fst
 vendor/unicode-segmentation/src/testdata.rs
 vendor/url/tests/*.json
 vendor/varisat/proptest-regressions/solver.txt
-vendor/vte/tests/demo.vte
+vendor/vcpkg/test-data/no-status/installed/vcpkg/updates/*
+vendor/vcpkg/test-data/normalized/installed/vcpkg/updates/status
 vendor/walkdir/compare/nftw.c
 vendor/wasm-bindgen/tests/headless/*
 vendor/wasm-bindgen/tests/wasm/*
@@ -410,7 +424,7 @@ vendor/unicode-normalization/src/tables.rs
 vendor/unicode-script/src/tables.rs
 vendor/unicode-segmentation/src/tables.rs
 vendor/wasi/src/lib_generated.rs
-vendor/windows-metadata/default/*.winmd
+vendor/windows-bindgen/default/*.winmd
 compiler/rustc_baked_icu_data/src/data/list/and_v1/es.rs.data
 compiler/rustc_baked_icu_data/src/data/fallback/likelysubtags_v1/und.rs.data
 compiler/rustc_baked_icu_data/src/data/fallback/parents_v1/und.rs.data
@@ -462,6 +476,9 @@ vendor/clap_derive/src/derives/args.rs
 vendor/clap_derive/src/derives/parser.rs
 vendor/clap_derive/src/derives/subcommand.rs
 vendor/clap_derive/src/derives/value_enum.rs
+vendor/color-print-proc-macro/src/format_args/mod.rs
+vendor/color-print-proc-macro/src/parse/color_tag.rs
+vendor/color-print-proc-macro/src/parse/util.rs
 vendor/compiler_builtins/libm/src/math/atan.rs
 vendor/datafrog/src/lib.rs
 vendor/derive_more/src/*.rs
@@ -485,13 +502,21 @@ vendor/gimli*/src/read/rnglists.rs
 vendor/gimli*/src/read/unit.rs
 vendor/gix-config/src/file/init/mod.rs
 vendor/gix-config/src/parse/events.rs
+vendor/gix-config/src/parse/nom/mod.rs
 vendor/gix-date/src/parse.rs
+vendor/gix-discover/src/is.rs
 vendor/gix-features/src/parallel/mod.rs
 vendor/gix-features/src/parallel/reduce.rs
 vendor/gix-features/src/zlib/mod.rs
 vendor/gix-features/src/zlib/stream/inflate.rs
+vendor/gix-filter/tests/eol/convert_to_git.rs
+vendor/gix-filter/tests/eol/convert_to_worktree.rs
+vendor/gix-filter/tests/worktree/mod.rs
 vendor/gix-odb/src/store_impls/loose/find.rs
 vendor/gix-path/src/env/git.rs
+vendor/gix-pathspec/src/lib.rs
+vendor/gix-pathspec/src/parse.rs
+vendor/gix-pathspec/tests/parse/mod.rs
 vendor/gix-protocol/src/fetch/delegate.rs
 vendor/gix-ref/src/store/packed/decode.rs
 vendor/gix-ref/src/store/packed/decode/tests.rs
@@ -543,6 +568,9 @@ vendor/pulldown-cmark/src/linklabel.rs
 vendor/pulldown-cmark/tests/lib.rs
 vendor/rayon/tests/sort-panic-safe.rs
 vendor/regex-automata-0.1.10/src/regex.rs
+vendor/regex-automata/src/dfa/automaton.rs
+vendor/regex-automata/src/hybrid/dfa.rs
+vendor/regex-automata/src/meta/regex.rs
 vendor/rustc-rayon/tests/sort-panic-safe.rs
 vendor/rustc_apfloat/src/lib.rs
 vendor/rustversion/src/attr.rs
@@ -589,7 +617,8 @@ vendor/varisat-dimacs/src/lib.rs
 vendor/varisat/src/clause/alloc.rs
 vendor/varisat/src/solver.rs
 vendor/vec_mut_scan/src/lib.rs
-vendor/windows-bindgen/src/constants.rs
+vendor/windows-bindgen/src/lib.rs
+vendor/windows-bindgen/src/rust/constants.rs
 vendor/winnow/benches/number.rs
 vendor/winnow/examples/css/parser.rs
 vendor/winnow/examples/http/parser.rs
@@ -619,6 +648,3 @@ vendor/yansi/src/tests.rs
 vendor/clap/examples/demo.md
 vendor/clap/examples/tutorial_builder/*.md
 vendor/clap/examples/tutorial_derive/*.md
-vendor/clap-4.*/examples/demo.md
-vendor/clap-4.*/examples/tutorial_builder/*.md
-vendor/clap-4.*/examples/tutorial_derive/*.md

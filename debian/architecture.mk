@@ -7,7 +7,10 @@ $(if $(findstring -riscv64-,-$(2)-),$(subst riscv64,riscv64gc,$(1)),\
 $(if $(findstring -armhf-,-$(2)-),$(subst arm,armv7,$(1)),\
 $(if $(findstring -armel-,-$(2)-),$(subst arm,armv5te,$(1)),\
 $(1)))))
-rust_type_setvar = $(1)_RUST_TYPE ?= $(call rust_cpu,$($(1)_GNU_CPU),$($(1)_ARCH))-unknown-$($(1)_GNU_SYSTEM)
+
+rust_os = $(if $(findstring -hurd-,-$(2)-),$(subst gnu,hurd-gnu,$(1)),$1)
+
+rust_type_setvar = $(1)_RUST_TYPE ?= $(call rust_cpu,$($(1)_GNU_CPU),$($(1)_ARCH))-unknown-$(call rust_os,$($(1)_GNU_SYSTEM),$($(1)_ARCH_OS))
 
 $(foreach machine,BUILD HOST TARGET,\
   $(eval $(call rust_type_setvar,DEB_$(machine))))
