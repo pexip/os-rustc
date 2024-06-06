@@ -1,0 +1,40 @@
+From c230637b92a3101a5b18141b75f94ada2edee776 Mon Sep 17 00:00:00 2001
+From: Pietro Albini <pietro.albini@ferrous-systems.com>
+Date: Fri, 15 Sep 2023 16:09:45 +0200
+Subject: [PATCH] avoid blessing cargo deps's source code in ui tests
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+FG: just the stderr part for now, the rest needs a newer cargo
+Signed-off-by: Fabian Grünbichler <f.gruenbichler@proxmox.com>
+---
+ tests/ui/issues/issue-21763.stderr   |  3 ---
+ 4 files changed, 20 insertions(+), 3 deletions(-)
+
+Index: rust/tests/ui/issues/issue-21763.stderr
+===================================================================
+--- rust.orig/tests/ui/issues/issue-21763.stderr
++++ rust/tests/ui/issues/issue-21763.stderr
+@@ -9,9 +9,6 @@ LL |     foo::<HashMap<Rc<()>, Rc<()>>>(
+    = note: required for `hashbrown::raw::RawTable<(Rc<()>, Rc<()>)>` to implement `Send`
+ note: required because it appears within the type `HashMap<Rc<()>, Rc<()>, RandomState>`
+   --> $HASHBROWN_SRC_LOCATION
+-   |
+-LL | pub struct HashMap<K, V, S = DefaultHashBuilder, A: Allocator + Clone = Global> {
+-   |            ^^^^^^^
+ note: required because it appears within the type `HashMap<Rc<()>, Rc<()>>`
+   --> $SRC_DIR/std/src/collections/hash/map.rs:LL:COL
+ note: required by a bound in `foo`
+Index: rust/tests/ui/issues/issue-21763.rs
+===================================================================
+--- rust.orig/tests/ui/issues/issue-21763.rs
++++ rust/tests/ui/issues/issue-21763.rs
+@@ -1,6 +1,6 @@
+ // Regression test for HashMap only impl'ing Send/Sync if its contents do
+ 
+-// normalize-stderr-test: "\S+hashbrown-\S+" -> "$$HASHBROWN_SRC_LOCATION"
++// normalize-stderr-test: "\S+[\\/]hashbrown\S+" -> "$$HASHBROWN_SRC_LOCATION"
+ 
+ use std::collections::HashMap;
+ use std::rc::Rc;

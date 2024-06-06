@@ -2,7 +2,7 @@ Index: rust/compiler/rustc_lint_defs/src/builtin.rs
 ===================================================================
 --- rust.orig/compiler/rustc_lint_defs/src/builtin.rs
 +++ rust/compiler/rustc_lint_defs/src/builtin.rs
-@@ -2880,11 +2880,13 @@ declare_lint! {
+@@ -2883,11 +2883,13 @@ declare_lint! {
      ///
      /// use std::arch::asm;
      ///
@@ -20,7 +20,7 @@ Index: rust/compiler/rustc_lint/src/builtin.rs
 ===================================================================
 --- rust.orig/compiler/rustc_lint/src/builtin.rs
 +++ rust/compiler/rustc_lint/src/builtin.rs
-@@ -3110,7 +3110,10 @@ declare_lint! {
+@@ -3102,7 +3102,10 @@ declare_lint! {
      /// ### Example
      ///
      /// ```rust,compile_fail

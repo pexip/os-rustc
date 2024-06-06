@@ -66,6 +66,7 @@ rpath = false
 # see also d-custom-debuginfo-path.patch
 remap-debuginfo = true
 
+omit-git-hash = true
 verbose-tests = true
 backtrace-on-ice = true
 

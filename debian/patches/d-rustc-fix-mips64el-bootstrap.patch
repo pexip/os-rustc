@@ -42,7 +42,7 @@ Index: rust/src/bootstrap/bootstrap.py
 ===================================================================
 --- rust.orig/src/bootstrap/bootstrap.py
 +++ rust/src/bootstrap/bootstrap.py
-@@ -759,6 +759,8 @@ class RustBuild(object):
+@@ -877,6 +877,8 @@ class RustBuild(object):
  
          # preserve existing RUSTFLAGS
          env.setdefault("RUSTFLAGS", "")

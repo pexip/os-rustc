@@ -1,3 +1,38 @@
+rustc (1.71.1+dfsg1-2) unstable; urgency=medium
+
+  * d/control: fix package names in B+R (Closes: #1071242)
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Fri, 17 May 2024 08:38:11 +0200
+
+rustc (1.71.1+dfsg1-1) unstable; urgency=medium
+
+  * upload to unstable
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Thu, 16 May 2024 21:46:58 +0200
+
+rustc (1.71.1+dfsg1-1~exp2) experimental; urgency=medium
+
+  * d/control: properly B+R old rustc packages (Closes: #1071005)
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Wed, 15 May 2024 07:21:42 +0200
+
+rustc (1.71.1+dfsg1-1~exp1) experimental; urgency=medium
+
+  [ Fabian Grünbichler ]
+  * New upstream release (Closes: #1069019)
+  * d/control: tighten cargo versions (Closes: #1029007)
+  * d/control: remove B-D on cmake-3 (Closes: #1067109)
+  * d/control: re-enable git-using tests
+  * rust-doc: fix references to cargo-doc (Closes: #969210, #1063390)
+  * rust-src: ship Cargo.lock (Closes: #1057736)
+  * d/control: add libssl and prefer curl with openssl (Closes: #962508)
+  * d/control: move LLVM symlinks to own package (Closes: #1021868)
+
+  [ Rob Shearman ]
+  * Support finding llvm-profdata & llvm-cov with cargo-binutils
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Wed, 08 May 2024 18:48:48 +0200
+
 rustc (1.70.0+dfsg2-1+pexip24u1) pexip; urgency=medium
 
   * New usptream release

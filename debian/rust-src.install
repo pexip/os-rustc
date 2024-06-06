@@ -13,3 +13,4 @@ Cargo.toml      usr/src/rustc-${env:RUST_LONG_VERSION}
 src             usr/src/rustc-${env:RUST_LONG_VERSION}
 library         usr/src/rustc-${env:RUST_LONG_VERSION}
 compiler        usr/src/rustc-${env:RUST_LONG_VERSION}
+Cargo.lock        usr/src/rustc-${env:RUST_LONG_VERSION}

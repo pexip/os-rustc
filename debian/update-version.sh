@@ -6,15 +6,8 @@ local V=$1
 python3 -c 'import sys; k=list(map(int,sys.argv[1].split("."))); k[1]-=1; print(".".join(map(str,k)))' "$V"
 }
 
-cargo_new() {
-local V=$1
-python3 -c 'import sys; k=list(map(int,sys.argv[1].split("."))); k[1]+='"${2:-1}"'; k[0]-=1; print(".".join(map(str,k)))' "$V"
-}
-
 update() {
 local ORIG=$1 NEW=$2 NEW_LONG=$3
-local CARGO_NEW=${4:-$(cargo_new $NEW)}
-local CARGO_NEXT=${4:-$(cargo_new $NEW 2)}
 
 ORIG_M1=$(prev_stable $ORIG)
 NEW_M1=$(prev_stable $NEW)
@@ -38,8 +31,7 @@ fi
 sed -i -e "s|libstd-rust-${ORIG_R}|libstd-rust-$NEW|g" \
        -e "s|rustc:native\( *\)(<= [^)]*)|rustc:native\1(<= $NEW_LONG++)|g" \
        -e "s|rustc:native\( *\)(>= ${ORIG_M1/./\\.}|rustc:native\1(>= ${NEW_M1}|g" \
-       -e "s|cargo\( *\)(>= [^)]*)|cargo\1(>= ${CARGO_NEW}.0~~)|g" \
-       -e "s|cargo\( *\)(<< [^)]*)|cargo\1(<< ${CARGO_NEXT}.0~~)|g" \
+       -e "s|cargo:native\( *\)(>= ${ORIG_M1/./\\.}|cargo:native\1(>= ${NEW_M1}|g" \
        control
 
 if [ "$WASI_COMMIT" != "$WASI_COMMIT_OLD" ]; then

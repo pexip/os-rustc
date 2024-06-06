@@ -12,7 +12,7 @@ Index: rust/src/bootstrap/lib.rs
 ===================================================================
 --- rust.orig/src/bootstrap/lib.rs
 +++ rust/src/bootstrap/lib.rs
-@@ -1011,10 +1011,9 @@ impl Build {
+@@ -1091,10 +1091,9 @@ impl Build {
  
          match which {
              GitRepo::Rustc => {
