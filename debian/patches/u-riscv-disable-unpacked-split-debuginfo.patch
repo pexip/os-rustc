@@ -3,10 +3,10 @@ Description: explicitly disable split unpacked debuginfo for now on riscv64,
  https://github.com/llvm/llvm-project/issues/56642
  https://github.com/rust-lang/rust/issues/110224Z
 
-diff --git a/compiler/rustc_target/src/spec/riscv64gc_unknown_freebsd.rs b/compiler/rustc_target/src/spec/riscv64gc_unknown_freebsd.rs
-index 8281bac10f..ad1fc624ad 100644
---- a/compiler/rustc_target/src/spec/riscv64gc_unknown_freebsd.rs
-+++ b/compiler/rustc_target/src/spec/riscv64gc_unknown_freebsd.rs
+Index: rust/compiler/rustc_target/src/spec/riscv64gc_unknown_freebsd.rs
+===================================================================
+--- rust.orig/compiler/rustc_target/src/spec/riscv64gc_unknown_freebsd.rs
++++ rust/compiler/rustc_target/src/spec/riscv64gc_unknown_freebsd.rs
 @@ -1,4 +1,5 @@
 -use crate::spec::{CodeModel, Target, TargetOptions};
 +use crate::spec::{CodeModel, SplitDebuginfo, Target, TargetOptions};
@@ -22,10 +22,10 @@ index 8281bac10f..ad1fc624ad 100644
              ..super::freebsd_base::opts()
          },
      }
-diff --git a/compiler/rustc_target/src/spec/riscv64gc_unknown_fuchsia.rs b/compiler/rustc_target/src/spec/riscv64gc_unknown_fuchsia.rs
-index 0585ed76fe..69d11081ac 100644
---- a/compiler/rustc_target/src/spec/riscv64gc_unknown_fuchsia.rs
-+++ b/compiler/rustc_target/src/spec/riscv64gc_unknown_fuchsia.rs
+Index: rust/compiler/rustc_target/src/spec/riscv64gc_unknown_fuchsia.rs
+===================================================================
+--- rust.orig/compiler/rustc_target/src/spec/riscv64gc_unknown_fuchsia.rs
++++ rust/compiler/rustc_target/src/spec/riscv64gc_unknown_fuchsia.rs
 @@ -1,4 +1,5 @@
 -use crate::spec::{CodeModel, SanitizerSet, Target, TargetOptions};
 +use crate::spec::{CodeModel, SanitizerSet, SplitDebuginfo, Target, TargetOptions};
@@ -41,10 +41,10 @@ index 0585ed76fe..69d11081ac 100644
              ..super::fuchsia_base::opts()
          },
      }
-diff --git a/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_gnu.rs b/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_gnu.rs
-index 90dccb2806..8114e024d1 100644
---- a/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_gnu.rs
-+++ b/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_gnu.rs
+Index: rust/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_gnu.rs
+===================================================================
+--- rust.orig/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_gnu.rs
++++ rust/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_gnu.rs
 @@ -1,4 +1,5 @@
 -use crate::spec::{CodeModel, Target, TargetOptions};
 +use crate::spec::{CodeModel, SplitDebuginfo, Target, TargetOptions};
@@ -60,10 +60,10 @@ index 90dccb2806..8114e024d1 100644
              ..super::linux_gnu_base::opts()
          },
      }
-diff --git a/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_musl.rs b/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_musl.rs
-index 1a56c78e68..67dbd2f740 100644
---- a/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_musl.rs
-+++ b/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_musl.rs
+Index: rust/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_musl.rs
+===================================================================
+--- rust.orig/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_musl.rs
++++ rust/compiler/rustc_target/src/spec/riscv64gc_unknown_linux_musl.rs
 @@ -1,4 +1,5 @@
 -use crate::spec::{CodeModel, Target, TargetOptions};
 +use crate::spec::{CodeModel, SplitDebuginfo, Target, TargetOptions};
@@ -79,10 +79,10 @@ index 1a56c78e68..67dbd2f740 100644
              ..super::linux_musl_base::opts()
          },
      }
-diff --git a/compiler/rustc_target/src/spec/riscv64gc_unknown_none_elf.rs b/compiler/rustc_target/src/spec/riscv64gc_unknown_none_elf.rs
-index ab3c14e3fe..a47b63dc94 100644
---- a/compiler/rustc_target/src/spec/riscv64gc_unknown_none_elf.rs
-+++ b/compiler/rustc_target/src/spec/riscv64gc_unknown_none_elf.rs
+Index: rust/compiler/rustc_target/src/spec/riscv64gc_unknown_none_elf.rs
+===================================================================
+--- rust.orig/compiler/rustc_target/src/spec/riscv64gc_unknown_none_elf.rs
++++ rust/compiler/rustc_target/src/spec/riscv64gc_unknown_none_elf.rs
 @@ -1,5 +1,6 @@
  use crate::spec::{Cc, CodeModel, LinkerFlavor, Lld, PanicStrategy};
 -use crate::spec::{RelocModel, Target, TargetOptions};
@@ -99,10 +99,10 @@ index ab3c14e3fe..a47b63dc94 100644
              ..Default::default()
          },
      }
-diff --git a/compiler/rustc_target/src/spec/riscv64gc_unknown_openbsd.rs b/compiler/rustc_target/src/spec/riscv64gc_unknown_openbsd.rs
-index ade9d77624..b04cea8850 100644
---- a/compiler/rustc_target/src/spec/riscv64gc_unknown_openbsd.rs
-+++ b/compiler/rustc_target/src/spec/riscv64gc_unknown_openbsd.rs
+Index: rust/compiler/rustc_target/src/spec/riscv64gc_unknown_openbsd.rs
+===================================================================
+--- rust.orig/compiler/rustc_target/src/spec/riscv64gc_unknown_openbsd.rs
++++ rust/compiler/rustc_target/src/spec/riscv64gc_unknown_openbsd.rs
 @@ -1,4 +1,5 @@
 -use crate::spec::{CodeModel, Target, TargetOptions};
 +use crate::spec::{CodeModel, SplitDebuginfo, Target, TargetOptions};
@@ -118,10 +118,10 @@ index ade9d77624..b04cea8850 100644
              ..super::openbsd_base::opts()
          },
      }
-diff --git a/compiler/rustc_target/src/spec/riscv64imac_unknown_none_elf.rs b/compiler/rustc_target/src/spec/riscv64imac_unknown_none_elf.rs
-index 0f1821c998..1bec356dcd 100644
---- a/compiler/rustc_target/src/spec/riscv64imac_unknown_none_elf.rs
-+++ b/compiler/rustc_target/src/spec/riscv64imac_unknown_none_elf.rs
+Index: rust/compiler/rustc_target/src/spec/riscv64imac_unknown_none_elf.rs
+===================================================================
+--- rust.orig/compiler/rustc_target/src/spec/riscv64imac_unknown_none_elf.rs
++++ rust/compiler/rustc_target/src/spec/riscv64imac_unknown_none_elf.rs
 @@ -1,5 +1,6 @@
  use crate::spec::{Cc, CodeModel, LinkerFlavor, Lld, PanicStrategy};
 -use crate::spec::{RelocModel, SanitizerSet, Target, TargetOptions};

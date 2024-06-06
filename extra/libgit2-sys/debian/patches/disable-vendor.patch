@@ -1,0 +1,26 @@
+Index: libgit2-sys/Cargo.toml
+===================================================================
+--- libgit2-sys.orig/Cargo.toml
++++ libgit2-sys/Cargo.toml
+@@ -57,8 +57,6 @@ version = "0.3.15"
+ https = ["openssl-sys"]
+ ssh = ["libssh2-sys"]
+ ssh_key_from_memory = []
+-vendored = []
+-vendored-openssl = ["openssl-sys/vendored"]
+ 
+ [target."cfg(unix)".dependencies.openssl-sys]
+ version = "0.9.45"
+Index: libgit2-sys/build.rs
+===================================================================
+--- libgit2-sys.orig/build.rs
++++ libgit2-sys/build.rs
+@@ -55,6 +55,8 @@ The build is now aborting. To disable, u
+         return;
+     }
+ 
++    panic!("debian build must never use vendored libgit2!");
++
+     println!("cargo:rustc-cfg=libgit2_vendored");
+ 
+     if !Path::new("libgit2/src").exists() {

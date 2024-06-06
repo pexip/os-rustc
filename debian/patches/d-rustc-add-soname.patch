@@ -24,9 +24,11 @@ using a GNU linker).
  compiler/rustc_codegen_ssa/src/back/link.rs | 7 +++++++
  1 file changed, 7 insertions(+)
 
---- a/compiler/rustc_codegen_ssa/src/back/link.rs
-+++ b/compiler/rustc_codegen_ssa/src/back/link.rs
-@@ -2241,6 +2241,13 @@
+Index: rust/compiler/rustc_codegen_ssa/src/back/link.rs
+===================================================================
+--- rust.orig/compiler/rustc_codegen_ssa/src/back/link.rs
++++ rust/compiler/rustc_codegen_ssa/src/back/link.rs
+@@ -2216,6 +2216,13 @@ fn add_order_independent_options(
      }
  
      add_rpath_args(cmd, sess, codegen_results, out_filename);

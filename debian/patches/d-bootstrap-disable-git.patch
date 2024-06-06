@@ -10,9 +10,11 @@ Forwarded: not-needed
  src/bootstrap/dist.rs    | 5 ++++-
  2 files changed, 9 insertions(+), 2 deletions(-)
 
---- a/src/bootstrap/channel.rs
-+++ b/src/bootstrap/channel.rs
-@@ -36,6 +36,12 @@
+Index: rust/src/bootstrap/channel.rs
+===================================================================
+--- rust.orig/src/bootstrap/channel.rs
++++ rust/src/bootstrap/channel.rs
+@@ -36,6 +36,12 @@ pub struct Info {
  
  impl GitInfo {
      pub fn new(omit_git_hash: bool, dir: &Path) -> GitInfo {
@@ -25,9 +27,11 @@ Forwarded: not-needed
          // See if this even begins to look like a git dir
          if !dir.join(".git").exists() {
              match read_commit_info_file(dir) {
---- a/src/bootstrap/dist.rs
-+++ b/src/bootstrap/dist.rs
-@@ -995,7 +995,10 @@
+Index: rust/src/bootstrap/dist.rs
+===================================================================
+--- rust.orig/src/bootstrap/dist.rs
++++ rust/src/bootstrap/dist.rs
+@@ -995,7 +995,10 @@ impl Step for PlainSourceTarball {
          }
  
          // If we're building from git sources, we need to vendor a complete distribution.

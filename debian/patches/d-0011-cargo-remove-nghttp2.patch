@@ -1,0 +1,19 @@
+Description: Remove nghttp2 from curl-sys crate
+Author: Zixing Liu <zixing.liu@canonical.com>
+Forwarded: not-needed
+Last-Update: 2023-05-17 <YYYY-MM-DD, last update of the meta-information, optional>
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+Index: rust/vendor/curl-sys/Cargo.toml
+===================================================================
+--- rust.orig/vendor/curl-sys/Cargo.toml
++++ rust/vendor/curl-sys/Cargo.toml
+@@ -52,7 +52,7 @@ version = "0.3.3"
+ [features]
+ default = ["ssl"]
+ force-system-lib-on-osx = []
+-http2 = ["libnghttp2-sys"]
++http2 = []
+ mesalink = []
+ ntlm = []
+ poll_7_68_0 = []

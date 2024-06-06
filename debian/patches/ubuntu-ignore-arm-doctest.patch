@@ -5,9 +5,11 @@ Bug: https://github.com/rust-lang/rust/issues/83453
 Last-Update: 2022-02-23
 ---
 This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
---- a/compiler/rustc_error_codes/src/error_codes/E0778.md
-+++ b/compiler/rustc_error_codes/src/error_codes/E0778.md
-@@ -16,7 +16,7 @@
+Index: rust/compiler/rustc_error_codes/src/error_codes/E0778.md
+===================================================================
+--- rust.orig/compiler/rustc_error_codes/src/error_codes/E0778.md
++++ rust/compiler/rustc_error_codes/src/error_codes/E0778.md
+@@ -16,7 +16,7 @@ specified:
  ```
  #![feature(isa_attribute)]
  
@@ -16,7 +18,7 @@ This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
  fn something() {}
  ```
  
-@@ -25,7 +25,7 @@
+@@ -25,7 +25,7 @@ or:
  ```
  #![feature(isa_attribute)]
  
@@ -25,9 +27,11 @@ This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
  fn something() {}
  ```
  
---- a/compiler/rustc_error_codes/src/error_codes/E0779.md
-+++ b/compiler/rustc_error_codes/src/error_codes/E0779.md
-@@ -21,7 +21,7 @@
+Index: rust/compiler/rustc_error_codes/src/error_codes/E0779.md
+===================================================================
+--- rust.orig/compiler/rustc_error_codes/src/error_codes/E0779.md
++++ rust/compiler/rustc_error_codes/src/error_codes/E0779.md
+@@ -21,7 +21,7 @@ error. Example:
  ```
  #![feature(isa_attribute)]
  

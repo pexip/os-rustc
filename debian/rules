@@ -34,8 +34,10 @@ export RUST_LONG_VERSION
 DEB_DESTDIR := $(CURDIR)/debian/tmp
 
 # Use system LLVM (comment out to use vendored LLVM)
-LLVM_VERSION = 15
-OLD_LLVM_VERSION = 13
+LLVM_VERSION = 16
+OLD_LLVM_VERSION = 15
+# Cargo-specific flags
+export LIBSSH2_SYS_USE_PKG_CONFIG=1
 # Make it easier to test against a custom LLVM
 ifneq (,$(LLVM_DESTDIR))
 LLVM_LIBRARY_PATH := $(LLVM_DESTDIR)/usr/lib/$(DEB_HOST_MULTIARCH):$(LLVM_DESTDIR)/usr/lib
@@ -53,7 +55,7 @@ ifeq (armhf,$(DEB_TARGET_ARCH))
 CLANG_RT_ARCH = armhf
 endif
 
-ifneq (,$(filter $(DEB_TARGET_ARCH), sparc64 mips64el)))
+ifneq (,$(filter $(DEB_TARGET_ARCH),sparc64 mips64el))
 # sparc64: see https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1061125
 # mips64el: has profiler, but buggy atm (32-bit overflow in some counter?)
 CLANG_RT_ARCH =
@@ -203,7 +205,7 @@ ifneq (,$(filter $(DEB_BUILD_ARCH), mips mipsel))
 endif
 
 %:
-	$(SYSTEM_WORKAROUNDS) dh $@ --parallel
+	$(SYSTEM_WORKAROUNDS) dh $@ --parallel --with bash-completion
 
 .PHONY: .dbg-windows
 .dbg-windows:
@@ -211,7 +213,7 @@ endif
 
 .PHONY: build
 build:
-	$(SYSTEM_WORKAROUNDS) dh $@ --parallel
+	$(SYSTEM_WORKAROUNDS) dh $@ --parallel --with bash-completion
 
 override_dh_clean:
 	# Upstream contains a lot of these
@@ -248,9 +250,23 @@ check-no-old-llvm:
 	! grep --color=always -i '\(clang\|ll\(..\|d\)\)-\?$(subst .,\.,$(OLD_LLVM_VERSION))' --exclude=changelog --exclude=copyright --exclude='*.patch' --exclude-dir='.debhelper' -R debian
 .PHONY: check-no-old-llvm
 
-debian/dh_auto_configure.stamp: debian/config.toml
+extra-vendor:
+	if [ -d extra ]; then \
+	  cd extra; \
+	  for c in *; do \
+	    if [ -e ../vendor/"$$c" ]; then \
+	      mv -v ../vendor/"$$c" ../vendor/"$$c".backup ; \
+	    fi ; \
+	    echo "adding extra vendored dependency '$$c'"; \
+	    cp -r ./"$$c" ../vendor/; \
+	  done; \
+	fi
+
+.PHONY: extra-vendor
+
+debian/dh_auto_configure.stamp: debian/config.toml check-no-old-llvm extra-vendor
 	# fail the build if we accidentally vendored openssl, indicates we pulled in unnecessary dependencies
-	test ! -e vendor/openssl
+	test ! -e vendor/openssl-src
 	# fail the build if our version contains ~exp and we are not releasing to experimental
 	v="$(DEB_VERSION)"; test "$$v" = "$${v%~exp*}" -o "$(DEB_DISTRIBUTION)" = "experimental" -o "$(DEB_DISTRIBUTION)" = "UNRELEASED"
 	$(PRECONFIGURE_CHECK)
@@ -259,7 +275,7 @@ debian/dh_auto_configure.stamp: debian/config.toml
 	if test $$(grep "127.0.0.1\s*localhost" /etc/hosts | wc -l) -gt 1; then \
 	  debian/ensure-patch -N debian/patches/d-test-host-duplicates.patch; fi
 	# don't care about lock changes
-	rm -f Cargo.lock src/bootstrap/Cargo.lock src/tools/rust-analyzer/Cargo.lock
+	rm -f Cargo.lock src/bootstrap/Cargo.lock src/tools/rust-analyzer/Cargo.lock src/tools/cargo/Cargo.lock
 	# We patched some crates so have to rm the checksums
 	find vendor -name .cargo-checksum.json -execdir "$(CURDIR)/debian/prune-checksums" "{}" +
 	# Link against system liblzma, see https://github.com/alexcrichton/xz2-rs/issues/16
@@ -300,6 +316,7 @@ ifeq (true,$(BUILD_WASM))
 endif
 ifeq (true,$(BUILD_DOCS))
 	$(RUSTBUILD) doc $(RUSTBUILD_FLAGS)
+	$(RUSTBUILD) doc $(RUSTBUILD_FLAGS) cargo # document cargo APIs
 endif
 
 TEST_LOG = debian/rustc-tests.log
@@ -410,6 +427,9 @@ debian/dh_auto_install.stamp:
 	  fi; \
 	done
 
+	# Remove Cargo made package cache
+	rm -vf $(CURDIR)/debian/cargo/.package-cache
+
 	touch "$@"
 
 override_dh_auto_install-arch: debian/dh_auto_install.stamp
@@ -419,6 +439,9 @@ ifeq (true,$(BUILD_WINDOWS))
 	  --target $(WINDOWS_ARCH)-pc-windows-gnu \
 	  library/std
 endif
+	# Remove Cargo made package cache
+	rm -vf $(CURDIR)/debian/cargo/.package-cache
+
 
 override_dh_auto_install-indep: debian/dh_auto_install.stamp
 ifeq (true,$(BUILD_WASM))
@@ -428,6 +451,9 @@ ifeq (true,$(BUILD_WASM))
 	  library/std
 endif
 ifeq (true,$(BUILD_DOCS))
+	# Install Cargo docs
+	install -d $(DEB_DESTDIR)/usr/share/doc/cargo
+	cp -r $(CURDIR)/build/$(DEB_BUILD_RUST_TYPE)/compiler-doc $(DEB_DESTDIR)/usr/share/doc/cargo/reference
 	# Brute force to remove privacy-breach-logo lintian warning.
 	# We could have updated the upstream sources but it would complexify
 	# the rebase
@@ -441,7 +467,13 @@ ifeq (true,$(BUILD_DOCS))
 	    -e 's,<img src="https://img.shields.io/[^"]*" alt="\([^"]*\)" />,<span class="deb-privacy-replace--shields-io">\1</span>,g' "$$file"; \
 	done
 	find $(DEB_DESTDIR) \( -iname '*.html' -empty -o -name .lock -o -name '*.inc' \) -delete;
+
+	# mv cargo book to cargo-docs
+	mv $(DEB_DESTDIR)/usr/share/doc/rust/html/cargo $(DEB_DESTDIR)/usr/share/doc/cargo/book
 endif
+	# Remove Cargo made package cache
+	rm -vf $(CURDIR)/debian/cargo/.package-cache
+
 
 override_dh_install-indep:
 	dh_install

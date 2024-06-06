@@ -15,9 +15,11 @@ Subject: Backwards-compat for cargo 0.47
  src/bootstrap/doc.rs | 3 ---
  1 file changed, 3 deletions(-)
 
---- a/src/bootstrap/doc.rs
-+++ b/src/bootstrap/doc.rs
-@@ -612,7 +612,6 @@
+Index: rust/src/bootstrap/doc.rs
+===================================================================
+--- rust.orig/src/bootstrap/doc.rs
++++ rust/src/bootstrap/doc.rs
+@@ -613,7 +613,6 @@ fn doc_std(
              .arg(&*target_dir.to_string_lossy())
              .arg("-p")
              .arg(package)
@@ -25,7 +27,7 @@ Subject: Backwards-compat for cargo 0.47
              .arg("--")
              .arg("-Z")
              .arg("unstable-options")
-@@ -712,7 +711,6 @@
+@@ -713,7 +712,6 @@ impl Step for Rustc {
          cargo.rustdocflag("--generate-link-to-definition");
          compile::rustc_cargo(builder, &mut cargo, target, compiler.stage);
          cargo.arg("-Zunstable-options");
@@ -33,7 +35,7 @@ Subject: Backwards-compat for cargo 0.47
  
          // Only include compiler crates, no dependencies of those, such as `libc`.
          // Do link to dependencies on `docs.rs` however using `rustdoc-map`.
-@@ -845,7 +843,6 @@
+@@ -846,7 +844,6 @@ macro_rules! tool_doc {
                      &[],
                  );
  

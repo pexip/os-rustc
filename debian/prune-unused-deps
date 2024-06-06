@@ -17,7 +17,7 @@ done
 test -f Cargo.lock.orig || cp Cargo.lock Cargo.lock.orig
 test -f src/bootstrap/Cargo.lock.orig || cp src/bootstrap/Cargo.lock src/bootstrap/Cargo.lock.orig
 test -f src/tools/rust-analyzer/Cargo.lock.orig || cp src/tools/rust-analyzer/Cargo.lock src/tools/rust-analyzer/Cargo.lock.orig
-rm -f Cargo.lock src/bootstrap/Cargo.lock src/tools/rust-analyzer/Cargo.lock
+rm -f Cargo.lock src/bootstrap/Cargo.lock src/tools/rust-analyzer/Cargo.lock src/tools/cargo/Cargo.lock
 
 find vendor -name .cargo-checksum.json -execdir "$scriptdir/debian/prune-checksums" "{}" +
 

@@ -12,10 +12,10 @@ Bug: https://github.com/rust-lang/rust/issues/52108
  src/test/assembly/asm/mips-types.rs                               | 1 +
  4 files changed, 5 insertions(+), 2 deletions(-)
 
-diff --git a/compiler/rustc_target/src/spec/mips64_unknown_linux_gnuabi64.rs b/compiler/rustc_target/src/spec/mips64_unknown_linux_gnuabi64.rs
-index fc5dbd1..b9df004 100644
---- a/compiler/rustc_target/src/spec/mips64_unknown_linux_gnuabi64.rs
-+++ b/compiler/rustc_target/src/spec/mips64_unknown_linux_gnuabi64.rs
+Index: rust/compiler/rustc_target/src/spec/mips64_unknown_linux_gnuabi64.rs
+===================================================================
+--- rust.orig/compiler/rustc_target/src/spec/mips64_unknown_linux_gnuabi64.rs
++++ rust/compiler/rustc_target/src/spec/mips64_unknown_linux_gnuabi64.rs
 @@ -12,7 +12,7 @@ pub fn target() -> Target {
              endian: Endian::Big,
              // NOTE(mips64r2) matches C toolchain
@@ -25,10 +25,10 @@ index fc5dbd1..b9df004 100644
              max_atomic_width: Some(64),
              mcount: "_mcount".into(),
  
-diff --git a/compiler/rustc_target/src/spec/mips64el_unknown_linux_gnuabi64.rs b/compiler/rustc_target/src/spec/mips64el_unknown_linux_gnuabi64.rs
-index e0d5f6f..57ad8c4 100644
---- a/compiler/rustc_target/src/spec/mips64el_unknown_linux_gnuabi64.rs
-+++ b/compiler/rustc_target/src/spec/mips64el_unknown_linux_gnuabi64.rs
+Index: rust/compiler/rustc_target/src/spec/mips64el_unknown_linux_gnuabi64.rs
+===================================================================
+--- rust.orig/compiler/rustc_target/src/spec/mips64el_unknown_linux_gnuabi64.rs
++++ rust/compiler/rustc_target/src/spec/mips64el_unknown_linux_gnuabi64.rs
 @@ -10,7 +10,7 @@ pub fn target() -> Target {
              abi: "abi64".into(),
              // NOTE(mips64r2) matches C toolchain
@@ -38,9 +38,11 @@ index e0d5f6f..57ad8c4 100644
              max_atomic_width: Some(64),
              mcount: "_mcount".into(),
  
---- a/src/bootstrap/bootstrap.py
-+++ b/src/bootstrap/bootstrap.py
-@@ -746,6 +746,8 @@
+Index: rust/src/bootstrap/bootstrap.py
+===================================================================
+--- rust.orig/src/bootstrap/bootstrap.py
++++ rust/src/bootstrap/bootstrap.py
+@@ -759,6 +759,8 @@ class RustBuild(object):
  
          # preserve existing RUSTFLAGS
          env.setdefault("RUSTFLAGS", "")
@@ -49,8 +51,10 @@ index e0d5f6f..57ad8c4 100644
          target_features = []
          if self.get_toml("crt-static", build_section) == "true":
              target_features += ["+crt-static"]
---- a/tests/assembly/asm/mips-types.rs
-+++ b/tests/assembly/asm/mips-types.rs
+Index: rust/tests/assembly/asm/mips-types.rs
+===================================================================
+--- rust.orig/tests/assembly/asm/mips-types.rs
++++ rust/tests/assembly/asm/mips-types.rs
 @@ -1,3 +1,4 @@
 +// ignore-test
  // revisions: mips32 mips64

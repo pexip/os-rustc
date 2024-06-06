@@ -7,11 +7,11 @@ Bug: https://github.com/rust-lang/rust/issues/34902
  compiler/rustc_llvm/build.rs | 5 +++++
  1 file changed, 5 insertions(+)
 
-diff --git a/compiler/rustc_llvm/build.rs b/compiler/rustc_llvm/build.rs
-index 7729ec6..b8f67ee 100644
---- a/compiler/rustc_llvm/build.rs
-+++ b/compiler/rustc_llvm/build.rs
-@@ -179,6 +179,11 @@ fn main() {
+Index: rust/compiler/rustc_llvm/build.rs
+===================================================================
+--- rust.orig/compiler/rustc_llvm/build.rs
++++ rust/compiler/rustc_llvm/build.rs
+@@ -180,6 +180,11 @@ fn main() {
      let mut cfg = cc::Build::new();
      cfg.warnings(false);
      for flag in cxxflags.split_whitespace() {

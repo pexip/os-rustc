@@ -6,9 +6,11 @@ Bug: https://github.com/rust-lang/rust/issues/105766
 Last-Update: 2023-03-29
 ---
 This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
---- a/src/bootstrap/config.rs
-+++ b/src/bootstrap/config.rs
-@@ -823,9 +823,9 @@
+Index: rust/src/bootstrap/config.rs
+===================================================================
+--- rust.orig/src/bootstrap/config.rs
++++ rust/src/bootstrap/config.rs
+@@ -848,9 +848,9 @@ impl Config {
      }
  
      pub fn parse(args: &[String]) -> Config {
@@ -20,7 +22,7 @@ This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
          let get_toml = |file: &Path| {
              let contents =
                  t!(fs::read_to_string(file), format!("config file {} not found", file.display()));
-@@ -834,7 +834,23 @@
+@@ -859,7 +859,23 @@ impl Config {
              match toml::from_str(&contents)
                  .and_then(|table: toml::Value| TomlConfig::deserialize(table))
              {

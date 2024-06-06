@@ -7,10 +7,10 @@ Subject: d-bootstrap-no-assume-tools
  src/bootstrap/builder/tests.rs | 4 ++++
  1 file changed, 4 insertions(+)
 
-diff --git a/src/bootstrap/builder/tests.rs b/src/bootstrap/builder/tests.rs
-index 4ab502e..5ce7fc8 100644
---- a/src/bootstrap/builder/tests.rs
-+++ b/src/bootstrap/builder/tests.rs
+Index: rust/src/bootstrap/builder/tests.rs
+===================================================================
+--- rust.orig/src/bootstrap/builder/tests.rs
++++ rust/src/bootstrap/builder/tests.rs
 @@ -364,9 +364,13 @@ mod dist {
      #[test]
      fn dist_only_cross_host() {
