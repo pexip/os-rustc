@@ -1,3 +1,9 @@
+rustc (1.70.0+dfsg2-1+pexip24u1) pexip; urgency=medium
+
+  * New usptream release
+
+ -- Huw Jones <huw@pexip.com>  Thu, 06 Jun 2024 21:36:56 +0100
+
 rustc (1.70.0+dfsg2-1) unstable; urgency=medium
 
   * upload to unstable
