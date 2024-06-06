@@ -4,14 +4,14 @@ Subject: d-bootstrap-use-local-css
 
 ===================================================================
 ---
- src/bootstrap/doc.rs | 15 ++++-----------
+ src/bootstrap/src/core/build_steps/doc.rs | 15 ++++-----------
  1 file changed, 4 insertions(+), 11 deletions(-)
 
-Index: rust/src/bootstrap/doc.rs
+Index: rust/src/bootstrap/src/core/build_steps/doc.rs
 ===================================================================
---- rust.orig/src/bootstrap/doc.rs
-+++ rust/src/bootstrap/doc.rs
-@@ -350,7 +350,27 @@ impl Step for Standalone {
+--- rust.orig/src/bootstrap/src/core/build_steps/doc.rs
++++ rust/src/bootstrap/src/core/build_steps/doc.rs
+@@ -362,7 +362,27 @@ impl Step for Standalone {
                  .arg("--index-page")
                  .arg(&builder.src.join("src/doc/index.md"))
                  .arg("--markdown-playground-url")
@@ -40,7 +40,7 @@ Index: rust/src/bootstrap/doc.rs
                  .arg("-o")
                  .arg(&out)
                  .arg(&path);
-@@ -359,11 +379,6 @@ impl Step for Standalone {
+@@ -371,11 +391,6 @@ impl Step for Standalone {
                  cmd.arg("--disable-minification");
              }
  

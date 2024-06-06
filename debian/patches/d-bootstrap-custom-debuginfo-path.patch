@@ -4,15 +4,15 @@ Subject: d-bootstrap-custom-debuginfo-path
 
 ===================================================================
 ---
- src/bootstrap/lib.rs                                        | 5 ++---
+ src/bootstrap/src/lib.rs                                        | 5 ++---
  src/test/codegen/remap_path_prefix/issue-73167-remap-std.rs | 2 +-
  2 files changed, 3 insertions(+), 4 deletions(-)
 
-Index: rust/src/bootstrap/lib.rs
+Index: rust/src/bootstrap/src/lib.rs
 ===================================================================
---- rust.orig/src/bootstrap/lib.rs
-+++ rust/src/bootstrap/lib.rs
-@@ -1145,10 +1145,9 @@ impl Build {
+--- rust.orig/src/bootstrap/src/lib.rs
++++ rust/src/bootstrap/src/lib.rs
+@@ -1163,10 +1163,9 @@ impl Build {
  
          match which {
              GitRepo::Rustc => {
@@ -38,3 +38,17 @@ Index: rust/tests/codegen/remap_path_prefix/issue-73167-remap-std.rs
  fn main() {
      std::thread::spawn(|| {
          println!("hello");
+Index: rust/src/bootstrap/src/core/builder.rs
+===================================================================
+--- rust.orig/src/bootstrap/src/core/builder.rs
++++ rust/src/bootstrap/src/core/builder.rs
+@@ -1775,7 +1775,8 @@ impl<'a> Builder<'a> {
+             cargo.env("CFG_VIRTUAL_RUST_SOURCE_BASE_DIR", map_to);
+         }
+ 
+-        if self.config.rust_remap_debuginfo {
++	// Debian: this breaks with our vendored sources!
++        if false && self.config.rust_remap_debuginfo {
+             // FIXME: handle vendored sources
+             let registry_src = t!(home::cargo_home()).join("registry").join("src");
+             let mut env_var = OsString::new();

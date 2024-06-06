@@ -27,6 +27,7 @@ vendor/term/src/terminfo/parser/names.rs
 CONTRIBUTING.md
 README.md
 RELEASES.md
+compiler/rustc_baked_icu_data/src/data/mod.rs
 compiler/rustc_codegen_cranelift/docs/dwarf.md
 compiler/rustc_codegen_gcc/Readme.md
 compiler/rustc_codegen_ssa/messages.ftl
@@ -36,7 +37,6 @@ library/std/src/sys/sgx/abi/entry.S
 library/stdarch/CONTRIBUTING.md
 library/stdarch/crates/core_arch/src/aarch64/neon/generated.rs
 library/stdarch/crates/std_detect/README.md
-src/bootstrap/CHANGELOG.md
 src/doc/*/CODE_OF_CONDUCT.md
 src/doc/book/first-edition/src/the-stack-and-the-heap.md
 src/doc/edition-guide/src/rust-2018/index.md
@@ -116,13 +116,16 @@ vendor/handlebars/src/lib.rs
 vendor/handlebars/src/render.rs
 vendor/handlebars/src/template.rs
 vendor/humansize/src/lib.rs
+vendor/icu_locid_transform_data/data/mod.rs
 vendor/ipnet/RELEASES.md
+vendor/kstring/benches/clone.rs
 vendor/lazy_static/src/lib.rs
 vendor/maplit/README.rst
 vendor/mdbook/CONTRIBUTING.md
 vendor/p384/src/arithmetic/hash2curve.rs
 vendor/pasetors/src/token.rs
 vendor/portable-atomic/src/imp/atomic128/README.md
+vendor/portable-atomic/src/imp/interrupt/README.md
 vendor/portable-atomic/src/lib.rs
 vendor/pulldown-cmark/tests/suite/footnotes.rs
 vendor/rustc-demangle/src/legacy.rs
@@ -181,10 +184,8 @@ vendor/mdbook/src/theme/book.js
 vendor/mdbook/src/theme/searcher/searcher.js
 
 # Trivial glue code for C <-> Rust
-library/backtrace/src/android-api.c
 library/backtrace/crates/line-tables-only/src/callback.c
 vendor/backtrace/src/android-api.c
-vendor/errno-dragonfly/src/errno.c
 vendor/stacker/src/arch/windows.c
 
 # False-positive, misc
@@ -286,7 +287,7 @@ tests/*/*/*.stderr
 tests/*/*/*.stdout
 tests/*/*/*/*.rs
 tests/auxiliary/rust_test_helpers.c
-tests/coverage-map/status-quo/*.cov-map
+tests/coverage/*.cov-map
 tests/debuginfo/type-names.cdb.js
 tests/run-make/*/*.c
 tests/run-make/libtest-junit/output-default.xml
@@ -337,8 +338,17 @@ vendor/hmac/tests/data/*.blb
 vendor/html5ever/data/bench/*.html
 vendor/icu_locid/benches/fixtures/*.json
 vendor/icu_locid/tests/fixtures/*.json
+vendor/icu_locid_transform/benches/fixtures/locales.json
+vendor/icu_locid_transform/benches/fixtures/uncanonicalized-locales.json
+vendor/icu_locid_transform/tests/fixtures/canonicalize.json
+vendor/icu_locid_transform/tests/fixtures/maximize.json
+vendor/icu_locid_transform/tests/fixtures/minimize.json
+vendor/icu_provider_adapters/tests/data/blob.postcard
+vendor/icu_provider_adapters/tests/data/config.json
 vendor/icu_provider_adapters/tests/data/langtest/*/*.json
 vendor/icu_provider_adapters/tests/data/langtest/*/*/*/*.json
+vendor/icu_provider_adapters/tests/data/langtest/de.json
+vendor/icu_provider_adapters/tests/data/langtest/ro.json
 vendor/idna/tests/IdnaTest*.txt
 vendor/idna/tests/punycode_tests.json
 vendor/im-rc/proptest-regressions/*.txt
@@ -347,7 +357,6 @@ vendor/im-rc/proptest-regressions/ord/map
 vendor/js-sys/tests/headless.js
 vendor/js-sys/tests/wasm/*.js
 vendor/js-sys/tests/wasm/global_fns.rs
-vendor/litemap/benches/testdata/large_litemap.postcard
 vendor/lsp-types/tests/tsc-unix.lsif
 vendor/md-5/tests/data/*.blb
 vendor/mdbook/test_book/src/individual/paragraph.md
@@ -388,11 +397,16 @@ vendor/serde_json/tests/lexical/parse.rs
 vendor/sha1/tests/data/sha1.blb
 vendor/sha2/tests/data/*.blb
 vendor/spki/tests/examples/*.der
+vendor/tabled/tests/core/iter_table.rs
+vendor/tabled/tests/settings/colorization.rs
+vendor/tabled/tests/settings/padding_test.rs
 vendor/term/tests/data/*
 vendor/tokio-native-tls/examples/identity.p12
 vendor/tokio-native-tls/tests/cert.der
 vendor/tokio-native-tls/tests/identity.p12
 vendor/tokio-native-tls/tests/root-ca.der
+vendor/toml_edit-0.19.11/tests/fixtures/invalid/control/*.stderr
+vendor/toml_edit-0.19.11/tests/fixtures/invalid/encoding/utf16.stderr
 vendor/toml_edit/tests/fixtures/invalid/*/*.stderr
 vendor/unicode-ident/tests/fst/*.fst
 vendor/unicode-segmentation/src/testdata.rs
@@ -405,15 +419,26 @@ vendor/wasm-bindgen/tests/headless/*
 vendor/wasm-bindgen/tests/wasm/*
 vendor/wasm-bindgen/tests/worker/modules.js
 vendor/web-sys/tests/wasm/*.js
-vendor/zerovec/benches/testdata/*.postcard
+vendor/winnow-0.4.7/benches/contains_token.rs
 vendor/zip/tests/data/*.zip
 
 # Compromise, ideally we'd autogenerate these
 # Should already by documented in debian/copyright
+compiler/rustc_baked_icu_data/src/data/macros/fallback_likelysubtags_v1.data.rs
+compiler/rustc_baked_icu_data/src/data/macros/fallback_parents_v1.data.rs
+compiler/rustc_baked_icu_data/src/data/macros/fallback_supplement_co_v1.data.rs
 src/doc/rustc-dev-guide/src/mir/mir_*.svg
 src/librustdoc/html/static/css/normalize.css
 src/tools/rust-analyzer/crates/ide-db/src/generated/lints.rs
 src/tools/rust-analyzer/crates/parser/src/syntax_kind/generated.rs
+vendor/icu_locid_transform_data/data/macros/fallback_likelysubtags_v1.data.rs
+vendor/icu_locid_transform_data/data/macros/fallback_parents_v1.data.rs
+vendor/icu_locid_transform_data/data/macros/fallback_supplement_co_v1.data.rs
+vendor/icu_locid_transform_data/data/macros/locid_transform_aliases_v1.data.rs
+vendor/icu_locid_transform_data/data/macros/locid_transform_likelysubtags_ext_v1.data.rs
+vendor/icu_locid_transform_data/data/macros/locid_transform_likelysubtags_l_v1.data.rs
+vendor/icu_locid_transform_data/data/macros/locid_transform_likelysubtags_sr_v1.data.rs
+vendor/icu_locid_transform_data/data/macros/locid_transform_script_dir_v1.data.rs
 vendor/linux-raw-sys/src/x86_64/general.rs
 vendor/pest_meta/src/grammar.rs
 vendor/regex-syntax/src/unicode_tables/*.rs
@@ -425,19 +450,17 @@ vendor/unicode-script/src/tables.rs
 vendor/unicode-segmentation/src/tables.rs
 vendor/wasi/src/lib_generated.rs
 vendor/windows-bindgen/default/*.winmd
-compiler/rustc_baked_icu_data/src/data/list/and_v1/es.rs.data
-compiler/rustc_baked_icu_data/src/data/fallback/likelysubtags_v1/und.rs.data
-compiler/rustc_baked_icu_data/src/data/fallback/parents_v1/und.rs.data
 
 # Compromise, ideally we'd package these in their own package
 src/librustdoc/html/static/fonts/*.woff2
 
 # file brokenness (detected as Algol source code)
 compiler/rustc_builtin_macros/src/global_allocator.rs
+compiler/rustc_codegen_gcc/build_system/src/utils.rs
 compiler/rustc_driver/src/lib.rs
 compiler/rustc_expand/src/mbe/quoted.rs
 compiler/rustc_macros/src/symbols/tests.rs
-compiler/rustc_trait_selection/src/solve/search_graph/mod.rs
+compiler/stable_mir/src/mir/visit.rs
 library/alloc/src/slice/tests.rs
 library/std/src/sys/unix/process/process_unix.rs
 library/stdarch/crates/stdarch-verify/src/lib.rs
@@ -481,6 +504,11 @@ vendor/color-print-proc-macro/src/parse/color_tag.rs
 vendor/color-print-proc-macro/src/parse/util.rs
 vendor/compiler_builtins/libm/src/math/atan.rs
 vendor/datafrog/src/lib.rs
+vendor/derivative/src/cmp.rs
+vendor/derivative/src/debug.rs
+vendor/derivative/src/hash.rs
+vendor/derivative/src/lib.rs
+vendor/derivative/src/matcher.rs
 vendor/derive_more/src/*.rs
 vendor/digest/src/core_api/rt_variable.rs
 vendor/digest/src/core_api/wrapper.rs
@@ -505,6 +533,10 @@ vendor/gix-config/src/parse/events.rs
 vendor/gix-config/src/parse/nom/mod.rs
 vendor/gix-date/src/parse.rs
 vendor/gix-discover/src/is.rs
+vendor/gix-features-0.35.0/src/parallel/mod.rs
+vendor/gix-features-0.35.0/src/parallel/reduce.rs
+vendor/gix-features-0.35.0/src/zlib/mod.rs
+vendor/gix-features-0.35.0/src/zlib/stream/inflate.rs
 vendor/gix-features/src/parallel/mod.rs
 vendor/gix-features/src/parallel/reduce.rs
 vendor/gix-features/src/zlib/mod.rs
@@ -521,11 +553,12 @@ vendor/gix-protocol/src/fetch/delegate.rs
 vendor/gix-ref/src/store/packed/decode.rs
 vendor/gix-ref/src/store/packed/decode/tests.rs
 vendor/gix-revision/src/spec/parse/function.rs
+vendor/gix-url/src/lib.rs
+vendor/gix-url/src/parse.rs
 vendor/humansize/src/allocating.rs
 vendor/icu_locid/tests/langid.rs
 vendor/icu_locid/tests/locale.rs
 vendor/indoc/src/lib.rs
-vendor/libm-0.1.4/src/math/atan.rs
 vendor/libm/src/math/atan.rs
 vendor/miniz_oxide*/src/deflate/mod.rs
 vendor/miniz_oxide*/src/inflate/mod.rs
@@ -602,6 +635,11 @@ vendor/time/src/parsing/*.rs
 vendor/time/src/parsing/combinator/mod.rs
 vendor/time/src/parsing/combinator/rfc/*.rs
 vendor/time/src/primitive_date_time.rs
+vendor/toml_edit-0.19.11/src/parser/key.rs
+vendor/toml_edit-0.19.11/src/parser/mod.rs
+vendor/toml_edit-0.19.11/src/parser/strings.rs
+vendor/toml_edit-0.19.11/src/raw_string.rs
+vendor/toml_edit-0.19.11/tests/testsuite/parse.rs
 vendor/toml_edit/src/parser/document.rs
 vendor/toml_edit/src/parser/key.rs
 vendor/toml_edit/src/parser/mod.rs
@@ -619,6 +657,22 @@ vendor/varisat/src/solver.rs
 vendor/vec_mut_scan/src/lib.rs
 vendor/windows-bindgen/src/lib.rs
 vendor/windows-bindgen/src/rust/constants.rs
+vendor/winnow-0.4.7/examples/css/parser.rs
+vendor/winnow-0.4.7/examples/http/parser.rs
+vendor/winnow-0.4.7/examples/http/parser_streaming.rs
+vendor/winnow-0.4.7/examples/json/*.rs
+vendor/winnow-0.4.7/examples/ndjson/parser.rs
+vendor/winnow-0.4.7/src/ascii/mod.rs
+vendor/winnow-0.4.7/src/binary/bits/mod.rs
+vendor/winnow-0.4.7/src/binary/bits/tests.rs
+vendor/winnow-0.4.7/src/binary/mod.rs
+vendor/winnow-0.4.7/src/combinator/branch.rs
+vendor/winnow-0.4.7/src/combinator/core.rs
+vendor/winnow-0.4.7/src/combinator/parser.rs
+vendor/winnow-0.4.7/src/combinator/sequence.rs
+vendor/winnow-0.4.7/src/combinator/tests.rs
+vendor/winnow-0.4.7/src/error.rs
+vendor/winnow-0.4.7/src/token/mod.rs
 vendor/winnow/benches/number.rs
 vendor/winnow/examples/css/parser.rs
 vendor/winnow/examples/http/parser.rs
@@ -627,6 +681,7 @@ vendor/winnow/examples/json/parser.rs
 vendor/winnow/examples/json/parser_dispatch.rs
 vendor/winnow/examples/json/parser_partial.rs
 vendor/winnow/examples/ndjson/example.ndjson
+vendor/winnow-0.4.7/examples/ndjson/example.ndjson
 vendor/winnow/examples/ndjson/parser.rs
 vendor/winnow/src/ascii/mod.rs
 vendor/winnow/src/binary/bits/mod.rs

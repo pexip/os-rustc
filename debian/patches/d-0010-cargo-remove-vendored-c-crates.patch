@@ -8,10 +8,10 @@ Last-Update: 2023-05-17
  1 file changed, 1 insertion(+), 3 deletions(-)
 
 diff --git a/src/tools/cargo/Cargo.toml b/src/tools/cargo/Cargo.toml
-index 4403044..23c5cc7 100644
+index 3fb36b4..c011909 100644
 --- a/src/tools/cargo/Cargo.toml
 +++ b/src/tools/cargo/Cargo.toml
-@@ -217,7 +217,5 @@ test = false
+@@ -226,7 +226,5 @@ test = false
  doc = false
  
  [features]
