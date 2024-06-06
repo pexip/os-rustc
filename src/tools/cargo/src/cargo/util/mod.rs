@@ -7,6 +7,7 @@ pub use self::config::{homedir, Config, ConfigValue};
 pub(crate) use self::counter::MetricsCounter;
 pub use self::dependency_queue::DependencyQueue;
 pub use self::diagnostic_server::RustfixDiagnosticServer;
+pub use self::edit_distance::{closest, closest_msg, edit_distance};
 pub use self::errors::CliError;
 pub use self::errors::{internal, CargoResult, CliResult};
 pub use self::flock::{FileLock, Filesystem};
@@ -16,7 +17,6 @@ pub use self::hex::{hash_u64, short_hash, to_hex};
 pub use self::into_url::IntoUrl;
 pub use self::into_url_with_base::IntoUrlWithBase;
 pub(crate) use self::io::LimitErrorReader;
-pub use self::lev_distance::{closest, closest_msg, lev_distance};
 pub use self::lockserver::{LockServer, LockServerClient, LockServerStarted};
 pub use self::progress::{Progress, ProgressStyle};
 pub use self::queue::Queue;
@@ -38,6 +38,7 @@ mod counter;
 pub mod cpu;
 mod dependency_queue;
 pub mod diagnostic_server;
+pub mod edit_distance;
 pub mod errors;
 mod flock;
 pub mod graph;
@@ -49,7 +50,6 @@ pub mod into_url;
 mod into_url_with_base;
 mod io;
 pub mod job;
-pub mod lev_distance;
 mod lockserver;
 pub mod machine_message;
 pub mod network;
@@ -205,6 +205,24 @@ pub fn try_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
             }
         }
     })
+}
+
+/// Get the current [`umask`] value.
+///
+/// [`umask`]: https://man7.org/linux/man-pages/man2/umask.2.html
+#[cfg(unix)]
+pub fn get_umask() -> u32 {
+    use std::sync::OnceLock;
+    static UMASK: OnceLock<libc::mode_t> = OnceLock::new();
+    // SAFETY: Syscalls are unsafe. Calling `umask` twice is even unsafer for
+    // multithreading program, since it doesn't provide a way to retrive the
+    // value without modifications. We use a static `OnceLock` here to ensure
+    // it only gets call once during the entire program lifetime.
+    *UMASK.get_or_init(|| unsafe {
+        let umask = libc::umask(0o022);
+        libc::umask(umask);
+        umask
+    }) as u32 // it is u16 on macos
 }
 
 #[cfg(test)]
