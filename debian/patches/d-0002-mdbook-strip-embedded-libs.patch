@@ -6,12 +6,12 @@ Comment: Use https://github.com/infinity0/mdBook/tree/debian to help you rebase 
 ---
  src/tools/linkchecker/main.rs                      |  28 +++++-
  vendor/mdbook/src/book/init.rs                     |  19 ----
- .../src/renderer/html_handlebars/hbs_renderer.rs   | 110 ++++-----------------
+ .../src/renderer/html_handlebars/hbs_renderer.rs   | 104 ++++-----------------
  .../mdbook/src/renderer/html_handlebars/search.rs  |   2 -
- vendor/mdbook/src/theme/index.hbs                  |  99 +------------------
- vendor/mdbook/src/theme/mod.rs                     |  27 -----
+ vendor/mdbook/src/theme/index.hbs                  |  99 +-------------------
+ vendor/mdbook/src/theme/mod.rs                     |  27 ------
  vendor/mdbook/src/theme/searcher/mod.rs            |   2 -
- 7 files changed, 47 insertions(+), 240 deletions(-)
+ 7 files changed, 47 insertions(+), 234 deletions(-)
 
 diff --git a/src/tools/linkchecker/main.rs b/src/tools/linkchecker/main.rs
 index c8a3700..4095c03 100644
@@ -67,7 +67,7 @@ index c8a3700..4095c03 100644
                          report.links_ignored_exception += 1;
                      } else {
 diff --git a/vendor/mdbook/src/book/init.rs b/vendor/mdbook/src/book/init.rs
-index ebcdd93..41dab42 100644
+index faca1d0..c1a82a3 100644
 --- a/vendor/mdbook/src/book/init.rs
 +++ b/vendor/mdbook/src/book/init.rs
 @@ -153,25 +153,6 @@ impl BookBuilder {
@@ -97,10 +97,10 @@ index ebcdd93..41dab42 100644
      }
  
 diff --git a/vendor/mdbook/src/renderer/html_handlebars/hbs_renderer.rs b/vendor/mdbook/src/renderer/html_handlebars/hbs_renderer.rs
-index e170e2f..caa2eff 100644
+index 709aa06..17ff63c 100644
 --- a/vendor/mdbook/src/renderer/html_handlebars/hbs_renderer.rs
 +++ b/vendor/mdbook/src/renderer/html_handlebars/hbs_renderer.rs
-@@ -3,13 +3,14 @@ use crate::config::{BookConfig, Config, HtmlConfig, Playground, RustEdition};
+@@ -3,13 +3,14 @@ use crate::config::{BookConfig, Code, Config, HtmlConfig, Playground, RustEditio
  use crate::errors::*;
  use crate::renderer::html_handlebars::helpers;
  use crate::renderer::{RenderContext, Renderer};
@@ -116,7 +116,7 @@ index e170e2f..caa2eff 100644
  use std::path::{Path, PathBuf};
  
  use crate::utils::fs::get_404_output_file;
-@@ -235,105 +236,28 @@ impl HtmlHandlebars {
+@@ -250,99 +251,28 @@ impl HtmlHandlebars {
          if let Some(contents) = &theme.favicon_svg {
              write_file(destination, "favicon.svg", contents)?;
          }
@@ -175,7 +175,8 @@ index e170e2f..caa2eff 100644
 +            "/usr/share/javascript/mathjax/MathJax.js",
 +            destination.join("MathJax.js"),
          )?;
--        if html_config.copy_fonts {
+-        // Don't copy the stock fonts if the user has specified their own fonts to use.
+-        if html_config.copy_fonts && theme.fonts_css.is_none() {
 -            write_file(destination, "fonts/fonts.css", theme::fonts::CSS)?;
 -            for (file_name, contents) in theme::fonts::LICENSES.iter() {
 -                write_file(destination, file_name, contents)?;
@@ -191,20 +192,13 @@ index e170e2f..caa2eff 100644
 -        }
 -        if let Some(fonts_css) = &theme.fonts_css {
 -            if !fonts_css.is_empty() {
--                if html_config.copy_fonts {
--                    warn!(
--                        "output.html.copy_fonts is deprecated.\n\
--                        Set copy_fonts=false and ensure the fonts you want are in \
--                        the `theme/fonts/` directory."
--                    );
--                }
--                write_file(destination, "fonts/fonts.css", &fonts_css)?;
+-                write_file(destination, "fonts/fonts.css", fonts_css)?;
 -            }
 -        }
 -        if !html_config.copy_fonts && theme.fonts_css.is_none() {
 -            warn!(
--                "output.html.copy_fonts is deprecated.\n\
--                This book appears to have copy_fonts=false without a fonts.css file.\n\
+-                "output.html.copy-fonts is deprecated.\n\
+-                This book appears to have copy-fonts=false in book.toml without a fonts.css file.\n\
 -                Add an empty `theme/fonts/fonts.css` file to squelch this warning."
 -            );
 -        }
@@ -238,7 +232,7 @@ index e170e2f..caa2eff 100644
          Ok(())
      }
 diff --git a/vendor/mdbook/src/renderer/html_handlebars/search.rs b/vendor/mdbook/src/renderer/html_handlebars/search.rs
-index a9e2f5c..3e3f69c 100644
+index 24d62fd..849a48c 100644
 --- a/vendor/mdbook/src/renderer/html_handlebars/search.rs
 +++ b/vendor/mdbook/src/renderer/html_handlebars/search.rs
 @@ -53,8 +53,6 @@ pub fn create_files(search_config: &Search, destination: &Path, book: &Book) ->
@@ -251,7 +245,7 @@ index a9e2f5c..3e3f69c 100644
      }
  
 diff --git a/vendor/mdbook/src/theme/index.hbs b/vendor/mdbook/src/theme/index.hbs
-index 6f3948c..7e5c54c 100644
+index 80315c4..48413b0 100644
 --- a/vendor/mdbook/src/theme/index.hbs
 +++ b/vendor/mdbook/src/theme/index.hbs
 @@ -33,10 +33,7 @@
@@ -324,7 +318,7 @@ index 6f3948c..7e5c54c 100644
          <nav id="sidebar" class="sidebar" aria-label="Table of contents">
              <div class="sidebar-scrollbox">
                  {{#toc}}{{/toc}}
-@@ -240,54 +195,8 @@
+@@ -262,54 +217,8 @@
          </script>
          {{/if}}
  

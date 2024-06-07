@@ -11,7 +11,7 @@ Index: rust/src/bootstrap/builder/tests.rs
 ===================================================================
 --- rust.orig/src/bootstrap/builder/tests.rs
 +++ rust/src/bootstrap/builder/tests.rs
-@@ -380,9 +380,13 @@ mod dist {
+@@ -387,9 +387,13 @@ mod dist {
      #[test]
      fn dist_only_cross_host() {
          let b = TargetSelection::from_user("B");

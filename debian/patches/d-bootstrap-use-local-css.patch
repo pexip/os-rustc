@@ -11,7 +11,7 @@ Index: rust/src/bootstrap/doc.rs
 ===================================================================
 --- rust.orig/src/bootstrap/doc.rs
 +++ rust/src/bootstrap/doc.rs
-@@ -360,7 +360,27 @@ impl Step for Standalone {
+@@ -350,7 +350,27 @@ impl Step for Standalone {
                  .arg("--index-page")
                  .arg(&builder.src.join("src/doc/index.md"))
                  .arg("--markdown-playground-url")
@@ -40,7 +40,7 @@ Index: rust/src/bootstrap/doc.rs
                  .arg("-o")
                  .arg(&out)
                  .arg(&path);
-@@ -369,11 +389,6 @@ impl Step for Standalone {
+@@ -359,11 +379,6 @@ impl Step for Standalone {
                  cmd.arg("--disable-minification");
              }
  

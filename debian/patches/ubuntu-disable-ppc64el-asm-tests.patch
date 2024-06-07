@@ -20,7 +20,7 @@ Index: rust/compiler/rustc_lint/src/builtin.rs
 ===================================================================
 --- rust.orig/compiler/rustc_lint/src/builtin.rs
 +++ rust/compiler/rustc_lint/src/builtin.rs
-@@ -3102,7 +3102,10 @@ declare_lint! {
+@@ -3112,7 +3112,10 @@ declare_lint! {
      /// ### Example
      ///
      /// ```rust,compile_fail

@@ -9,31 +9,32 @@ Subject: d-0020-remove-windows-dependencies
  compiler/rustc_driver_impl/Cargo.toml              |  6 ----
  compiler/rustc_errors/Cargo.toml                   |  8 -----
  compiler/rustc_session/Cargo.toml                  |  7 ----
- library/backtrace/Cargo.toml                       |  3 --
+ library/backtrace/Cargo.toml                       | 13 -------
  src/bootstrap/Cargo.toml                           | 15 --------
- src/tools/cargo/Cargo.toml                         | 17 ---------
+ src/tools/cargo/Cargo.toml                         | 18 ++--------
  .../cargo/crates/cargo-test-support/Cargo.toml     | 41 ++++++++++------------
  src/tools/cargo/crates/cargo-util/Cargo.toml       |  7 ----
  src/tools/cargo/crates/home/Cargo.toml             |  3 --
  src/tools/compiletest/Cargo.toml                   | 10 ------
+ src/tools/rust-analyzer/crates/profile/Cargo.toml  |  3 --
  .../rust-analyzer/crates/rust-analyzer/Cargo.toml  |  6 ----
  src/tools/rust-analyzer/crates/stdx/Cargo.toml     |  4 ---
- 14 files changed, 19 insertions(+), 122 deletions(-)
+ 15 files changed, 22 insertions(+), 133 deletions(-)
 
 diff --git a/compiler/rustc_codegen_ssa/Cargo.toml b/compiler/rustc_codegen_ssa/Cargo.toml
-index 0ac12d3..3f483ab 100644
+index 984efa2..f4c194b 100644
 --- a/compiler/rustc_codegen_ssa/Cargo.toml
 +++ b/compiler/rustc_codegen_ssa/Cargo.toml
 @@ -49,7 +49,3 @@ libc = "0.2.50"
  version = "0.31.1"
  default-features = false
- features = ["read_core", "elf", "macho", "pe", "unaligned", "archive", "write"]
+ features = ["read_core", "elf", "macho", "pe", "xcoff", "unaligned", "archive", "write"]
 -
 -[target.'cfg(windows)'.dependencies.windows]
 -version = "0.48.0"
 -features = ["Win32_Globalization"]
 diff --git a/compiler/rustc_data_structures/Cargo.toml b/compiler/rustc_data_structures/Cargo.toml
-index 78f73d1..fce2ee0 100644
+index a5c3cb3..5cf1462 100644
 --- a/compiler/rustc_data_structures/Cargo.toml
 +++ b/compiler/rustc_data_structures/Cargo.toml
 @@ -37,16 +37,6 @@ itertools = "0.10.1"
@@ -71,7 +72,7 @@ index 67352c5..f27cb40 100644
  llvm = ['rustc_interface/llvm']
  max_level_info = ['rustc_log/max_level_info']
 diff --git a/compiler/rustc_errors/Cargo.toml b/compiler/rustc_errors/Cargo.toml
-index bd3033f..83c8036 100644
+index e8bcd7c..36a5ee6 100644
 --- a/compiler/rustc_errors/Cargo.toml
 +++ b/compiler/rustc_errors/Cargo.toml
 @@ -26,13 +26,5 @@ termize = "0.1.1"
@@ -89,10 +90,10 @@ index bd3033f..83c8036 100644
  [features]
  rustc_use_parallel_compiler = ['rustc_error_messages/rustc_use_parallel_compiler']
 diff --git a/compiler/rustc_session/Cargo.toml b/compiler/rustc_session/Cargo.toml
-index 3af83aa..c3d2a00 100644
+index 1291d14..d9f8675 100644
 --- a/compiler/rustc_session/Cargo.toml
 +++ b/compiler/rustc_session/Cargo.toml
-@@ -23,10 +23,3 @@ termize = "0.1.1"
+@@ -25,10 +25,3 @@ termize = "0.1.1"
  
  [target.'cfg(unix)'.dependencies]
  libc = "0.2"
@@ -104,10 +105,10 @@ index 3af83aa..c3d2a00 100644
 -    "Win32_System_LibraryLoader",
 -]
 diff --git a/library/backtrace/Cargo.toml b/library/backtrace/Cargo.toml
-index 4779091..aa78771 100644
+index cff2c9e..ad053f0 100644
 --- a/library/backtrace/Cargo.toml
 +++ b/library/backtrace/Cargo.toml
-@@ -45,9 +45,6 @@ version = "0.30.0"
+@@ -45,9 +45,6 @@ version = "0.31.1"
  default-features = false
  features = ['read_core', 'elf', 'macho', 'pe', 'unaligned', 'archive']
  
@@ -135,10 +136,10 @@ index 4779091..aa78771 100644
  
  [[example]]
 diff --git a/src/bootstrap/Cargo.toml b/src/bootstrap/Cargo.toml
-index 367c619..72c9992 100644
+index 85eb543..cf21349 100644
 --- a/src/bootstrap/Cargo.toml
 +++ b/src/bootstrap/Cargo.toml
-@@ -63,21 +63,6 @@ semver = "1.0.17"
+@@ -62,21 +62,6 @@ semver = "1.0.17"
  [target.'cfg(not(target_os = "solaris"))'.dependencies]
  fd-lock = "3.0.8"
  
@@ -161,7 +162,7 @@ index 367c619..72c9992 100644
  pretty_assertions = "1.2"
  
 diff --git a/src/tools/cargo/Cargo.toml b/src/tools/cargo/Cargo.toml
-index a7475f6..4ad22f5 100644
+index 384fe45..7ed3853 100644
 --- a/src/tools/cargo/Cargo.toml
 +++ b/src/tools/cargo/Cargo.toml
 @@ -2,7 +2,9 @@
@@ -183,7 +184,7 @@ index a7475f6..4ad22f5 100644
  
  [package]
  name = "cargo"
-@@ -174,22 +175,6 @@ walkdir.workspace = true
+@@ -174,19 +175,6 @@ walkdir.workspace = true
  [target.'cfg(not(windows))'.dependencies]
  openssl = { workspace = true, optional = true }
  
@@ -196,11 +197,8 @@ index a7475f6..4ad22f5 100644
 -  "Win32_Foundation",
 -  "Win32_Storage_FileSystem",
 -  "Win32_System_Console",
--  "Win32_System_IO",
 -  "Win32_System_Threading",
 -  "Win32_System_JobObjects",
--  "Win32_Security",
--  "Win32_System_SystemServices"
 -]
 -
  [dev-dependencies]
@@ -256,7 +254,7 @@ index 305c809a..c656678 100644
 +toml = "0.7.0"
 +url = "2.2.2"
 diff --git a/src/tools/cargo/crates/cargo-util/Cargo.toml b/src/tools/cargo/crates/cargo-util/Cargo.toml
-index f01705f..138690f 100644
+index 6145810..46af186 100644
 --- a/src/tools/cargo/crates/cargo-util/Cargo.toml
 +++ b/src/tools/cargo/crates/cargo-util/Cargo.toml
 @@ -19,10 +19,3 @@ same-file.workspace = true
@@ -299,11 +297,25 @@ index d2f2583..61f7be4 100644
 -    "Win32_Foundation",
 -    "Win32_System_Diagnostics_Debug",
 -]
+diff --git a/src/tools/rust-analyzer/crates/profile/Cargo.toml b/src/tools/rust-analyzer/crates/profile/Cargo.toml
+index 5faecc5..0d39d3b 100644
+--- a/src/tools/rust-analyzer/crates/profile/Cargo.toml
++++ b/src/tools/rust-analyzer/crates/profile/Cargo.toml
+@@ -21,9 +21,6 @@ countme = { version = "3.0.1", features = ["enable"] }
+ [target.'cfg(target_os = "linux")'.dependencies]
+ perf-event = "=0.4.7"
+ 
+-[target.'cfg(windows)'.dependencies]
+-winapi = { version = "0.3.9", features = ["processthreadsapi", "psapi"] }
+-
+ [features]
+ cpu_profiler = []
+ 
 diff --git a/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml b/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml
-index f0f1900..3137edb 100644
+index 5b72d57..df53f34 100644
 --- a/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml
 +++ b/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml
-@@ -67,12 +67,6 @@ tt.workspace = true
+@@ -77,12 +77,6 @@ tt.workspace = true
  vfs-notify.workspace = true
  vfs.workspace = true
  
@@ -315,27 +327,13 @@ index f0f1900..3137edb 100644
 -
  [dev-dependencies]
  expect-test = "1.4.0"
- jod-thread = "0.1.2"
-diff --git a/src/tools/rust-analyzer/crates/profile/Cargo.toml b/src/tools/rust-analyzer/crates/profile/Cargo.toml
-index 642fb05..0883bb7 100644
---- a/src/tools/rust-analyzer/crates/profile/Cargo.toml
-+++ b/src/tools/rust-analyzer/crates/profile/Cargo.toml
-@@ -21,9 +21,6 @@ countme = { version = "3.0.1", features = ["enable"] }
- [target.'cfg(target_os = "linux")'.dependencies]
- perf-event = "0.4.7"
- 
--[target.'cfg(windows)'.dependencies]
--winapi = { version = "0.3.9", features = ["processthreadsapi", "psapi"] }
--
- [features]
- cpu_profiler = []
- 
+ xshell = "0.2.2"
 diff --git a/src/tools/rust-analyzer/crates/stdx/Cargo.toml b/src/tools/rust-analyzer/crates/stdx/Cargo.toml
-index c881f2f..5cb4cb0 100644
+index a67f36a..bfbd00f 100644
 --- a/src/tools/rust-analyzer/crates/stdx/Cargo.toml
 +++ b/src/tools/rust-analyzer/crates/stdx/Cargo.toml
-@@ -17,10 +17,6 @@ backtrace = { version = "0.3.65", optional = true }
- always-assert = { version = "0.1.2", features = ["log"] }
+@@ -19,10 +19,6 @@ jod-thread = "0.1.2"
+ crossbeam-channel = "0.5.5"
  # Think twice before adding anything here
  
 -[target.'cfg(windows)'.dependencies]

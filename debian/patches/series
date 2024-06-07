@@ -41,13 +41,11 @@ d-0012-cargo-always-return-dev-channel.patch
 ## Patches to the build process, including doc path tweaks
 ## Should not change resulting rustc behaviour
 d-bootstrap-rustflags.patch
-d-remove-arm-privacy-breaches.patch
 d-bootstrap-install-symlinks.patch
 d-bootstrap-disable-git.patch
 d-bootstrap-no-assume-tools.patch
 d-bootstrap-cargo-doc-paths.patch
 d-bootstrap-use-local-css.patch
-d-bootstrap-old-cargo-compat.patch
 d-bootstrap-custom-debuginfo-path.patch
 d-bootstrap-permit-symlink-in-docs.patch
 d-test-ignore-avx-44056.patch
@@ -63,7 +61,6 @@ d-armel-fix-lldb.patch
 d-rust-gdb-paths
 d-rust-lldb-paths
 d-rustc-add-soname.patch
-d-rustc-fix-mips64el-bootstrap.patch
 d-rustc-windows-ssp.patch
 d-rustc-i686-baseline.patch
 # Experimental patch not yet working

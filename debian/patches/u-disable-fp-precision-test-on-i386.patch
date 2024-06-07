@@ -15,7 +15,7 @@ Index: rust/library/core/src/num/f32.rs
 ===================================================================
 --- rust.orig/library/core/src/num/f32.rs
 +++ rust/library/core/src/num/f32.rs
-@@ -799,7 +799,7 @@ impl f32 {
+@@ -800,7 +800,7 @@ impl f32 {
      /// let angle = std::f32::consts::PI;
      ///
      /// let abs_difference = (angle.to_degrees() - 180.0).abs();
