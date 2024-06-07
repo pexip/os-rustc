@@ -55,7 +55,7 @@ ifeq (armhf,$(DEB_TARGET_ARCH))
 CLANG_RT_ARCH = armhf
 endif
 
-ifneq (,$(filter $(DEB_TARGET_ARCH),sparc64 mips64el))
+ifneq (,$(filter $(DEB_TARGET_ARCH),sparc64 mips64el hurd-i386 hurd-amd64))
 # sparc64: see https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1061125
 # mips64el: has profiler, but buggy atm (32-bit overflow in some counter?)
 CLANG_RT_ARCH =
@@ -343,7 +343,7 @@ endif
 ifneq (,$(filter $(DEB_BUILD_ARCH), ppc64 s390x riscv64))
   FAILURES_ALLOWED = 40
 endif
-ifneq (,$(filter $(DEB_BUILD_ARCH), loong64 powerpc powerpcspe sparc64 x32))
+ifneq (,$(filter $(DEB_BUILD_ARCH), loong64 powerpc powerpcspe sparc64 x32 hurd-i386 hurd-amd64))
   FAILURES_ALLOWED = 180
 endif
 FAILED_TESTS = grep "FAILED\|^command did not execute successfully" $(TEST_LOG) | grep -v '^test result: FAILED' | grep -v 'FAILED (allowed)'
@@ -522,7 +522,8 @@ override_dh_compress:
 override_dh_dwz:
 	# otherwise rustc gets an empty multifile which lintian errors on, causing
 	# FTP auto-reject. this is a work-around, the lintian bug is #955752
-	dh_dwz --no-dwz-multifile
+	# double up the max entries count, else the build might fail..
+	dh_dwz --no-dwz-multifile -- -L 100000000
 
 override_dh_makeshlibs:
 	dh_makeshlibs -V -N $(LIBSTD_PKG)

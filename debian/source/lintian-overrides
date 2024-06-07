@@ -1,5 +1,3 @@
-# Long documentation
-rustc source: source-is-missing [library/stdarch/crates/stdarch-verify/arm-intrinsics.html]
 # Test data
 rustc source: source-is-missing [src/tools/rust-analyzer/crates/ide/src/syntax_highlighting/test_data/*.html]
 rustc source: source-is-missing [tests/rustdoc/notable-trait/doc-notable_trait*.html]
@@ -14,7 +12,7 @@ rustc source: missing-license-paragraph-in-dep5-copyright mpl-2.0+ [debian/copyr
 rustc source: missing-license-paragraph-in-dep5-copyright debian/copyright mpl-2.0+ (*)
 
 # see d/copyright
-rustc source: source-contains-prebuilt-windows-binary [vendor/windows-metadata/default/*.winmd]
+rustc source: source-contains-prebuilt-windows-binary [vendor/windows-bindgen/default/*.winmd]
 
 # lintian is superfluous
 rustc source: superfluous-file-pattern debian/copyright * (*)

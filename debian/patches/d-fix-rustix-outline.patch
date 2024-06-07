@@ -3,16 +3,16 @@ Always enable cc even if the feature is not enabled.
 Some Debian architectures need outline asm, and Debian does not ship pre-built
 outline asm.
 
-Index: rust/vendor/rustix-0.37.22/build.rs
+Index: rust/vendor/rustix-0.37.6/build.rs
 ===================================================================
---- rust.orig/vendor/rustix-0.37.22/build.rs
-+++ rust/vendor/rustix-0.37.22/build.rs
+--- rust.orig/vendor/rustix-0.37.6/build.rs
++++ rust/vendor/rustix-0.37.6/build.rs
 @@ -1,4 +1,3 @@
 -#[cfg(feature = "cc")]
  use cc::Build;
  use std::env::var;
  use std::io::Write;
-@@ -169,16 +168,16 @@ fn link_in_librustix_outline(arch: &str,
+@@ -158,16 +157,16 @@ fn link_in_librustix_outline(arch: &str,
      println!("cargo:rerun-if-changed={}", to);
  
      // If "cc" is not enabled, use a pre-built library.
@@ -32,10 +32,10 @@ Index: rust/vendor/rustix-0.37.22/build.rs
      {
          let out_dir = var("OUT_DIR").unwrap();
          // Add `-gdwarf-3` so that we always get the same output, regardless of
-Index: rust/vendor/rustix-0.37.22/Cargo.toml
+Index: rust/vendor/rustix-0.37.6/Cargo.toml
 ===================================================================
---- rust.orig/vendor/rustix-0.37.22/Cargo.toml
-+++ rust/vendor/rustix-0.37.22/Cargo.toml
+--- rust.orig/vendor/rustix-0.37.6/Cargo.toml
++++ rust/vendor/rustix-0.37.6/Cargo.toml
 @@ -127,7 +127,6 @@ version = "3.4.0"
  
  [build-dependencies.cc]

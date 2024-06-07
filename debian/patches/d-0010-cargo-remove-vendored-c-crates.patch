@@ -8,7 +8,7 @@ Last-Update: 2023-05-17
  1 file changed, 1 insertion(+), 3 deletions(-)
 
 diff --git a/src/tools/cargo/Cargo.toml b/src/tools/cargo/Cargo.toml
-index 0e189a6..4071e8c 100644
+index 4403044..23c5cc7 100644
 --- a/src/tools/cargo/Cargo.toml
 +++ b/src/tools/cargo/Cargo.toml
 @@ -217,7 +217,5 @@ test = false

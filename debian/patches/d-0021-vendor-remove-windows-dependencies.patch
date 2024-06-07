@@ -7,64 +7,59 @@ Content-Transfer-Encoding: 8bit
 
 Signed-off-by: Fabian Grünbichler <f.gruenbichler@proxmox.com>
 ---
- vendor/android-tzdata/Cargo.toml             |  1 +
- vendor/anstream/Cargo.toml                   |  6 ----
- vendor/anstyle-query/Cargo.toml              |  7 -----
- vendor/atty/Cargo.toml                       |  3 --
- vendor/backtrace/Cargo.toml                  | 13 ---------
- vendor/chrono/Cargo.toml                     | 12 --------
- vendor/colored/Cargo.toml                    |  4 ---
- vendor/curl-sys-0.4.63+curl-8.1.2/Cargo.toml | 10 -------
- vendor/curl-sys/Cargo.toml                   | 10 -------
- vendor/curl/Cargo.toml                       | 10 -------
- vendor/dirs-sys-next/Cargo.toml              |  3 --
- vendor/dirs-sys/Cargo.toml                   |  3 --
- vendor/errno/Cargo.toml                      |  6 ----
- vendor/fd-lock/Cargo.toml                    |  8 ------
- vendor/filetime/Cargo.toml                   |  7 -----
- vendor/gix-sec/Cargo.toml                    | 12 --------
- vendor/home/Cargo.toml                       |  7 -----
- vendor/iana-time-zone/Cargo.toml             |  4 ---
- vendor/ignore/Cargo.toml                     |  3 --
- vendor/io-close/Cargo.toml                   |  3 --
- vendor/io-lifetimes/Cargo.toml               | 13 ---------
- vendor/is-terminal/Cargo.toml                | 11 --------
- vendor/libloading-0.7.4/Cargo.toml           |  6 ----
- vendor/libloading/Cargo.toml                 |  8 ------
- vendor/libssh2-sys/Cargo.toml                |  8 ------
- vendor/libz-sys/Cargo.toml                   |  3 --
- vendor/mio/Cargo.toml                  | 11 --------
- vendor/native-tls/Cargo.toml                 |  3 --
- vendor/normpath/Cargo.toml                   | 10 -------
- vendor/nu-ansi-term/Cargo.toml               | 10 -------
- vendor/opener-0.5.2/Cargo.toml               |  4 ---
- vendor/opener/Cargo.toml                     |  9 ------
- vendor/openssl-sys/Cargo.toml                |  3 --
- vendor/os_info/Cargo.toml                    | 15 ----------
- vendor/parking_lot_core-0.8.6/Cargo.toml     | 12 --------
- vendor/parking_lot_core/Cargo.toml           |  3 --
- vendor/pretty_assertions-1.3.0/Cargo.toml    |  6 ----
- vendor/reqwest/Cargo.toml                    |  3 --
- vendor/rustix-0.37.20/Cargo.toml             | 16 -----------
- vendor/rustix-0.37.22/Cargo.toml             | 16 -----------
- vendor/rustix/Cargo.toml                     | 17 ------------
- vendor/same-file/Cargo.toml                  |  2 --
- vendor/snapbox/Cargo.toml                    |  6 ----
- vendor/socket2/Cargo.toml                    |  8 ------
- vendor/stacker/Cargo.toml                    | 10 -------
- vendor/sysinfo-0.26.7/Cargo.toml             | 38 --------------------------
- vendor/sysinfo/Cargo.toml                    | 41 ----------------------------
- vendor/tempfile-3.6.0/Cargo.toml             |  7 -----
- vendor/tempfile/Cargo.toml                   |  7 -----
- vendor/term/Cargo.toml                       |  6 ----
- vendor/termcolor/Cargo.toml                  |  3 --
- vendor/terminal_size/Cargo.toml              |  7 -----
- vendor/termize/Cargo.toml                    |  3 --
- vendor/tokio/Cargo.toml                      | 21 --------------
- vendor/uuid/Cargo.toml                       |  4 ---
- vendor/walkdir/Cargo.toml                    |  3 --
- vendor/yansi-term/Cargo.toml                 |  3 --
- 57 files changed, 1 insertion(+), 487 deletions(-)
+ vendor/android-tzdata/Cargo.toml         |  1 +
+ vendor/ansi_term/Cargo.toml              |  3 ---
+ vendor/anstream/Cargo.toml               |  7 ------
+ vendor/anstyle-query/Cargo.toml          |  7 ------
+ vendor/atty/Cargo.toml                   |  3 ---
+ vendor/backtrace/Cargo.toml              | 14 -----------
+ vendor/chrono/Cargo.toml                 | 12 ----------
+ vendor/colored/Cargo.toml                |  7 ------
+ vendor/console/Cargo.toml                | 11 ---------
+ vendor/curl-sys/Cargo.toml               |  7 ------
+ vendor/curl/Cargo.toml                   | 10 --------
+ vendor/dirs-sys-next/Cargo.toml          |  3 ---
+ vendor/dirs-sys/Cargo.toml               |  3 ---
+ vendor/errno/Cargo.toml                  |  6 -----
+ vendor/fd-lock/Cargo.toml                |  8 -------
+ vendor/filetime/Cargo.toml               |  7 ------
+ vendor/gix-sec/Cargo.toml                | 12 ----------
+ vendor/home/Cargo.toml                   |  7 ------
+ vendor/iana-time-zone/Cargo.toml         |  4 ----
+ vendor/ignore/Cargo.toml                 |  3 ---
+ vendor/io-lifetimes/Cargo.toml           | 13 ----------
+ vendor/is-terminal/Cargo.toml            | 11 ---------
+ vendor/libloading-0.7.4/Cargo.toml       |  6 -----
+ vendor/libloading/Cargo.toml             |  8 -------
+ vendor/libssh2-sys/Cargo.toml            |  8 -------
+ vendor/libz-sys/Cargo.toml               |  3 ---
+ vendor/mio/Cargo.toml                    | 11 ---------
+ vendor/native-tls/Cargo.toml             |  3 ---
+ vendor/nu-ansi-term/Cargo.toml           | 10 --------
+ vendor/opener-0.5.2/Cargo.toml           |  4 ----
+ vendor/opener/Cargo.toml                 |  9 -------
+ vendor/os_info/Cargo.toml                | 15 ------------
+ vendor/parking_lot_core-0.8.6/Cargo.toml | 12 ----------
+ vendor/parking_lot_core/Cargo.toml       |  3 ---
+ vendor/reqwest/Cargo.toml                |  3 ---
+ vendor/rustix/Cargo.toml                 | 17 -------------
+ vendor/same-file/Cargo.toml              |  2 --
+ vendor/snapbox/Cargo.toml                |  6 -----
+ vendor/socket2/Cargo.toml                |  8 -------
+ vendor/stacker/Cargo.toml                | 10 --------
+ vendor/sysinfo-0.26.7/Cargo.toml         | 38 -----------------------------
+ vendor/sysinfo/Cargo.toml                | 41 --------------------------------
+ vendor/tempfile/Cargo.toml               |  7 ------
+ vendor/term/Cargo.toml                   |  6 -----
+ vendor/termcolor/Cargo.toml              |  3 ---
+ vendor/terminal_size/Cargo.toml          |  7 ------
+ vendor/termize/Cargo.toml                |  3 ---
+ vendor/tokio-native-tls/Cargo.toml       | 17 -------------
+ vendor/tokio/Cargo.toml                  | 21 ----------------
+ vendor/uuid/Cargo.toml                   |  4 ----
+ vendor/walkdir/Cargo.toml                |  3 ---
+ vendor/yansi-term/Cargo.toml             |  3 ---
+ 56 files changed, 1 insertion(+), 489 deletions(-)
 
 Index: rust/vendor/android-tzdata/Cargo.toml
 ===================================================================
@@ -75,20 +70,32 @@ Index: rust/vendor/android-tzdata/Cargo.toml
  [dev-dependencies.zip]
  version = "0.6.4"
 +repository = "https://github.com/rust-cli/concolor"
+Index: rust/vendor/ansi_term/Cargo.toml
+===================================================================
+--- rust.orig/vendor/ansi_term/Cargo.toml
++++ rust/vendor/ansi_term/Cargo.toml
+@@ -38,6 +38,3 @@ version = "1.0.39"
+ 
+ [features]
+ derive_serde_style = ["serde"]
+-[target."cfg(target_os=\"windows\")".dependencies.winapi]
+-version = "0.3.4"
+-features = ["consoleapi", "errhandlingapi", "fileapi", "handleapi", "processenv"]
 Index: rust/vendor/anstream/Cargo.toml
 ===================================================================
 --- rust.orig/vendor/anstream/Cargo.toml
 +++ rust/vendor/anstream/Cargo.toml
-@@ -136,10 +136,4 @@ auto = [
+@@ -131,11 +131,4 @@ auto = [
  ]
  default = [
      "auto",
 -    "wincon",
  ]
+-test = []
 -wincon = ["dep:anstyle-wincon"]
 -
 -[target."cfg(windows)".dependencies.anstyle-wincon]
--version = "1.0.1"
+-version = "3.0.1"
 -optional = true
 Index: rust/vendor/anstyle-query/Cargo.toml
 ===================================================================
@@ -122,7 +129,7 @@ Index: rust/vendor/backtrace/Cargo.toml
 ===================================================================
 --- rust.orig/vendor/backtrace/Cargo.toml
 +++ rust/vendor/backtrace/Cargo.toml
-@@ -127,18 +127,5 @@ serialize-serde = ["serde"]
+@@ -104,16 +104,6 @@ serialize-serde = ["serde"]
  std = []
  unix-backtrace = []
  verify-winapi = [
@@ -138,6 +145,12 @@ Index: rust/vendor/backtrace/Cargo.toml
 -    "winapi/winnt",
  ]
  
+ [target."cfg(not(all(windows, target_env = \"msvc\", not(target_vendor = \"uwp\"))))".dependencies.addr2line]
+@@ -139,7 +129,3 @@ features = [
+     "archive",
+ ]
+ default-features = false
+-
 -[target."cfg(windows)".dependencies.winapi]
 -version = "0.3.9"
 -optional = true
@@ -172,31 +185,50 @@ Index: rust/vendor/colored/Cargo.toml
 ===================================================================
 --- rust.orig/vendor/colored/Cargo.toml
 +++ rust/vendor/colored/Cargo.toml
-@@ -33,7 +33,3 @@ version = "=1.0.0-beta.3"
+@@ -42,10 +42,3 @@ version = "=1.0.0-beta.3"
  
  [features]
  no-color = []
--[target."cfg(windows)".dependencies.winapi]
+-
+-[target."cfg(windows)".dependencies.windows-sys]
+-version = "0.48"
+-features = [
+-    "Win32_Foundation",
+-    "Win32_System_Console",
+-]
+Index: rust/vendor/console/Cargo.toml
+===================================================================
+--- rust.orig/vendor/console/Cargo.toml
++++ rust/vendor/console/Cargo.toml
+@@ -59,14 +59,3 @@ default = [
+ ]
+ windows-console-colors = ["ansi-parsing"]
+ 
+-[target."cfg(windows)".dependencies.encode_unicode]
 -version = "0.3"
--features = ["consoleapi", "processenv", "winbase"]
--default-features = false
+-
+-[target."cfg(windows)".dependencies.windows-sys]
+-version = "0.45.0"
+-features = [
+-    "Win32_Foundation",
+-    "Win32_System_Console",
+-    "Win32_Storage_FileSystem",
+-    "Win32_UI_Input_KeyboardAndMouse",
+-]
 Index: rust/vendor/curl-sys/Cargo.toml
 ===================================================================
 --- rust.orig/vendor/curl-sys/Cargo.toml
 +++ rust/vendor/curl-sys/Cargo.toml
-@@ -73,16 +73,6 @@ zlib-ng-compat = [
+@@ -73,13 +73,6 @@ zlib-ng-compat = [
  version = "0.9.64"
  optional = true
  
 -[target."cfg(target_env = \"msvc\")".build-dependencies.vcpkg]
 -version = "0.2"
 -
--[target."cfg(windows)".dependencies.winapi]
--version = "0.3"
--features = [
--    "winsock2",
--    "ws2def",
--]
+-[target."cfg(windows)".dependencies.windows-sys]
+-version = "0.48"
+-features = ["Win32_Networking_WinSock"]
 -
  [badges.appveyor]
  repository = "alexcrichton/curl-rust"
@@ -280,7 +312,7 @@ Index: rust/vendor/filetime/Cargo.toml
 ===================================================================
 --- rust.orig/vendor/filetime/Cargo.toml
 +++ rust/vendor/filetime/Cargo.toml
-@@ -38,10 +38,3 @@ version = "0.2.9"
+@@ -38,10 +38,3 @@ version = "0.3.5"
  
  [target."cfg(unix)".dependencies.libc]
  version = "0.2.27"
@@ -300,7 +332,7 @@ Index: rust/vendor/gix-sec/Cargo.toml
  version = "0.2.123"
  
 -[target."cfg(windows)".dependencies.gix-path]
--version = "^0.8.1"
+-version = "^0.10.0"
 -
 -[target."cfg(windows)".dependencies.windows]
 -version = "0.48"
@@ -349,17 +381,6 @@ Index: rust/vendor/ignore/Cargo.toml
 -
 -[target."cfg(windows)".dependencies.winapi-util]
 -version = "0.1.2"
-Index: rust/vendor/io-close/Cargo.toml
-===================================================================
---- rust.orig/vendor/io-close/Cargo.toml
-+++ rust/vendor/io-close/Cargo.toml
-@@ -28,6 +28,3 @@ optional = true
- version = "3.1.0"
- [target."cfg(unix)".dependencies.libc]
- version = "0.2.80"
--[target."cfg(windows)".dependencies.winapi]
--version = "0.3.9"
--features = ["handleapi", "std", "winsock2"]
 Index: rust/vendor/io-lifetimes/Cargo.toml
 ===================================================================
 --- rust.orig/vendor/io-lifetimes/Cargo.toml
@@ -378,7 +399,7 @@ Index: rust/vendor/io-lifetimes/Cargo.toml
  optional = true
 -
 -[target."cfg(windows)".dependencies.windows-sys]
--version = "0.48.0"
+-version = "0.45.0"
 -features = [
 -    "Win32_Foundation",
 -    "Win32_Storage_FileSystem",
@@ -566,17 +587,6 @@ Index: rust/vendor/opener/Cargo.toml
  [badges.appveyor]
  branch = "master"
  repository = "Seeker14491/opener"
-Index: rust/vendor/openssl-sys/Cargo.toml
-===================================================================
---- rust.orig/vendor/openssl-sys/Cargo.toml
-+++ rust/vendor/openssl-sys/Cargo.toml
-@@ -56,6 +56,3 @@ version = "0.3.9"
- [features]
- unstable_boringssl = ["bssl-sys"]
- vendored = ["openssl-src"]
--
--[target."cfg(target_env = \"msvc\")".build-dependencies.vcpkg]
--version = "0.2.8"
 Index: rust/vendor/os_info/Cargo.toml
 ===================================================================
 --- rust.orig/vendor/os_info/Cargo.toml
@@ -642,21 +652,17 @@ Index: rust/vendor/reqwest/Cargo.toml
 -
 -[target."cfg(windows)".dependencies.winreg]
 -version = "0.10"
-Index: rust/vendor/rustix-0.37.22/Cargo.toml
+Index: rust/vendor/rustix-0.37.6/Cargo.toml
 ===================================================================
---- rust.orig/vendor/rustix-0.37.22/Cargo.toml
-+++ rust/vendor/rustix-0.37.22/Cargo.toml
-@@ -239,19 +239,3 @@ package = "errno"
+--- rust.orig/vendor/rustix-0.37.6/Cargo.toml
++++ rust/vendor/rustix-0.37.6/Cargo.toml
+@@ -232,15 +232,3 @@ package = "errno"
+ [target."cfg(any(target_os = \"android\", target_os = \"linux\"))".dependencies.once_cell]
  version = "1.5.2"
  optional = true
- 
--[target."cfg(windows)".dependencies.libc_errno]
--version = "0.3.1"
--default-features = false
--package = "errno"
 -
 -[target."cfg(windows)".dependencies.windows-sys]
--version = "0.48.0"
+-version = "0.45.0"
 -features = [
 -    "Win32_Foundation",
 -    "Win32_Networking_WinSock",
@@ -665,12 +671,12 @@ Index: rust/vendor/rustix-0.37.22/Cargo.toml
 -]
 -
 -[target."cfg(windows)".dev-dependencies.ctor]
--version = "0.2.0"
+-version = "0.1.21"
 Index: rust/vendor/rustix/Cargo.toml
 ===================================================================
 --- rust.orig/vendor/rustix/Cargo.toml
 +++ rust/vendor/rustix/Cargo.toml
-@@ -238,20 +238,3 @@ package = "errno"
+@@ -249,20 +249,3 @@ package = "errno"
  [target."cfg(any(target_os = \"android\", target_os = \"linux\"))".dependencies.once_cell]
  version = "1.5.2"
  optional = true
@@ -719,7 +725,7 @@ Index: rust/vendor/snapbox/Cargo.toml
  optional = true
 -
 -[target."cfg(windows)".dependencies.windows-sys]
--version = "0.45.0"
+-version = "0.48.0"
 -features = ["Win32_Foundation"]
 -optional = true
 Index: rust/vendor/socket2/Cargo.toml
@@ -900,7 +906,7 @@ Index: rust/vendor/terminal_size/Cargo.toml
 +++ rust/vendor/terminal_size/Cargo.toml
 @@ -30,10 +30,3 @@ repository = "https://github.com/eminenc
  [target."cfg(not(windows))".dependencies.rustix]
- version = "0.37.0"
+ version = "0.38.0"
  features = ["termios"]
 -
 -[target."cfg(windows)".dependencies.windows-sys]
@@ -922,6 +928,31 @@ Index: rust/vendor/termize/Cargo.toml
 -features = ["handleapi", "processenv", "wincon", "winbase"]
  [badges.cirrus-ci]
  repository = "JohnTitor/termize"
+Index: rust/vendor/tokio-native-tls/Cargo.toml
+===================================================================
+--- rust.orig/vendor/tokio-native-tls/Cargo.toml
++++ rust/vendor/tokio-native-tls/Cargo.toml
+@@ -76,20 +76,3 @@ version = "0.10"
+ 
+ [target."cfg(any(target_os = \"macos\", target_os = \"ios\"))".dev-dependencies.security-framework]
+ version = "0.2"
+-
+-[target."cfg(windows)".dev-dependencies.schannel]
+-version = "0.1"
+-
+-[target."cfg(windows)".dev-dependencies.winapi]
+-version = "0.3"
+-features = [
+-    "lmcons",
+-    "basetsd",
+-    "minwinbase",
+-    "minwindef",
+-    "ntdef",
+-    "sysinfoapi",
+-    "timezoneapi",
+-    "wincrypt",
+-    "winerror",
+-]
 Index: rust/vendor/tokio/Cargo.toml
 ===================================================================
 --- rust.orig/vendor/tokio/Cargo.toml
