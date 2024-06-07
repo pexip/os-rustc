@@ -1,3 +1,0 @@
-disable-vendor.patch
-remove-zlib-ng-compat.patch
-skip-credential_helper5-if-no-git.patch
