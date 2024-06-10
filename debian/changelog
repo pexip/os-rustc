@@ -1,3 +1,9 @@
+rustc (1.75.0+dfsg1-4+pexip24u2) pexip; urgency=medium
+
+  * No change rebuild
+
+ -- Huw Jones <huw@pexip.com>  Mon, 10 Jun 2024 16:40:04 +0100
+
 rustc (1.75.0+dfsg1-4+pexip24u1) pexip; urgency=medium
 
   * New upstream release
