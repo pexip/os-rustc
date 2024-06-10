@@ -1,10 +1,10 @@
 partial revert of b9eedea4b0368fd1f00f204db75109ff444fab5b upstream
 
-Index: rust/src/bootstrap/dist.rs
+Index: rust/src/bootstrap/src/core/build_steps/dist.rs
 ===================================================================
---- rust.orig/src/bootstrap/dist.rs
-+++ rust/src/bootstrap/dist.rs
-@@ -81,6 +81,7 @@ impl Step for Docs {
+--- rust.orig/src/bootstrap/src/core/build_steps/dist.rs
++++ rust/src/bootstrap/src/core/build_steps/dist.rs
+@@ -79,6 +79,7 @@ impl Step for Docs {
          tarball.set_product_name("Rust Documentation");
          tarball.add_bulk_dir(&builder.doc_out(host), dest);
          tarball.add_file(&builder.src.join("src/doc/robots.txt"), dest, 0o644);

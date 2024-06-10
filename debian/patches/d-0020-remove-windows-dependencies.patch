@@ -4,30 +4,30 @@ Subject: d-0020-remove-windows-dependencies
 
 ===================================================================
 ---
- compiler/rustc_codegen_ssa/Cargo.toml               |  4 ----
- compiler/rustc_data_structures/Cargo.toml           | 10 ----------
- compiler/rustc_driver_impl/Cargo.toml               |  6 ------
- compiler/rustc_errors/Cargo.toml                    |  8 --------
- compiler/rustc_session/Cargo.toml                   |  7 -------
- library/backtrace/Cargo.toml                        | 13 -------------
- src/bootstrap/Cargo.toml                            | 15 ---------------
- src/tools/cargo/Cargo.toml                          | 21 +++------------------
- .../cargo/crates/cargo-test-support/Cargo.toml      |  3 ---
- src/tools/cargo/crates/cargo-util/Cargo.toml        |  7 -------
- src/tools/cargo/crates/home/Cargo.toml              |  3 ---
- .../cargo/credential/cargo-credential/Cargo.toml    |  3 ---
- src/tools/cargo/src/cargo/util/auth/mod.rs          |  2 --
- src/tools/compiletest/Cargo.toml                    | 10 ----------
- src/tools/rust-analyzer/crates/profile/Cargo.toml   |  3 ---
- .../rust-analyzer/crates/rust-analyzer/Cargo.toml   |  6 ------
- src/tools/rust-analyzer/crates/stdx/Cargo.toml      |  4 ----
- 17 files changed, 3 insertions(+), 122 deletions(-)
+ compiler/rustc_codegen_ssa/Cargo.toml              |  4 ----
+ compiler/rustc_data_structures/Cargo.toml          | 10 ----------
+ compiler/rustc_driver_impl/Cargo.toml              |  6 ------
+ compiler/rustc_errors/Cargo.toml                   |  8 --------
+ compiler/rustc_session/Cargo.toml                  |  7 -------
+ library/backtrace/Cargo.toml                       | 13 ------------
+ src/bootstrap/Cargo.toml                           | 15 --------------
+ src/tools/cargo/Cargo.toml                         | 23 ++++------------------
+ .../cargo/crates/cargo-test-support/Cargo.toml     |  3 ---
+ src/tools/cargo/crates/cargo-util/Cargo.toml       |  7 -------
+ src/tools/cargo/crates/home/Cargo.toml             |  3 ---
+ .../cargo/credential/cargo-credential/Cargo.toml   |  3 ---
+ src/tools/cargo/src/cargo/util/auth/mod.rs         |  5 -----
+ src/tools/compiletest/Cargo.toml                   | 10 ----------
+ src/tools/rust-analyzer/crates/profile/Cargo.toml  |  3 ---
+ .../rust-analyzer/crates/rust-analyzer/Cargo.toml  |  6 ------
+ src/tools/rust-analyzer/crates/stdx/Cargo.toml     |  4 ----
+ 17 files changed, 4 insertions(+), 126 deletions(-)
 
 diff --git a/compiler/rustc_codegen_ssa/Cargo.toml b/compiler/rustc_codegen_ssa/Cargo.toml
-index 34d0e2d..2cb22f0 100644
+index 4dae49f..20453c2 100644
 --- a/compiler/rustc_codegen_ssa/Cargo.toml
 +++ b/compiler/rustc_codegen_ssa/Cargo.toml
-@@ -45,7 +45,3 @@ libc = "0.2.50"
+@@ -49,7 +49,3 @@ libc = "0.2.50"
  version = "0.32.0"
  default-features = false
  features = ["read_core", "elf", "macho", "pe", "xcoff", "unaligned", "archive", "write"]
@@ -36,10 +36,10 @@ index 34d0e2d..2cb22f0 100644
 -version = "0.48.0"
 -features = ["Win32_Globalization"]
 diff --git a/compiler/rustc_data_structures/Cargo.toml b/compiler/rustc_data_structures/Cargo.toml
-index f77bd53..a3d1810 100644
+index 8d91c4c..0de63d9 100644
 --- a/compiler/rustc_data_structures/Cargo.toml
 +++ b/compiler/rustc_data_structures/Cargo.toml
-@@ -37,16 +37,6 @@ itertools = "0.10.1"
+@@ -32,16 +32,6 @@ tracing = "0.1"
  [dependencies.parking_lot]
  version = "0.12"
  
@@ -54,15 +54,15 @@ index f77bd53..a3d1810 100644
 -]
 -
  [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ # tidy-alphabetical-start
  memmap2 = "0.2.1"
- 
 diff --git a/compiler/rustc_driver_impl/Cargo.toml b/compiler/rustc_driver_impl/Cargo.toml
-index a7b0161..62c4249 100644
+index da7c244..80547ce 100644
 --- a/compiler/rustc_driver_impl/Cargo.toml
 +++ b/compiler/rustc_driver_impl/Cargo.toml
-@@ -57,12 +57,6 @@ rustc_mir_transform = { path = "../rustc_mir_transform" }
- [target.'cfg(unix)'.dependencies]
+@@ -58,12 +58,6 @@ tracing = { version = "0.1.35" }
  libc = "0.2"
+ # tidy-alphabetical-end
  
 -[target.'cfg(windows)'.dependencies.windows]
 -version = "0.48.0"
@@ -71,15 +71,15 @@ index a7b0161..62c4249 100644
 -]
 -
  [features]
+ # tidy-alphabetical-start
  llvm = ['rustc_interface/llvm']
- max_level_info = ['rustc_log/max_level_info']
 diff --git a/compiler/rustc_errors/Cargo.toml b/compiler/rustc_errors/Cargo.toml
-index faab9f0..3ea55cb 100644
+index fc3ff83..4f74aec 100644
 --- a/compiler/rustc_errors/Cargo.toml
 +++ b/compiler/rustc_errors/Cargo.toml
-@@ -27,13 +27,5 @@ serde = { version = "1.0.125", features = [ "derive" ] }
- serde_json = "1.0.59"
- derive_setters = "0.1.6"
+@@ -27,14 +27,6 @@ tracing = "0.1"
+ unicode-width = "0.1.4"
+ # tidy-alphabetical-end
  
 -[target.'cfg(windows)'.dependencies.windows]
 -version = "0.48.0"
@@ -90,15 +90,16 @@ index faab9f0..3ea55cb 100644
 -]
 -
  [features]
+ # tidy-alphabetical-start
  rustc_use_parallel_compiler = ['rustc_error_messages/rustc_use_parallel_compiler']
 diff --git a/compiler/rustc_session/Cargo.toml b/compiler/rustc_session/Cargo.toml
-index e26d25d..fe343f8 100644
+index 1f51dd6..2974bd0 100644
 --- a/compiler/rustc_session/Cargo.toml
 +++ b/compiler/rustc_session/Cargo.toml
-@@ -24,10 +24,3 @@ termize = "0.1.1"
- 
- [target.'cfg(unix)'.dependencies]
+@@ -28,10 +28,3 @@ tracing = "0.1"
+ # tidy-alphabetical-start
  libc = "0.2"
+ # tidy-alphabetical-end
 -
 -[target.'cfg(windows)'.dependencies.windows]
 -version = "0.48.0"
@@ -107,12 +108,12 @@ index e26d25d..fe343f8 100644
 -    "Win32_System_LibraryLoader",
 -]
 diff --git a/library/backtrace/Cargo.toml b/library/backtrace/Cargo.toml
-index 6714b3b..71d56b4 100644
+index 932310b..dce3c3f 100644
 --- a/library/backtrace/Cargo.toml
 +++ b/library/backtrace/Cargo.toml
-@@ -47,9 +47,6 @@ version = "0.32.0"
+@@ -48,9 +48,6 @@ version = "0.32.0"
  default-features = false
- features = ['read_core', 'elf', 'macho', 'pe', 'unaligned', 'archive']
+ features = ['read_core', 'elf', 'macho', 'pe', 'xcoff', 'unaligned', 'archive']
  
 -[target.'cfg(windows)'.dependencies]
 -winapi = { version = "0.3.9", optional = true }
@@ -120,7 +121,7 @@ index 6714b3b..71d56b4 100644
  [build-dependencies]
  # Only needed for Android, but cannot be target dependent
  # https://github.com/rust-lang/cargo/issues/4932
-@@ -87,16 +84,6 @@ libbacktrace = []
+@@ -88,16 +85,6 @@ libbacktrace = []
  libunwind = []
  unix-backtrace = []
  verify-winapi = [
@@ -138,18 +139,18 @@ index 6714b3b..71d56b4 100644
  
  [[example]]
 diff --git a/src/bootstrap/Cargo.toml b/src/bootstrap/Cargo.toml
-index 9bf2694..9fc6f66 100644
+index e4d3591..b548faf 100644
 --- a/src/bootstrap/Cargo.toml
 +++ b/src/bootstrap/Cargo.toml
-@@ -62,21 +62,6 @@ semver = "1.0.17"
+@@ -66,21 +66,6 @@ sysinfo = { version = "0.26.0", optional = true }
  [target.'cfg(not(target_os = "solaris"))'.dependencies]
- fd-lock = "3.0.8"
+ fd-lock = "3.0.13"
  
 -[target.'cfg(windows)'.dependencies.junction]
 -version = "1.0.0"
 -
 -[target.'cfg(windows)'.dependencies.windows]
--version = "0.46.0"
+-version = "0.51.1"
 -features = [
 -    "Win32_Foundation",
 -    "Win32_Security",
@@ -164,7 +165,7 @@ index 9bf2694..9fc6f66 100644
  pretty_assertions = "1.4"
  
 diff --git a/src/tools/cargo/Cargo.toml b/src/tools/cargo/Cargo.toml
-index 23c5cc7..91ecfd0 100644
+index c011909..989d8d4 100644
 --- a/src/tools/cargo/Cargo.toml
 +++ b/src/tools/cargo/Cargo.toml
 @@ -2,7 +2,9 @@
@@ -180,34 +181,46 @@ index 23c5cc7..91ecfd0 100644
  ]
 @@ -24,8 +26,6 @@ bytesize = "1.3"
  cargo = { path = "" }
- cargo-credential = { version = "0.4.0", path = "credential/cargo-credential" }
- cargo-credential-libsecret = { version = "0.3.1", path = "credential/cargo-credential-libsecret" }
--cargo-credential-wincred = { version = "0.3.0", path = "credential/cargo-credential-wincred" }
--cargo-credential-macos-keychain = { version = "0.3.0", path = "credential/cargo-credential-macos-keychain" }
+ cargo-credential = { version = "0.4.1", path = "credential/cargo-credential" }
+ cargo-credential-libsecret = { version = "0.4.1", path = "credential/cargo-credential-libsecret" }
+-cargo-credential-macos-keychain = { version = "0.4.1", path = "credential/cargo-credential-macos-keychain" }
+-cargo-credential-wincred = { version = "0.4.1", path = "credential/cargo-credential-wincred" }
  cargo-platform = { path = "crates/cargo-platform", version = "0.1.4" }
  cargo-test-macro = { path = "crates/cargo-test-macro" }
  cargo-test-support = { path = "crates/cargo-test-support" }
-@@ -101,7 +101,6 @@ unicode-xid = "0.2.4"
+@@ -102,7 +102,6 @@ unicode-xid = "0.2.4"
  url = "2.4.1"
  varisat = "0.2.2"
- walkdir = "2.3.3"
+ walkdir = "2.4.0"
 -windows-sys = "0.48"
  
  [package]
  name = "cargo"
-@@ -128,8 +127,6 @@ bytesize.workspace = true
- cargo-platform.workspace = true
+@@ -129,6 +128,7 @@ base64.workspace = true
+ bytesize.workspace = true
  cargo-credential.workspace = true
- cargo-credential-libsecret.workspace = true
--cargo-credential-macos-keychain.workspace = true
--cargo-credential-wincred.workspace = true
+ cargo-platform.workspace = true
++cargo-credential-libsecret.workspace = true
  cargo-util.workspace = true
- color-print.workspace = true
  clap = { workspace = true, features = ["wrap_help"] }
-@@ -189,18 +186,6 @@ walkdir.workspace = true
+ color-print.workspace = true
+@@ -189,9 +189,6 @@ walkdir.workspace = true
+ [target.'cfg(target_os = "linux")'.dependencies]
+ cargo-credential-libsecret.workspace = true
+ 
+-[target.'cfg(target_os = "macos")'.dependencies]
+-cargo-credential-macos-keychain.workspace = true
+-
  [target.'cfg(not(windows))'.dependencies]
  openssl = { workspace = true, optional = true }
  
+@@ -195,21 +195,6 @@ cargo-credential-macos-keychain.workspace = true
+ [target.'cfg(not(windows))'.dependencies]
+ openssl = { workspace = true, optional = true }
+ 
+-[target.'cfg(windows)'.dependencies]
+-cargo-credential-wincred.workspace = true
+-
 -[target.'cfg(windows)'.dependencies.windows-sys]
 -workspace = true
 -features = [
@@ -235,7 +248,7 @@ index fc32e1c..ce5d708 100644
 -[target.'cfg(windows)'.dependencies]
 -windows-sys = { workspace = true, features = ["Win32_Storage_FileSystem"] }
 diff --git a/src/tools/cargo/crates/cargo-util/Cargo.toml b/src/tools/cargo/crates/cargo-util/Cargo.toml
-index cba00f9..fb52b6e 100644
+index 616a79c..9fc3971 100644
 --- a/src/tools/cargo/crates/cargo-util/Cargo.toml
 +++ b/src/tools/cargo/crates/cargo-util/Cargo.toml
 @@ -20,10 +20,3 @@ shell-escape.workspace = true
@@ -250,10 +263,10 @@ index cba00f9..fb52b6e 100644
 -miow.workspace = true
 -windows-sys = { workspace = true, features = ["Win32_Storage_FileSystem", "Win32_Foundation", "Win32_System_Console"] }
 diff --git a/src/tools/cargo/crates/home/Cargo.toml b/src/tools/cargo/crates/home/Cargo.toml
-index 03bd555..32fdf26 100644
+index 702a14e..dafeec8 100644
 --- a/src/tools/cargo/crates/home/Cargo.toml
 +++ b/src/tools/cargo/crates/home/Cargo.toml
-@@ -14,6 +14,3 @@ include = [
+@@ -15,6 +15,3 @@ include = [
  license.workspace = true
  repository = "https://github.com/rust-lang/cargo"
  description = "Shared definitions of home directories."
@@ -261,7 +274,7 @@ index 03bd555..32fdf26 100644
 -[target.'cfg(windows)'.dependencies]
 -windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_UI_Shell"] }
 diff --git a/src/tools/cargo/credential/cargo-credential/Cargo.toml b/src/tools/cargo/credential/cargo-credential/Cargo.toml
-index c8db996..96aa498 100644
+index 8ba65b8..6678c23 100644
 --- a/src/tools/cargo/credential/cargo-credential/Cargo.toml
 +++ b/src/tools/cargo/credential/cargo-credential/Cargo.toml
 @@ -15,8 +15,5 @@ serde_json.workspace = true
@@ -274,23 +287,26 @@ index c8db996..96aa498 100644
  [dev-dependencies]
  snapbox = { workspace = true, features = ["examples"] }
 diff --git a/src/tools/cargo/src/cargo/util/auth/mod.rs b/src/tools/cargo/src/cargo/util/auth/mod.rs
-index ea82dce..df181db 100644
+index c2f8186..c420971 100644
 --- a/src/tools/cargo/src/cargo/util/auth/mod.rs
 +++ b/src/tools/cargo/src/cargo/util/auth/mod.rs
-@@ -529,8 +529,6 @@ fn credential_action(
+@@ -529,11 +529,6 @@ fn credential_action(
              }
              "cargo:paseto" => bail!("cargo:paseto requires -Zasymmetric-token"),
              "cargo:token-from-stdout" => Box::new(BasicProcessCredential {}),
+-            #[cfg(windows)]
 -            "cargo:wincred" => Box::new(cargo_credential_wincred::WindowsCredential {}),
+-            #[cfg(target_os = "macos")]
 -            "cargo:macos-keychain" => Box::new(cargo_credential_macos_keychain::MacKeychain {}),
+-            #[cfg(target_os = "linux")]
              "cargo:libsecret" => Box::new(cargo_credential_libsecret::LibSecretCredential {}),
-             process => Box::new(CredentialProcessCredential::new(process)),
-         };
+             name if BUILT_IN_PROVIDERS.contains(&name) => {
+                 Box::new(cargo_credential::UnsupportedCredential {})
 diff --git a/src/tools/compiletest/Cargo.toml b/src/tools/compiletest/Cargo.toml
-index bb1fa6e..2735e1e 100644
+index 31c6353..bdc4805 100644
 --- a/src/tools/compiletest/Cargo.toml
 +++ b/src/tools/compiletest/Cargo.toml
-@@ -28,13 +28,3 @@ home = "0.5.5"
+@@ -29,13 +29,3 @@ home = "0.5.5"
  
  [target.'cfg(unix)'.dependencies]
  libc = "0.2"
@@ -305,7 +321,7 @@ index bb1fa6e..2735e1e 100644
 -    "Win32_System_Diagnostics_Debug",
 -]
 diff --git a/src/tools/rust-analyzer/crates/profile/Cargo.toml b/src/tools/rust-analyzer/crates/profile/Cargo.toml
-index fd98d85..8c1d1379 100644
+index fd98d85..8c1d137 100644
 --- a/src/tools/rust-analyzer/crates/profile/Cargo.toml
 +++ b/src/tools/rust-analyzer/crates/profile/Cargo.toml
 @@ -21,9 +21,6 @@ countme = { version = "3.0.1", features = ["enable"] }

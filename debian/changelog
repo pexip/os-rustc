@@ -1,3 +1,34 @@
+rustc (1.75.0+dfsg1-4) unstable; urgency=medium
+
+  * d/rules: fix comparison (unbreak 32-bit builds)
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Thu, 06 Jun 2024 10:25:40 +0200
+
+rustc (1.75.0+dfsg1-3) unstable; urgency=medium
+
+  * d/rules: fix variable typo
+  * fix changelog
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Thu, 06 Jun 2024 09:16:53 +0200
+
+rustc (1.75.0+dfsg1-1) unstable; urgency=medium
+
+  * d/rules: switch low-mem check to cover all 32-bits archs
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Thu, 06 Jun 2024 08:14:17 +0200
+
+rustc (1.75.0+dfsg1-1~exp1) experimental; urgency=medium
+
+  [ Fabian Grünbichler ]
+  * New upstream release (Closes: #1068008)
+  * fix cross-building (thanks John Paul Adrian Glaubitz!)
+
+  [ Samuel Thibault ]
+  * rules: Use 32bit limitations workaround on !linux as well
+
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Tue, 04 Jun 2024 21:24:09 +0200
+
 rustc (1.74.1+dfsg1-1+pexip24u2) pexip; urgency=medium
 
   * No change rebuild

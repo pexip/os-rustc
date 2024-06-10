@@ -6,17 +6,16 @@ Bug: https://github.com/rust-lang/rust/issues/105766
 Last-Update: 2023-03-29
 ---
 This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
-Index: rust/src/bootstrap/config.rs
+Index: rust/src/bootstrap/src/core/config/config.rs
 ===================================================================
---- rust.orig/src/bootstrap/config.rs
-+++ rust/src/bootstrap/config.rs
-@@ -1040,9 +1040,32 @@ impl Config {
+--- rust.orig/src/bootstrap/src/core/config/config.rs
++++ rust/src/bootstrap/src/core/config/config.rs
+@@ -1093,8 +1093,32 @@ impl Config {
  
      pub fn parse(args: &[String]) -> Config {
          #[cfg(test)]
 -        fn get_toml(_: &Path) -> TomlConfig {
 -            TomlConfig::default()
--        }
 +        fn get_toml(file: &Path) -> TomlConfig {
 +            // Debian: We use previous version as a custom rustc, which
 +            // unfortunately won't be picked up because config.toml isn't
@@ -42,7 +41,7 @@ Index: rust/src/bootstrap/config.rs
 +                .unwrap_or_else(|err| {
 +                    eprintln!("failed to parse TOML configuration '{}': {err}", file.display());
 +                    crate::detail_exit(2);
-+                })        }
++                })
+         }
  
          #[cfg(not(test))]
-         fn get_toml(file: &Path) -> TomlConfig {

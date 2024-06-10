@@ -240,10 +240,10 @@ debian/config.toml: debian/config.toml.in debian/rules
 	if $(DOWNLOAD_BOOTSTRAP) || [ $(HAVE_BINARY_TARBALL) != 0 ]; \
 	  then sed -i -e '/^rustc = /d' -e '/^cargo = /d' "$@"; fi
 # Work around low-memory (32-bit) architectures: https://github.com/rust-lang/rust/issues/45854
-# i386 and x32 fail to mmap rustc_driver when building rustdoc in >1.60
-ifneq (,$(filter $(DEB_BUILD_ARCH), armhf armel i386 mips mipsel powerpc powerpcspe x32))
-	sed -i -e 's/^debuginfo-level = .*/debuginfo-level = 0/g' "$@"
-endif
+# otherwise they fail to mmap rustc_driver when building rustdoc in >1.60
+	if [ $(DEB_BUILD_ARCH_BITS) = "32" ]; then \
+		sed -i -e 's/^debuginfo-level = .*/debuginfo-level = 0/g' "$@"; \
+	fi
 
 check-no-old-llvm:
 	# fail the build if we have any instances of OLD_LLVM_VERSION in debian, except for debian/changelog

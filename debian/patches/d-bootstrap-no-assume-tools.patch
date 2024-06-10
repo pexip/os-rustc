@@ -7,11 +7,11 @@ Subject: d-bootstrap-no-assume-tools
  src/bootstrap/builder/tests.rs | 4 ++++
  1 file changed, 4 insertions(+)
 
-Index: rust/src/bootstrap/builder/tests.rs
+Index: rust/src/bootstrap/src/tests/builder.rs
 ===================================================================
---- rust.orig/src/bootstrap/builder/tests.rs
-+++ rust/src/bootstrap/builder/tests.rs
-@@ -387,9 +387,13 @@ mod dist {
+--- rust.orig/src/bootstrap/src/tests/builder.rs
++++ rust/src/bootstrap/src/tests/builder.rs
+@@ -390,9 +390,13 @@ mod dist {
      #[test]
      fn dist_only_cross_host() {
          let b = TargetSelection::from_user("B");

@@ -4,15 +4,15 @@ Subject: d-bootstrap-rustflags
 
 ===================================================================
 ---
- src/bootstrap/builder.rs | 12 ++++++++++++
+ src/bootstrap/src/core/builder.rs | 12 ++++++++++++
  1 file changed, 12 insertions(+)
 
-Index: rust/src/bootstrap/builder.rs
+Index: rust/src/bootstrap/src/core/builder.rs
 ===================================================================
---- rust.orig/src/bootstrap/builder.rs
-+++ rust/src/bootstrap/builder.rs
-@@ -1385,6 +1385,18 @@ impl<'a> Builder<'a> {
-             }
+--- rust.orig/src/bootstrap/src/core/builder.rs
++++ rust/src/bootstrap/src/core/builder.rs
+@@ -1447,6 +1447,18 @@ impl<'a> Builder<'a> {
+             hostflags.arg("--check-cfg=values(bootstrap)");
          }
  
 +        // Debian-specific stuff here
