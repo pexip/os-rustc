@@ -1,0 +1,92 @@
+https://github.com/rust-lang/socket2/pull/474
+
+commit c19d481701f01f77cf8346fc0f6e69886e44b097
+Author: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Date:   Tue Aug 29 20:03:20 2023 +0000
+
+    Add GNU/Hurd support
+
+diff --git a/vendor/socket2/src/sockaddr.rs b/vendor/socket2/src/sockaddr.rs
+index 9ce638e..649a6dc 100644
+--- a/vendor/socket2/src/sockaddr.rs
++++ b/vendor/socket2/src/sockaddr.rs
+@@ -231,6 +231,7 @@ impl From<SocketAddrV4> for SockAddr {
+                 target_os = "dragonfly",
+                 target_os = "freebsd",
+                 target_os = "haiku",
++                target_os = "hurd",
+                 target_os = "ios",
+                 target_os = "macos",
+                 target_os = "netbsd",
+@@ -270,6 +271,7 @@ impl From<SocketAddrV6> for SockAddr {
+                 target_os = "dragonfly",
+                 target_os = "freebsd",
+                 target_os = "haiku",
++                target_os = "hurd",
+                 target_os = "ios",
+                 target_os = "macos",
+                 target_os = "netbsd",
+diff --git a/vendor/socket2/src/socket.rs b/vendor/socket2/src/socket.rs
+index 69d0478..eedcff0 100644
+--- a/vendor/socket2/src/socket.rs
++++ b/vendor/socket2/src/socket.rs
+@@ -1223,6 +1223,7 @@ impl Socket {
+     #[cfg(not(any(
+         target_os = "dragonfly",
+         target_os = "haiku",
++        target_os = "hurd",
+         target_os = "netbsd",
+         target_os = "openbsd",
+         target_os = "redox",
+@@ -1258,6 +1259,7 @@ impl Socket {
+     #[cfg(not(any(
+         target_os = "dragonfly",
+         target_os = "haiku",
++        target_os = "hurd",
+         target_os = "netbsd",
+         target_os = "openbsd",
+         target_os = "redox",
+@@ -1432,6 +1434,7 @@ impl Socket {
+     #[cfg(not(any(
+         target_os = "dragonfly",
+         target_os = "fuchsia",
++        target_os = "hurd",
+         target_os = "illumos",
+         target_os = "netbsd",
+         target_os = "openbsd",
+@@ -1461,6 +1464,7 @@ impl Socket {
+     #[cfg(not(any(
+         target_os = "dragonfly",
+         target_os = "fuchsia",
++        target_os = "hurd",
+         target_os = "illumos",
+         target_os = "netbsd",
+         target_os = "openbsd",
+diff --git a/vendor/socket2/src/sys/unix.rs b/vendor/socket2/src/sys/unix.rs
+index 74da8cc..9d3d6cd 100644
+--- a/vendor/socket2/src/sys/unix.rs
++++ b/vendor/socket2/src/sys/unix.rs
+@@ -82,6 +82,7 @@ pub(crate) use libc::IP_HDRINCL;
+ #[cfg(not(any(
+     target_os = "dragonfly",
+     target_os = "fuchsia",
++    target_os = "hurd",
+     target_os = "illumos",
+     target_os = "netbsd",
+     target_os = "openbsd",
+@@ -112,6 +113,7 @@ pub(crate) use libc::{
+ #[cfg(not(any(
+     target_os = "dragonfly",
+     target_os = "haiku",
++    target_os = "hurd",
+     target_os = "netbsd",
+     target_os = "openbsd",
+     target_os = "redox",
+@@ -226,6 +228,7 @@ type IovLen = usize;
+     target_os = "freebsd",
+     target_os = "fuchsia",
+     target_os = "haiku",
++    target_os = "hurd",
+     target_os = "illumos",
+     target_os = "netbsd",
+     target_os = "openbsd",

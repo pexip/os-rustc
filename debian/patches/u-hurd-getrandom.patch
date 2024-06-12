@@ -1,0 +1,77 @@
+https://github.com/rust-random/getrandom/pull/370
+
+commit c96bfff10ba20326fc5a89bc7f51056ce8e19e38
+Author: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Date:   Tue Aug 29 19:45:37 2023 +0000
+
+    Add GNU/Hurd support
+    
+    Signed-off-by: Samuel Thibault <samuel.thibault@ens-lyon.org>
+
+diff --git a/vendor/getrandom/src/hurd.rs b/vendor/getrandom/src/hurd.rs
+new file mode 100644
+index 0000000..842b9bc
+--- /dev/null
++++ b/vendor/getrandom/src/hurd.rs
+@@ -0,0 +1,18 @@
++// Copyright 2021 Developers of the Rand project.
++//
++// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
++// https://www.apache.org/licenses/LICENSE-2.0> or the MIT license
++// <LICENSE-MIT or https://opensource.org/licenses/MIT>, at your
++// option. This file may not be copied, modified, or distributed
++// except according to those terms.
++
++//! Implementation for GNU/Hurd
++use crate::util_libc::sys_fill_exact;
++use crate::Error;
++use core::mem::MaybeUninit;
++
++pub fn getrandom_inner(dest: &mut [MaybeUninit<u8>]) -> Result<(), Error> {
++    sys_fill_exact(dest, |buf| unsafe {
++        libc::getrandom(buf.as_mut_ptr() as *mut libc::c_void, buf.len(), 0)
++    })
++}
+diff --git a/vendor/getrandom/src/lib.rs b/vendor/getrandom/src/lib.rs
+index fbfe729..6336098 100644
+--- a/vendor/getrandom/src/lib.rs
++++ b/vendor/getrandom/src/lib.rs
+@@ -25,6 +25,7 @@
+ //! | Redox             | `*‑redox`          | `/dev/urandom`
+ //! | Haiku             | `*‑haiku`          | `/dev/urandom` (identical to `/dev/random`)
+ //! | Hermit            | `*-hermit`         | [`sys_read_entropy`]
++//! | Hurd              | `*-hurd-*`         | [`getrandom`][17]
+ //! | SGX               | `x86_64‑*‑sgx`     | [`RDRAND`]
+ //! | VxWorks           | `*‑wrs‑vxworks‑*`  | `randABytes` after checking entropy pool initialization with `randSecure`
+ //! | ESP-IDF           | `*‑espidf`         | [`esp_fill_random`]
+@@ -166,6 +167,7 @@
+ //! [14]: https://www.qnx.com/developers/docs/7.1/index.html#com.qnx.doc.neutrino.utilities/topic/r/random.html
+ //! [15]: https://www.ibm.com/docs/en/aix/7.3?topic=files-random-urandom-devices
+ //! [16]: https://man.netbsd.org/getrandom.2
++//! [17]: https://www.gnu.org/software/libc/manual/html_mono/libc.html#index-getrandom
+ //!
+ //! [`BCryptGenRandom`]: https://docs.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptgenrandom
+ //! [`Crypto.getRandomValues`]: https://www.w3.org/TR/WebCryptoAPI/#Crypto-method-getRandomValues
+@@ -278,6 +280,9 @@ cfg_if! {
+                         any(target_arch = "wasm32", target_arch = "wasm64"),
+                         target_os = "unknown"))] {
+         #[path = "js.rs"] mod imp;
++    } else if #[cfg(target_os = "hurd")] {
++        mod util_libc;
++        #[path = "hurd.rs"] mod imp;
+     } else if #[cfg(feature = "custom")] {
+         use custom as imp;
+     } else if #[cfg(all(any(target_arch = "wasm32", target_arch = "wasm64"),
+diff --git a/vendor/getrandom/src/util_libc.rs b/vendor/getrandom/src/util_libc.rs
+index 4b94144..99bee38 100644
+--- a/vendor/getrandom/src/util_libc.rs
++++ b/vendor/getrandom/src/util_libc.rs
+@@ -19,7 +19,7 @@ use libc::c_void;
+ cfg_if! {
+     if #[cfg(any(target_os = "netbsd", target_os = "openbsd", target_os = "android"))] {
+         use libc::__errno as errno_location;
+-    } else if #[cfg(any(target_os = "linux", target_os = "emscripten", target_os = "redox"))] {
++    } else if #[cfg(any(target_os = "linux", target_os = "emscripten", target_os = "hurd", target_os = "redox"))] {
+         use libc::__errno_location as errno_location;
+     } else if #[cfg(any(target_os = "solaris", target_os = "illumos"))] {
+         use libc::___errno as errno_location;

@@ -13,11 +13,19 @@ u-reproducible-build.patch
 u-fix-get-toml-when-test.patch
 u-riscv-disable-unpacked-split-debuginfo.patch
 u-avoid-blessing-cargo-deps-s-source-code-in-ui-tests.patch
+u-hurd-backtrace.patch
+u-hurd-getrandom.patch
+u-hurd-libc.3.patch
+u-hurd-libc.4.patch
+u-hurd-libloading-0.7.4.patch
+u-hurd-socket2.patch
 
 # not forwarded, or forwarded but unlikely to be merged
 u-ignore-ppc-hangs.patch
 u-rustc-llvm-cross-flags.patch
 #u-allow-system-compiler-rt.patch
+u-hurd-tests.patch
+d-ignore-test_arc_condvar_poison-ppc.patch
 
 # Debian-specific patches, not suitable for upstream
 d-disable-download-tests.patch

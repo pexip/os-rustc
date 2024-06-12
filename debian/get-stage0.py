@@ -11,7 +11,7 @@ from bootstrap import RustBuild
 
 class DownloadOnlyRustBuild(RustBuild):
     triple = None
-    def build_bootstrap(self, color, verbose_count):
+    def build_bootstrap(self):
         pass
     def run(self, *args):
         pass
@@ -26,7 +26,7 @@ def main(argv):
     triple = argv.pop(1)
     DownloadOnlyRustBuild.triple = triple
     bootstrap.RustBuild = DownloadOnlyRustBuild
-    args = bootstrap.parse_args()
+    args = bootstrap.parse_args(argv)
     # bootstrap.py likes to delete our .cargo directory out from under us
     shutil.move(".cargo", ".cargo-bak")
     try:

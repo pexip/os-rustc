@@ -1,3 +1,26 @@
+rustc (1.75.0+dfsg1-5) unstable; urgency=medium
+
+  [ Samuel Thibault ]
+  * hurd-i386 build fixes:
+    - d/patches/u-hurd-backtrace.patch
+    - d/patches/u-hurd-getrandom.patch
+    - d/patches/u-hurd-libc.3.patch
+    - d/patches/u-hurd-libc.4.patch
+    - d/patches/u-hurd-libloading-0.7.4.patch
+    - d/patches/u-hurd-socket2.patch
+    - d/patches/u-hurd-tests.patch
+
+  [ Fabian Grünbichler ]
+  * hurd: also skip problematic run-make test
+  * powerpc: disable test running into timeout (Closes: #1072897)
+  * d/control: replace non-ASCII apostrophe (Closes: #1072926)
+  * stage0: drop mips64el from default list
+
+  [ Rob Shearman ]
+  * fix get-stage0.py
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Wed, 12 Jun 2024 17:33:10 +0200
+
 rustc (1.75.0+dfsg1-4) unstable; urgency=medium
 
   * d/rules: fix comparison (unbreak 32-bit builds)

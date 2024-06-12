@@ -1,0 +1,12 @@
+Index: rustc-1.75.0+dfsg1/library/std/src/sync/mutex/tests.rs
+===================================================================
+--- rustc-1.75.0+dfsg1.orig/library/std/src/sync/mutex/tests.rs
++++ rustc-1.75.0+dfsg1/library/std/src/sync/mutex/tests.rs
+@@ -145,6 +145,7 @@ fn test_mutex_arc_condvar() {
+     }
+ }
+ 
++#[cfg(not(target_arch = "powerpc"))]
+ #[test]
+ fn test_arc_condvar_poison() {
+     let packet = Packet(Arc::new((Mutex::new(1), Condvar::new())));

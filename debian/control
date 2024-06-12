@@ -405,7 +405,7 @@ Description: Rust package manager
     your project.
   * Introduces conventions, making working with Rust projects easier.
  .
- Cargo downloads your Rust project’s dependencies and compiles your
+ Cargo downloads your Rust project's dependencies and compiles your
  project.
 
 Package: cargo-doc
@@ -425,7 +425,7 @@ Description: Rust package manager, documentation
     your project.
   * Introduces conventions, making working with Rust projects easier.
  .
- Cargo downloads your Rust project’s dependencies and compiles your
+ Cargo downloads your Rust project's dependencies and compiles your
  project.
  .
  This package contains the documentation.
