@@ -1,4 +1,4 @@
-Document by Ximin Luo, Luca Bruno & Sylvestre Ledru
+Document by Ximin Luo, Luca Bruno, Sylvestre Ledru & Fabian Grünbichler
 
 This source package is unfortunately quite tricky and with several cutting
 edges, due to the complexity of rust-lang bootstrapping system and the high
@@ -17,7 +17,7 @@ The upstream source package embeds many external libraries. We make a great
 effort to remove them and use system versions where possible, but there are a
 few more remaining:
 
- * vendor/dlmalloc, vendor/windows_*_gnu, vendor/windows_*_msvc
+ * vendor/dlmalloc
 
    These are small C libraries designed to be statically linked; their upstream
    does not support building them as a shared library and they are too small to
@@ -79,6 +79,13 @@ This way, other architectures will be omitted from the orig-stage0 tarball. You
 might want to do this e.g. if these other architectures are already present in
 your distro, but the $upstream_bootstrap_arch ones are not yet present.
 
+If the toolchain for the architecture you are attempting to bootstrap is not
+provided upstream (i.e., it's not at Tier 2 with Host Tools or higher[2]), you
+can manually prepare such a stage0 tarball via cross compilation using
+upstream's build process.
+
+[2] https://doc.rust-lang.org/nightly/rustc/platform-support.html
+
 Notes
 -----
 
@@ -135,17 +142,19 @@ $ sudo mk-build-deps -irt 'aptitude -R'
 $ uscan --verbose                       # or debian/rules source_orig-beta, for beta
 $ ver=UPDATE-ME                         # whatever it is, probably X.YY.Z or X.YY.Z~beta.N
 
-$ debian/refresh-early-patches.sh $ver
+$ debian/rebase-patches.sh $ver
 # This will require an understanding of how git-rebase and git-mergetool works
 # We recommend either kdiff3 or p4merge (proprietary) as the git-mergetool.
+# See individual patches for instructions on rebasing.
 
-$ tar xf ../rustc-${ver/\~/-}-src.tar.xz && ( cd rustc-${ver/*~*/beta}-src/ && pwd && ../debian/prune-unused-deps ) && rm -rf rustc-${ver/*~*/beta}-src/
+$ tar -C /tmp -xf ../rustc-${ver/\~/-}-src.tar.xz && ( dir=$PWD; cd /tmp/rustc-${ver/*~*/beta}-src/ && pwd && $dir/debian/prune-unused-deps ) && rm -rf /tmp/rustc-${ver/*~*/beta}-src/
 $ git diff
 # Review the diff. If it removes too much stuff, it could mean that rustc
 # pulled in new unnecessary dependencies in this newer version. See if you can
 # drop them by amending the patch "d-0000-ignore-removed-submodules.patch".
 # Rerun the above "tar ..." commands again and check that your patch works.
-# For example, there is absolutely no reason to pull in windows-sys/windows.
+# For example, there is absolutely no reason to pull in windows-sys/windows or
+# openssl-src.
 
 $ git commit -m "Update Files-Excluded for new upstream version ${ver/\~/-}" debian/copyright
 $ uscan --verbose                       # yes, again, to pick up the new Files-Excluded stuff
@@ -159,7 +168,6 @@ $ git checkout debian/experimental
 $ gbp import-orig ../rustc_$ver+dfsg1.orig.tar.xz
 $ dch -v $ver+dfsg1-1~exp1 "New upstream release."
 $ debian/rules update-version
-# might also need to bump the version of the cargo Build-Depends
 # then refresh patches, etc etc
 # Use /usr/share/cargo/scripts/guess-crate-copyright to help update d/copyright quickly
 

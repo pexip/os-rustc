@@ -1,0 +1,44 @@
+From: Debian Rust Maintainers <pkg-rust-maintainers@alioth-lists.debian.net>
+Date: Thu, 13 Jun 2024 11:16:41 +0200
+Subject: ubuntu-disable-ppc64el-asm-tests
+
+Forwarded: not-needed
+---
+ compiler/rustc_lint/src/builtin.rs      | 5 ++++-
+ compiler/rustc_lint_defs/src/builtin.rs | 2 ++
+ 2 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/compiler/rustc_lint/src/builtin.rs b/compiler/rustc_lint/src/builtin.rs
+index 045ff38..3472290 100644
+--- a/compiler/rustc_lint/src/builtin.rs
++++ b/compiler/rustc_lint/src/builtin.rs
+@@ -2700,7 +2700,10 @@ declare_lint! {
+     /// ### Example
+     ///
+     /// ```rust,compile_fail
+-    /// # #![feature(asm_experimental_arch)]
++    /// #![cfg_attr(
++    ///  not(any(target_arch = "powerpc64", target_arch = "s390x")),
++    ///  feature(asm_experimental_arch)
++    /// )]
+     /// use std::arch::asm;
+     ///
+     /// fn main() {
+diff --git a/compiler/rustc_lint_defs/src/builtin.rs b/compiler/rustc_lint_defs/src/builtin.rs
+index f9b6623..b4f5c7b 100644
+--- a/compiler/rustc_lint_defs/src/builtin.rs
++++ b/compiler/rustc_lint_defs/src/builtin.rs
+@@ -3046,11 +3046,13 @@ declare_lint! {
+     ///
+     /// use std::arch::asm;
+     ///
++    /// #[cfg(not(any(target_arch = "powerpc64", target_arch = "s390x")))]
+     /// #[naked]
+     /// pub fn default_abi() -> u32 {
+     ///     unsafe { asm!("", options(noreturn)); }
+     /// }
+     ///
++    /// #[cfg(not(any(target_arch = "powerpc64", target_arch = "s390x")))]
+     /// #[naked]
+     /// pub extern "Rust" fn rust_abi() -> u32 {
+     ///     unsafe { asm!("", options(noreturn)); }

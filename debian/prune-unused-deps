@@ -22,8 +22,13 @@ rm -f Cargo.lock src/bootstrap/Cargo.lock src/tools/rust-analyzer/Cargo.lock src
 
 find vendor -name .cargo-checksum.json -execdir "$scriptdir/debian/prune-checksums" "{}" +
 
+# TEMP: cc 1.0.83 is broken, see https://github.com/rust-lang/cc-rs/issues/913
+# this forces a downgrade to 1.0.79, and can be removed once a fixed version is vendored
+rm -rf vendor/cc
+
 # re-generate Cargo.lock after patching
 cargo update --offline
+# temporary, versions until 1.85 are broken for bootstrapping, and this would pick up 1.83 otherwise
 
 # re-generate src/bootstrap/Cargo.lock after patching
 (cd src/bootstrap && cargo update --offline)
