@@ -46,7 +46,6 @@ Files-Excluded:
  vendor/mdbook/src/theme/playground_editor
  vendor/psm/src/arch/wasm32.o
 # test binary files
- vendor/libloading-0.7.4/tests/*.dll
  vendor/libloading/tests/*.dll
 # Misc
  vendor/*/icon_CLion.svg
@@ -61,43 +60,40 @@ Files-Excluded:
  vendor/addr2line-0.19.0
  vendor/aes
  vendor/ahash-0.8.3
- vendor/aho-corasick-0.7.18
+ vendor/ahash-0.8.6
+ vendor/aho-corasick-0.7.20
  vendor/aho-corasick-1.0.2
  vendor/allocator-api2-0.2.15
- vendor/anstyle-1.0.0
  vendor/anstyle-parse-0.2.1
  vendor/anstyle-query-1.0.0
  vendor/anstyle-wincon-2.1.0
  vendor/anstyle-wincon
+ vendor/anyhow-1.0.75
  vendor/backtrace-0.3.67
  vendor/base64-0.21.2
- vendor/bitflags-2.4.0
- vendor/block-buffer-0.10.2
- vendor/bstr-0.2.17
  vendor/bstr-1.5.0
+ vendor/bstr-1.8.0
  vendor/bumpalo-3.13.0
+ vendor/byteorder-1.4.3
  vendor/bytes-1.4.0
  vendor/camino-1.1.4
  vendor/cargo_metadata-0.18.0
  vendor/cargo-platform-0.1.2
- vendor/cc-1.0.73
  vendor/chalk-derive
  vendor/chalk-ir
  vendor/chalk-recursive
  vendor/chalk-solve
  vendor/cipher
+ vendor/clap-4.4.12
  vendor/clap-4.4.4
- vendor/clap-4.4.7
  vendor/clap_builder-4.4.4
- vendor/clap_builder-4.4.7
- vendor/clap_complete-4.4.3
+ vendor/clap_complete-4.4.4
  vendor/clap_derive-4.4.2
  vendor/clap_lex-0.5.0
  vendor/command-group
  vendor/core-foundation-0.9.3
- vendor/core-foundation-sys-0.8.3
  vendor/core-foundation-sys-0.8.4
- vendor/cpufeatures-0.2.5
+ vendor/cpufeatures-0.2.11
  vendor/cpufeatures-0.2.8
  vendor/cranelift-bforest
  vendor/cranelift-codegen
@@ -111,51 +107,45 @@ Files-Excluded:
  vendor/cranelift-module
  vendor/cranelift-native
  vendor/cranelift-object
- vendor/crossbeam-deque-0.8.2
- vendor/crossbeam-epoch-0.9.13
- vendor/crossbeam-utils-0.8.14
- vendor/crypto-common-0.1.3
- vendor/ctrlc-3.4.0
+ vendor/crossbeam-channel-0.5.8
+ vendor/crossbeam-deque-0.8.3
+ vendor/crossbeam-epoch-0.9.15
+ vendor/crossbeam-epoch-0.9.16
+ vendor/crossbeam-utils-0.8.16
+ vendor/crossbeam-utils-0.8.17
+ vendor/ctrlc-3.4.1
  vendor/curl-sys-0.4.63+curl-8.1.2
- vendor/diff-0.1.12
- vendor/digest-0.10.3
  vendor/directories
  vendor/dirs-sys
  vendor/dissimilar-1.0.6
  vendor/dot
- vendor/either-1.6.1
  vendor/either-1.8.1
  vendor/encode_unicode
  vendor/encoding_rs-0.8.32
  vendor/equivalent-1.0.0
  vendor/errno-0.3.5
  vendor/fastrand-2.0.0
- vendor/filetime-0.2.16
  vendor/filetime-0.2.21
  vendor/filetime-0.2.22
  vendor/fixedbitset
  vendor/flate2-1.0.26
  vendor/form_urlencoded-1.2.0
  vendor/fsevent-sys
- vendor/generic-array-0.14.5
  vendor/getrandom-0.2.10
  vendor/gimli-0.27.3
  vendor/globset-0.4.10
- vendor/globset-0.4.8
  vendor/hashbrown-0.13.2
  vendor/hashbrown-0.14.0
  vendor/hermit-abi-0.2.6
  vendor/hermit-abi-0.3.2
- vendor/home-0.5.4
+ vendor/home-0.5.5
  vendor/idna-0.4.0
- vendor/ignore-0.4.18
  vendor/ignore-0.4.20
  vendor/indexmap-2.0.0
  vendor/inotify
  vendor/inotify-sys
  vendor/inout
  vendor/is-terminal-0.4.8
- vendor/itoa-1.0.2
  vendor/itoa-1.0.6
  vendor/jemalloc-sys
  vendor/js-sys-0.3.64
@@ -163,6 +153,7 @@ Files-Excluded:
  vendor/kqueue
  vendor/kqueue-sys
  vendor/libc-0.2.148
+ vendor/libc-0.2.150
  vendor/libffi
  vendor/libffi-sys
  vendor/libloading-0.8.0
@@ -173,14 +164,10 @@ Files-Excluded:
  vendor/linked-hash-map
  vendor/linux-raw-sys-0.4.10
  vendor/lock_api-0.4.10
- vendor/log-0.4.17
  vendor/log-0.4.19
- vendor/lsp-server
- vendor/lzma-sys-0.1.17
  vendor/mach
  vendor/memchr-2.5.0
  vendor/memchr-2.6.3
- vendor/memoffset-0.7.1
  vendor/mimalloc
  vendor/miniz_oxide-0.6.2
  vendor/mio-0.8.5
@@ -188,18 +175,16 @@ Files-Excluded:
  vendor/nix-0.26.2
  vendor/normpath
  vendor/notify
- vendor/ntapi-0.4.0
  vendor/ntapi
  vendor/nu-ansi-term
  vendor/num_cpus-1.15.0
  vendor/num-traits-0.2.15
  vendor/object-0.30.4
  vendor/object-0.32.0
- vendor/once_cell-1.12.0
- vendor/opener-0.5.0
- vendor/openssl-0.10.55
+ vendor/once_cell-1.18.0
+ vendor/openssl-0.10.57
  vendor/openssl-src
- vendor/openssl-sys-0.9.90
+ vendor/openssl-sys-0.9.92
  vendor/option-ext
  vendor/parking_lot_core-0.9.8
  vendor/paste
@@ -211,27 +196,28 @@ Files-Excluded:
  vendor/petgraph
  vendor/pin-project-lite-0.2.10
  vendor/pin-project-lite-0.2.9
- vendor/pkg-config-0.3.25
- vendor/proc-macro2-1.0.60
+ vendor/pkg-config-0.3.27
  vendor/proc-macro2-1.0.63
  vendor/proc-macro2-1.0.69
+ vendor/proc-macro2-1.0.74
  vendor/protobuf
  vendor/protobuf-support
+ vendor/pulldown-cmark-0.9.3
  vendor/pulldown-cmark-to-cmark
- vendor/quote-1.0.26
  vendor/quote-1.0.28
  vendor/quote-1.0.29
- vendor/redox_syscall-0.2.13
+ vendor/ra-ap-rustc_abi
+ vendor/ra-ap-rustc_index
+ vendor/ra-ap-rustc_index_macros
+ vendor/ra-ap-rustc_parse_format
+ vendor/ra-ap-rustc_pattern_analysis
  vendor/redox_syscall-0.3.5
  vendor/regalloc2
- vendor/regex-1.5.6
  vendor/regex-1.8.4
- vendor/regex-syntax-0.6.26
  vendor/regex-syntax-0.7.2
  vendor/region
  vendor/rustc-build-sysroot
  vendor/rustix-0.38.19
- vendor/ryu-1.0.10
  vendor/ryu-1.0.13
  vendor/schannel
  vendor/scip
@@ -239,50 +225,52 @@ Files-Excluded:
  vendor/security-framework-2.9.1
  vendor/security-framework-sys-2.9.0
  vendor/semver-1.0.17
- vendor/serde-1.0.160
+ vendor/semver-1.0.20
  vendor/serde-1.0.185
- vendor/serde_derive-1.0.160
+ vendor/serde-1.0.193
+ vendor/serde-1.0.194
  vendor/serde_derive-1.0.185
- vendor/serde_json-1.0.81
+ vendor/serde_derive-1.0.193
+ vendor/serde_derive-1.0.194
+ vendor/serde_json-1.0.108
+ vendor/serde_json-1.0.110
  vendor/serde_json-1.0.99
  vendor/serde_spanned-0.6.3
  vendor/sha1-0.10.5
- vendor/sha2-0.10.2
  vendor/sha2-0.10.7
  vendor/sharded-slab-0.1.4
  vendor/slice-group-by
- vendor/smallvec-1.10.0
  vendor/smallvec-1.11.0
+ vendor/smallvec-1.11.2
  vendor/socket2-0.4.9
  vendor/syn-2.0.32
- vendor/syn-2.0.8
+ vendor/syn-2.0.39
+ vendor/syn-2.0.46
+ vendor/tar-0.4.38
  vendor/target-lexicon
  vendor/tempfile-3.8.0
+ vendor/termcolor-1.2.0
  vendor/thiserror-1.0.40
  vendor/thiserror-1.0.47
  vendor/thiserror-impl-1.0.40
  vendor/thiserror-impl-1.0.47
- vendor/thread_local-1.1.4
  vendor/tikv-jemallocator
  vendor/tikv-jemalloc-ctl
  vendor/tikv-jemalloc-sys
  vendor/time-0.3.22
  vendor/time-core-0.1.1
  vendor/time-macros-0.2.9
- vendor/toml-0.5.9
  vendor/toml_datetime-0.6.3
  vendor/tracing-attributes-0.1.26
  vendor/tracing-subscriber-0.3.17
  vendor/tracing-tree
- vendor/typenum-1.15.0
+ vendor/typed-arena
  vendor/typenum-1.16.0
  vendor/ucd-trie-0.1.5
  vendor/unicase-2.6.0
- vendor/unicode-ident-1.0.0
+ vendor/unicode-bidi-0.3.13
  vendor/unicode-ident-1.0.9
- vendor/unicode-width-0.1.10
  vendor/url-2.4.0
- vendor/walkdir-2.3.2
  vendor/walkdir-2.3.3
  vendor/wasm-bindgen-0.2.87
  vendor/wasm-bindgen-backend-0.2.87
@@ -337,7 +325,7 @@ Files-Excluded:
  vendor/windows_x86_64_msvc-0.48.5
  vendor/windows_x86_64_msvc
  vendor/winreg
- vendor/xz2-0.1.6
+ vendor/xattr-0.2.3
  vendor/yaml-merge-keys
  vendor/yaml-rust
  vendor/zerocopy-0.7.28
@@ -593,12 +581,12 @@ Comment: see https://github.com/RumovZ/android-tzdata
 
 Files:
  vendor/annotate-snippets/*
+ vendor/annotate-snippets-0.*/*
 Copyright: 2018-2020 Zibi Braniecki <gandalf@mozilla.com>
 License: Apache-2.0 or MIT
 Comment: see https://github.com/zbraniecki/annotate-snippets-rs
 
 Files: vendor/aho-corasick/*
-       vendor/aho-corasick-0.*/*
        vendor/memchr/*
 Copyright: 2015 Andrew Gallant <jamslam@gmail.com>
            2015-2018 bluss
@@ -1096,9 +1084,7 @@ Copyright: 2016-2018 Steven Fackler <sfackler@gmail.com>
 License: MIT or Apache-2.0
 Comment: see https://github.com/sfackler/fallible-streaming-iterator
 
-Files:
- vendor/faster-hex/*
- vendor/faster-hex-0.*/*
+Files: vendor/faster-hex/*
 Copyright: 2018-2023 zhangsoledad <787953403@qq.com>
 License: MIT
 Comment: see https://github.com/NervosFoundation/faster-hex
@@ -1216,7 +1202,6 @@ Files:
  vendor/gix-diff/*
  vendor/gix-discover/*
  vendor/gix-features/*
- vendor/gix-features-0.*/*
  vendor/gix-filter/*
  vendor/gix-fs/*
  vendor/gix-glob/*
@@ -1282,7 +1267,7 @@ Comment: see https://github.com/starkat99/half-rs
 
 Files: 
  vendor/handlebars/*
- vendor/handlebars-3.5.*/*
+ vendor/handlebars-4.*/*
 Copyright: 2014-2017 Ning Sun <sunng@about.me>
 License: MIT
 Comment: see https://github.com/sunng87/handlebars-rust
@@ -1531,9 +1516,7 @@ Copyright: 2016-2021 Titus Wormer <tituswormer@gmail.com>
 License: MIT
 Comment: see https://github.com/wooorm/levenshtein-rs
 
-Files:
- vendor/libloading/*
- vendor/libloading-0.7.4/*
+Files: vendor/libloading/*
 Copyright: 2015-2022 Simonas Kazlauskas <libloading@kazlauskas.me>
 License: ISC
 Comment: see https://github.com/nagisa/rust_libloading/
@@ -1574,6 +1557,11 @@ Files: vendor/linux-raw-sys/*
 Copyright: 2021-2022 Dan Gohman <dev@sunfishcode.online>
 License: Apache-2.0 with LLVM exception OR Apache-2.0 OR MIT
 Comment: see https://github.com/sunfishcode/linux-raw-sys
+
+Files: vendor/lsp-server/*
+Copyright: 2024 rust-analyzer team
+License: MIT OR Apache-2.0
+Comment: see https://github.com/rust-lang/rust-analyzer/tree/master/lib/lsp-server
 
 Files: vendor/lsp-types/*
 Copyright: 2016-2022 Markus Westerlind <marwes91@gmail.com>
@@ -1996,12 +1984,7 @@ Copyright: 2018-2022 Aleksey Kladov <aleksey.kladov@gmail.com>
 License: MIT OR Apache-2.0
 Comment: see https://github.com/rust-analyzer/rowan
 
-Files:
- vendor/ra-ap-rustc_lexer/*
- vendor/ra-ap-rustc_abi/*
- vendor/ra-ap-rustc_index/*
- vendor/ra-ap-rustc_index_macros/*
- vendor/ra-ap-rustc_parse_format/*
+Files: vendor/ra-ap-rustc_lexer/*
 Copyright: 2010-2024 The Rust Project Developers
 License: MIT or Apache-2.0
 Comment: see https://github.com/rust-lang/rust
@@ -2276,11 +2259,6 @@ Copyright: 2020-2024 Maxim Zhiburt <zhiburt@gmail.com>
 License: MIT
 Comment: see https://github.com/zhiburt/tabled
 
-Files: vendor/tar-0.4.38/*
-Copyright: 2014-2023 Alex Crichton <alex@alexcrichton.com>
-License: MIT or Apache-2.0
-Comment: see https://github.com/alexcrichton/tar-rs
-
 Files: vendor/tempfile/*
 Copyright: 2015-2018 Steven Allen <steven@stebalien.com>
            2015-2018 The Rust Project Developers
@@ -2330,15 +2308,6 @@ Files:
 Copyright: 2019-2020 David Tolnay <dtolnay@gmail.com>
 License: MIT OR Apache-2.0
 Comment: see https://github.com/dtolnay/thiserror
-
-Files:
- vendor/thiserror-core/*
- vendor/thiserror-core-impl/*
-Copyright:
- 2019-2023 David Tolnay <dtolnay@gmail.com>
- 2022-2023 Florian Uekermann <florian@code.green>
-License: MIT or Apache-2.0
-Comment: https://github.com/FlorianUekermann/thiserror/tree/core
 
 Files: vendor/thorin-dwp/*
 Copyright: 2021-2022 David Wood <david.wood@huawei.com>
@@ -2445,11 +2414,6 @@ Files: vendor/type-map/*
 Copyright: 2019-2022 Jacob Brown <kardeiz@gmail.com>
 License: MIT or Apache-2.0
 Comment: see https://github.com/kardeiz/type-map
-
-Files: vendor/typed-arena/*
-Copyright: 2015-2023 The typed-arena developers
-License: MIT
-Comment: see https://github.com/SimonSapin/rust-typed-arena
 
 Files: vendor/typenum/*
 Copyright: 2015-2019 Paho Lurie-Gregg <paho@paholg.com>

@@ -5,13 +5,13 @@ Subject: set tools to those built in Debian
 Forwarded: not-needed
 ===================================================================
 ---
- src/bootstrap/src/tests/builder.rs | 4 ++++
+ src/bootstrap/src/core/builder/tests.rs | 4 ++++
  1 file changed, 4 insertions(+)
 
-diff --git a/src/bootstrap/src/tests/builder.rs b/src/bootstrap/src/tests/builder.rs
+diff --git a/src/bootstrap/src/core/builder/tests.rs b/src/bootstrap/src/core/builder/tests.rs
 index 700ebcf..bf31009 100644
---- a/src/bootstrap/src/tests/builder.rs
-+++ b/src/bootstrap/src/tests/builder.rs
+--- a/src/bootstrap/src/core/builder/tests.rs
++++ b/src/bootstrap/src/core/builder/tests.rs
 @@ -374,9 +374,13 @@ mod dist {
      #[test]
      fn dist_only_cross_host() {

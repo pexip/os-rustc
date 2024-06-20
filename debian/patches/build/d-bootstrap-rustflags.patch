@@ -10,10 +10,10 @@ Forwarded: not-needed
  1 file changed, 12 insertions(+)
 
 diff --git a/src/bootstrap/src/core/builder.rs b/src/bootstrap/src/core/builder.rs
-index 7245d11..82f8e91 100644
+index 58f12f9..c37ab20 100644
 --- a/src/bootstrap/src/core/builder.rs
 +++ b/src/bootstrap/src/core/builder.rs
-@@ -1462,6 +1462,18 @@ impl<'a> Builder<'a> {
+@@ -1459,6 +1459,18 @@ impl<'a> Builder<'a> {
          hostflags.arg("-Zunstable-options");
          hostflags.arg("--check-cfg=cfg(bootstrap)");
  
