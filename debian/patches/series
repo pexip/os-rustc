@@ -5,13 +5,13 @@ cargo/c-disable-fs-specific-test.patch
 cargo/c-0003-tests-add-missing-cross-disabled-checks.patch
 cargo/d-0012-cargo-always-return-dev-channel.patch
 upstream/u-fix-get-toml-when-test.patch
-upstream/u-riscv-disable-unpacked-split-debuginfo.patch
 upstream/u-avoid-blessing-cargo-deps-s-source-code-in-ui-tests.patch
 upstream/u-ignore-ppc-hangs.patch
 upstream/u-rustc-llvm-cross-flags.patch
 upstream/u-hurd-tests.patch
 upstream/d-ignore-test_arc_condvar_poison-ppc.patch
 upstream/d-disable-download-tests.patch
+upstream/u-set-the-host-library-path-in-run-make-v2.patch
 prune/d-0000-ignore-removed-submodules.patch
 prune/d-0001-pkg-config-no-special-snowflake.patch
 prune/d-0002-mdbook-strip-embedded-libs.patch
@@ -24,6 +24,7 @@ vendor/u-hurd-backtrace.patch
 vendor/u-hurd-gix-index.patch
 vendor/u-hurd-gix-index-2.patch
 vendor/u-hurd-socket2.patch
+vendor/u-hurd-rustix.patch
 vendor/d-0003-cc-psm-rebuild-wasm32.patch
 build/d-bootstrap-rustflags.patch
 build/d-bootstrap-install-symlinks.patch
@@ -43,3 +44,4 @@ behaviour/d-rustc-i686-baseline.patch
 behaviour/d-rustdoc-disable-embedded-fonts.patch
 ubuntu/ubuntu-disable-ppc64el-asm-tests.patch
 ubuntu/ubuntu-ignore-arm-doctest.patch
+upstream/Revert-loongarch-add-frecipe-and-relax-target-feature.patch

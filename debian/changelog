@@ -1,3 +1,23 @@
+rustc (1.78.0+dfsg1-2) unstable; urgency=medium
+
+  * unbreak loongson64 build
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Mon, 24 Jun 2024 08:25:58 +0200
+
+rustc (1.78.0+dfsg1-1) unstable; urgency=medium
+
+  [ Samuel Thibault ]
+  * debian/patches/vendor/u-hurd-rustix.patch: Fix Hurd build.
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Mon, 24 Jun 2024 07:36:42 +0200
+
+rustc (1.78.0+dfsg1-1~exp1) experimental; urgency=medium
+
+  * New upstream release
+  * cherry-pick rmake v2 test fix
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Fri, 21 Jun 2024 12:33:24 +0200
+
 rustc (1.77.2+dfsg1-1) unstable; urgency=medium
 
   [ Fabian Grünbichler ]

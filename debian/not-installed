@@ -9,7 +9,12 @@ usr/lib/rustlib/uninstall.sh
 usr/lib/rustlib/*/bin/rust-llvm-dwp
 
 # docs, we already install into /usr/share/doc/rustc
-usr/share/doc/rust/*
+usr/share/doc/docs/*
+
+# already contained in d/copyright and rust-src
+usr/share/doc/*/LICENSE-*
+usr/share/doc/*/README.md
+usr/share/doc/rustc/COPYRIGHT
 
 # should be claimed by dh_bash-completion
 etc/bash_completion.d/cargo

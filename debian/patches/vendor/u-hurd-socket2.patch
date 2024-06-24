@@ -5,90 +5,37 @@ Subject: add hurd support
 Forwarded: https://github.com/rust-lang/socket2/pull/474
 ---
  vendor/socket2/src/sockaddr.rs | 2 ++
- vendor/socket2/src/socket.rs   | 4 ++++
- vendor/socket2/src/sys/unix.rs | 3 +++
- 3 files changed, 9 insertions(+)
+ vendor/socket2/src/sys/unix.rs | 1 +
+ 2 files changed, 3 insertions(+)
 
 diff --git a/vendor/socket2/src/sockaddr.rs b/vendor/socket2/src/sockaddr.rs
-index e721018..682ec89 100644
+index 6df22fd..185f421 100644
 --- a/vendor/socket2/src/sockaddr.rs
 +++ b/vendor/socket2/src/sockaddr.rs
-@@ -231,6 +231,7 @@ impl From<SocketAddrV4> for SockAddr {
-                 target_os = "dragonfly",
-                 target_os = "freebsd",
-                 target_os = "haiku",
-+                target_os = "hurd",
-                 target_os = "ios",
-                 target_os = "macos",
-                 target_os = "netbsd",
-@@ -275,6 +276,7 @@ impl From<SocketAddrV6> for SockAddr {
-                 target_os = "dragonfly",
-                 target_os = "freebsd",
-                 target_os = "haiku",
-+                target_os = "hurd",
-                 target_os = "ios",
-                 target_os = "macos",
-                 target_os = "netbsd",
-diff --git a/vendor/socket2/src/socket.rs b/vendor/socket2/src/socket.rs
-index 90649d9..45fe1e3 100644
---- a/vendor/socket2/src/socket.rs
-+++ b/vendor/socket2/src/socket.rs
-@@ -1235,6 +1235,7 @@ impl Socket {
-     #[cfg(not(any(
-         target_os = "dragonfly",
-         target_os = "haiku",
-+        target_os = "hurd",
-         target_os = "netbsd",
-         target_os = "openbsd",
-         target_os = "redox",
-@@ -1272,6 +1273,7 @@ impl Socket {
-     #[cfg(not(any(
-         target_os = "dragonfly",
-         target_os = "haiku",
-+        target_os = "hurd",
-         target_os = "netbsd",
-         target_os = "openbsd",
-         target_os = "redox",
-@@ -1448,6 +1450,7 @@ impl Socket {
-     #[cfg(not(any(
-         target_os = "dragonfly",
-         target_os = "fuchsia",
-+        target_os = "hurd",
-         target_os = "illumos",
-         target_os = "netbsd",
-         target_os = "openbsd",
-@@ -1479,6 +1482,7 @@ impl Socket {
-     #[cfg(not(any(
-         target_os = "dragonfly",
-         target_os = "fuchsia",
-+        target_os = "hurd",
-         target_os = "illumos",
-         target_os = "netbsd",
-         target_os = "openbsd",
+@@ -290,6 +290,7 @@ impl From<SocketAddrV4> for SockAddr {
+             target_os = "freebsd",
+             target_os = "haiku",
+             target_os = "hermit",
++            target_os = "hurd",
+             target_os = "ios",
+             target_os = "macos",
+             target_os = "netbsd",
+@@ -333,6 +334,7 @@ impl From<SocketAddrV6> for SockAddr {
+             target_os = "freebsd",
+             target_os = "haiku",
+             target_os = "hermit",
++            target_os = "hurd",
+             target_os = "ios",
+             target_os = "macos",
+             target_os = "netbsd",
 diff --git a/vendor/socket2/src/sys/unix.rs b/vendor/socket2/src/sys/unix.rs
-index ec7c3e2..1b89e37 100644
+index 805b6d5..1683ff2 100644
 --- a/vendor/socket2/src/sys/unix.rs
 +++ b/vendor/socket2/src/sys/unix.rs
-@@ -84,6 +84,7 @@ pub(crate) use libc::IP_HDRINCL;
- #[cfg(not(any(
+@@ -138,6 +138,7 @@ pub(crate) use libc::IP_HDRINCL;
+     target_os = "aix",
      target_os = "dragonfly",
      target_os = "fuchsia",
-+    target_os = "hurd",
-     target_os = "illumos",
-     target_os = "netbsd",
-     target_os = "openbsd",
-@@ -116,6 +117,7 @@ pub(crate) use libc::{
- #[cfg(not(any(
-     target_os = "dragonfly",
-     target_os = "haiku",
-+    target_os = "hurd",
-     target_os = "netbsd",
-     target_os = "openbsd",
-     target_os = "redox",
-@@ -233,6 +235,7 @@ type IovLen = usize;
-     target_os = "freebsd",
-     target_os = "fuchsia",
-     target_os = "haiku",
 +    target_os = "hurd",
      target_os = "illumos",
      target_os = "netbsd",

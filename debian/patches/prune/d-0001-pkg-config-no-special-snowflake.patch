@@ -11,10 +11,10 @@ Forwarded: not-needed
  2 files changed, 11 insertions(+), 17 deletions(-)
 
 diff --git a/vendor/pkg-config/src/lib.rs b/vendor/pkg-config/src/lib.rs
-index ccffd74..79a3f4f 100644
+index b425404..b880079 100644
 --- a/vendor/pkg-config/src/lib.rs
 +++ b/vendor/pkg-config/src/lib.rs
-@@ -128,11 +128,8 @@ pub enum Error {
+@@ -150,11 +150,8 @@ pub enum Error {
      /// Contains the name of the responsible environment variable.
      EnvNoPkgConfig(String),
  
@@ -28,7 +28,7 @@ index ccffd74..79a3f4f 100644
      CrossCompilation,
  
      /// Failed to run `pkg-config`.
-@@ -247,14 +244,6 @@ impl fmt::Display for Error {
+@@ -269,14 +266,6 @@ impl fmt::Display for Error {
      fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
          match *self {
              Error::EnvNoPkgConfig(ref name) => write!(f, "Aborted because {} is set", name),
@@ -43,7 +43,7 @@ index ccffd74..79a3f4f 100644
              Error::Command {
                  ref command,
                  ref cause,
-@@ -380,7 +369,7 @@ impl fmt::Display for Error {
+@@ -402,7 +391,7 @@ impl fmt::Display for Error {
                  )?;
                  format_output(output, f)
              }
@@ -52,7 +52,7 @@ index ccffd74..79a3f4f 100644
          }
      }
  }
-@@ -574,6 +563,8 @@ impl Config {
+@@ -596,6 +585,8 @@ impl Config {
          if host == target {
              return true;
          }
@@ -61,7 +61,7 @@ index ccffd74..79a3f4f 100644
  
          // pkg-config may not be aware of cross-compilation, and require
          // a wrapper script that sets up platform-specific prefixes.
-@@ -631,7 +622,12 @@ impl Config {
+@@ -653,7 +644,12 @@ impl Config {
      }
  
      fn run(&self, name: &str, args: &[&str]) -> Result<Vec<u8>, Error> {
