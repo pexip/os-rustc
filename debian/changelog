@@ -1,3 +1,21 @@
+rustc (1.77.2+dfsg1-1) unstable; urgency=medium
+
+  [ Fabian Grünbichler ]
+  * fix builds on porter boxes
+  * d/control: tighten libgit2-dev dependency
+
+  [ Samuel Thibault ]
+  * fix hurd patches
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Thu, 20 Jun 2024 13:40:40 +0200
+
+rustc (1.77.2+dfsg1-1~exp1) experimental; urgency=medium
+
+  * New upstream release.
+  * config: don't attempt to optimize compiler-rt
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Wed, 19 Jun 2024 12:44:26 +0200
+
 rustc (1.76.0+dfsg1-1+pexip24u1) pexip; urgency=medium
 
   * New upstream release

@@ -16,11 +16,11 @@ index 493d4e1..cc89fd5 100644
      /// Return the device id on which the file is located, or 0 on windows.
      pub fn dev(&self) -> u64 {
 -        #[cfg(not(windows))]
-+        #[cfg(all(not(windows), not(host_os = "hurd")))]
++        #[cfg(all(not(windows), not(target_os = "hurd")))]
          {
              self.0.st_dev as u64
          }
-+        #[cfg(host_os = "hurd")]
++        #[cfg(target_os = "hurd")]
 +        {
 +            self.0.st_fsid as u64
 +        }

@@ -23,9 +23,6 @@ prune/d-0021-vendor-remove-windows-dependencies.patch
 vendor/u-hurd-backtrace.patch
 vendor/u-hurd-gix-index.patch
 vendor/u-hurd-gix-index-2.patch
-vendor/u-hurd-libc.3.patch
-vendor/u-hurd-libc.4.patch
-vendor/u-hurd-libloading-0.7.4.patch
 vendor/u-hurd-socket2.patch
 vendor/d-0003-cc-psm-rebuild-wasm32.patch
 build/d-bootstrap-rustflags.patch

@@ -15,7 +15,7 @@ Forwarded: not-needed
  3 files changed, 4 insertions(+), 3 deletions(-)
 
 diff --git a/compiler/rustc_target/src/spec/targets/i686_unknown_linux_gnu.rs b/compiler/rustc_target/src/spec/targets/i686_unknown_linux_gnu.rs
-index 3b7be48..4f01366 100644
+index 9bc38a7..c4a83b4 100644
 --- a/compiler/rustc_target/src/spec/targets/i686_unknown_linux_gnu.rs
 +++ b/compiler/rustc_target/src/spec/targets/i686_unknown_linux_gnu.rs
 @@ -2,7 +2,7 @@ use crate::spec::{base, Cc, LinkerFlavor, Lld, SanitizerSet, StackProbeType, Tar

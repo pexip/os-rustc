@@ -10,7 +10,7 @@ had_config_toml=$(if test -e "$scriptdir/debian/config.toml"; then echo true; el
 ( cd "$scriptdir" && debian/rules debian/config.toml )
 cp "$scriptdir/debian/config.toml" config.toml
 
-for i in "$scriptdir/debian/patches"/d-00*.patch; do
+for i in "$scriptdir/debian/patches"/prune/d-00*.patch; do
 	"$scriptdir/debian/ensure-patch" -N "$i"
 done
 

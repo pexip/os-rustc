@@ -31,7 +31,7 @@ compiler/rustc_codegen_gcc/Readme.md
 compiler/rustc_codegen_ssa/messages.ftl
 library/core/src/ffi/c_*.md
 library/portable-simd/*.md
-library/std/src/sys/sgx/abi/entry.S
+library/std/src/sys/pal/sgx/abi/entry.S
 library/stdarch/CONTRIBUTING.md
 library/stdarch/crates/core_arch/src/aarch64/neon/generated.rs
 library/stdarch/crates/std_detect/README.md
@@ -107,7 +107,6 @@ vendor/elliptic-curve/src/hash2curve/hash2field/expand_msg/xof.rs
 vendor/elliptic-curve/src/jwk.rs
 vendor/encoding_rs/src/ascii.rs
 vendor/encoding_rs/src/utf_16.rs
-vendor/faster-hex-0.8.1/src/serde.rs
 vendor/faster-hex/src/serde.rs
 vendor/fiat-crypto/src/p521_32.rs
 vendor/fiat-crypto/src/secp256k1_dettman_32.rs
@@ -115,6 +114,7 @@ vendor/fiat-crypto/src/secp256k1_dettman_64.rs
 vendor/git2/src/cred.rs
 vendor/half/LICENSES/Apache-2.0.txt
 vendor/half/LICENSES/MIT.txt
+vendor/handlebars-4.3.7/src/render.rs
 vendor/handlebars/src/lib.rs
 vendor/handlebars/src/render.rs
 vendor/handlebars/src/template.rs
@@ -125,6 +125,7 @@ vendor/kstring/benches/clone.rs
 vendor/lazy_static/src/lib.rs
 vendor/maplit/README.rst
 vendor/mdbook/CONTRIBUTING.md
+vendor/openssl/src/dh.rs
 vendor/p384/src/arithmetic/hash2curve.rs
 vendor/pasetors/src/token.rs
 vendor/portable-atomic/src/imp/atomic128/README.md
@@ -176,7 +177,7 @@ src/tools/rustdoc-js/tester.js
 vendor/libz-sys/src/smoke.c
 vendor/openssl-sys/build/expando.c
 vendor/sharded-slab/flake.lock
-vendor/sysinfo-0.26.7/examples/simple.c
+vendor/sysinfo-0.*/examples/simple.c
 vendor/wasm-bindgen-futures/src/task/worker.js
 vendor/wasm-bindgen-macro/src/worker.js
 vendor/wasm-bindgen/_package.json
@@ -256,7 +257,7 @@ library/core/benches/str.rs
 library/core/tests/num/dec2flt/parse.rs
 library/portable-simd/crates/core_simd/tests/mask_ops_impl/*.rs
 library/portable-simd/crates/core_simd/webdriver.json
-library/std/src/sys/windows/path/tests.rs
+library/std/src/sys/pal/windows/path/tests.rs
 library/stdarch/ci/gba.json
 library/stdarch/crates/std_detect/src/detect/test_data/*.auxv
 library/stdarch/crates/stdarch-verify/x86-intel.xml
@@ -311,7 +312,10 @@ tests/rustdoc-js/*.js
 tests/ui/*/*/*.stderr
 tests/ui/macros/not-utf8.bin
 tests/ui/traits/object/print_vtable_sizes.stdout
+vendor/annotate-snippets-0.9.1/tests/fixtures/no-color/strip_line_non_ws.toml
 vendor/annotate-snippets/tests/fixtures/no-color/strip_line_non_ws.toml
+vendor/askama_parser/tests/target-recursion.txt
+vendor/askama_parser/tests/unary-recursion.txt
 vendor/basic-toml/tests/invalid-encoder/array-mixed-types-ints-and-floats.json
 vendor/basic-toml/tests/valid/*.json
 vendor/basic-toml/tests/valid/table-whitespace.toml
@@ -332,6 +336,7 @@ vendor/flate2/tests/*.gz
 vendor/flate2/tests/corrupt-gz-file.bin
 vendor/fluent-syntax/benches/parser.rs
 vendor/gsgdt/tests/*.json
+vendor/handlebars-4.3.7/tests/helper_with_space.rs
 vendor/handlebars/tests/helper_with_space.rs
 vendor/hkdf/tests/data/*.blb
 vendor/hmac/tests/data/*.blb
@@ -463,7 +468,7 @@ compiler/rustc_expand/src/mbe/quoted.rs
 compiler/rustc_macros/src/symbols/tests.rs
 compiler/stable_mir/src/mir/visit.rs
 library/alloc/src/slice/tests.rs
-library/std/src/sys/unix/process/process_unix.rs
+library/std/src/sys/pal/unix/process/process_unix.rs
 library/stdarch/crates/stdarch-verify/src/lib.rs
 src/librustdoc/html/markdown/tests.rs
 src/tools/cargo/crates/mdman/src/format/man.rs
@@ -482,8 +487,8 @@ src/tools/rustfmt/src/string.rs
 vendor/ahash/src/fallback_hash.rs
 vendor/ahash/src/hash_quality_test.rs
 vendor/ahash/src/lib.rs
-vendor/aho-corasick-0.7.20/src/nfa.rs
 vendor/aho-corasick/src/ahocorasick.rs
+vendor/askama_parser/src/lib.rs
 vendor/base16ct/benches/mod.rs
 vendor/base16ct/src/lower.rs
 vendor/base16ct/src/mixed.rs
@@ -535,10 +540,6 @@ vendor/gix-config/src/parse/events.rs
 vendor/gix-config/src/parse/nom/mod.rs
 vendor/gix-date/src/parse.rs
 vendor/gix-discover/src/is.rs
-vendor/gix-features-0.35.0/src/parallel/mod.rs
-vendor/gix-features-0.35.0/src/parallel/reduce.rs
-vendor/gix-features-0.35.0/src/zlib/mod.rs
-vendor/gix-features-0.35.0/src/zlib/stream/inflate.rs
 vendor/gix-features/src/parallel/mod.rs
 vendor/gix-features/src/parallel/reduce.rs
 vendor/gix-features/src/zlib/mod.rs
@@ -635,8 +636,8 @@ vendor/syn*/src/stmt.rs
 vendor/syn*/src/token.rs
 vendor/syn*/src/ty.rs
 vendor/syn*/tests/test_meta.rs
-vendor/thiserror-core-impl/src/attr.rs
 vendor/thiserror-impl/src/attr.rs
+vendor/thiserror-impl/src/expand.rs
 vendor/time/src/parsing/*.rs
 vendor/time/src/parsing/combinator/mod.rs
 vendor/time/src/parsing/combinator/rfc/*.rs
@@ -653,6 +654,7 @@ vendor/toml_edit/src/parser/numbers.rs
 vendor/toml_edit/src/parser/strings.rs
 vendor/toml_edit/src/raw_string.rs
 vendor/toml_edit/tests/testsuite/parse.rs
+vendor/unic-langid/tests/langid.rs
 vendor/url/src/parser.rs
 vendor/utf-8/benches/from_utf8_lossy.rs
 vendor/utf-8/tests/unit.rs

@@ -8,10 +8,10 @@ Forwarded: no
  1 file changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/src/bootstrap/src/core/build_steps/test.rs b/src/bootstrap/src/core/build_steps/test.rs
-index 5c115cf..5c28e3d 100644
+index 48838c7..61c09c6 100644
 --- a/src/bootstrap/src/core/build_steps/test.rs
 +++ b/src/bootstrap/src/core/build_steps/test.rs
-@@ -1787,7 +1787,11 @@ NOTE: if you're sure you want to do this, please open an issue as to why. In the
+@@ -1789,7 +1789,11 @@ NOTE: if you're sure you want to do this, please open an issue as to why. In the
              .ok();
          if let Some(ref vers) = lldb_version {
              cmd.arg("--lldb-version").arg(vers);
