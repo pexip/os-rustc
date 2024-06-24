@@ -1,0 +1,56 @@
+From: Debian Rust Maintainers <pkg-rust-maintainers@alioth-lists.debian.net>
+Date: Thu, 14 Jul 2022 13:17:39 +0200
+Subject: d-bootstrap-custom-debuginfo-path
+
+Forwarded: not-needed
+===================================================================
+---
+ src/bootstrap/src/core/builder.rs                        | 3 ++-
+ src/bootstrap/src/lib.rs                                 | 5 ++---
+ tests/codegen/remap_path_prefix/issue-73167-remap-std.rs | 2 +-
+ 3 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/src/bootstrap/src/core/builder.rs b/src/bootstrap/src/core/builder.rs
+index 82f8e91..5f4a7af 100644
+--- a/src/bootstrap/src/core/builder.rs
++++ b/src/bootstrap/src/core/builder.rs
+@@ -1787,7 +1787,8 @@ impl<'a> Builder<'a> {
+             cargo.env("CFG_VIRTUAL_RUST_SOURCE_BASE_DIR", map_to);
+         }
+ 
+-        if self.config.rust_remap_debuginfo {
++	// Debian: this breaks with our vendored sources!
++        if false && self.config.rust_remap_debuginfo {
+             // FIXME: handle vendored sources
+             let registry_src = t!(home::cargo_home()).join("registry").join("src");
+             let mut env_var = OsString::new();
+diff --git a/src/bootstrap/src/lib.rs b/src/bootstrap/src/lib.rs
+index 871318d..861a2aa 100644
+--- a/src/bootstrap/src/lib.rs
++++ b/src/bootstrap/src/lib.rs
+@@ -1155,10 +1155,9 @@ impl Build {
+ 
+         match which {
+             GitRepo::Rustc => {
+-                let sha = self.rust_sha().unwrap_or(&self.version);
+-                Some(format!("/rustc/{sha}"))
++                Some(format!("/usr/src/rustc-{}", &self.version))
+             }
+-            GitRepo::Llvm => Some(String::from("/rustc/llvm")),
++            GitRepo::Llvm => panic!("GitRepo::Llvm unsupported on Debian"),
+         }
+     }
+ 
+diff --git a/tests/codegen/remap_path_prefix/issue-73167-remap-std.rs b/tests/codegen/remap_path_prefix/issue-73167-remap-std.rs
+index b66abc6..f6efe1e 100644
+--- a/tests/codegen/remap_path_prefix/issue-73167-remap-std.rs
++++ b/tests/codegen/remap_path_prefix/issue-73167-remap-std.rs
+@@ -7,7 +7,7 @@
+ // true automatically. If paths to std library hasn't been remapped, we use the
+ // above simulate-remapped-rust-src-base option to do it temporarily
+ 
+-// CHECK: !DIFile(filename: "{{/rustc/.*/library/std/src/panic.rs}}"
++// CHECK: !DIFile(filename: "{{/usr/src/rustc-.*/library/std/src/panic.rs}}"
+ fn main() {
+     std::thread::spawn(|| {
+         println!("hello");

@@ -1,0 +1,45 @@
+From: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Date: Tue, 29 Aug 2023 19:55:29 +0000
+Subject: add hurd support
+
+Forwarded: https://github.com/nagisa/rust_libloading/pull/129
+---
+ vendor/libloading-0.7.4/src/os/unix/consts.rs | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/vendor/libloading-0.7.4/src/os/unix/consts.rs b/vendor/libloading-0.7.4/src/os/unix/consts.rs
+index ea7a6a1..5794ade 100644
+--- a/vendor/libloading-0.7.4/src/os/unix/consts.rs
++++ b/vendor/libloading-0.7.4/src/os/unix/consts.rs
+@@ -82,6 +82,7 @@ mod posix {
+ 
+             target_os = "fuchsia",
+             target_os = "redox",
++            target_os = "hurd",
+         ))] {
+             pub(super) const RTLD_LAZY: c_int = 1;
+         } else {
+@@ -115,6 +116,7 @@ mod posix {
+ 
+             target_os = "fuchsia",
+             target_os = "redox",
++            target_os = "hurd",
+         ))] {
+             pub(super) const RTLD_NOW: c_int = 2;
+         } else if #[cfg(all(target_os = "android",target_pointer_width = "32"))] {
+@@ -162,6 +164,7 @@ mod posix {
+ 
+             target_os = "fuchsia",
+             target_os = "redox",
++            target_os = "hurd",
+         ))] {
+             pub(super) const RTLD_GLOBAL: c_int = 0x100;
+         } else {
+@@ -200,6 +203,7 @@ mod posix {
+ 
+             target_os = "fuchsia",
+             target_os = "redox",
++            target_os = "hurd",
+         ))] {
+             pub(super) const RTLD_LOCAL: c_int = 0;
+         } else {
