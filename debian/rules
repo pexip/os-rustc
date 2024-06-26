@@ -432,6 +432,7 @@ debian/dh_auto_install.stamp:
 
 	# Remove Cargo made package cache
 	rm -vf $(CURDIR)/debian/cargo/.package-cache
+	rm -vf $(CURDIR)/debian/cargo/.package-cache-mutate
 
 	touch "$@"
 
@@ -444,6 +445,7 @@ ifeq (true,$(BUILD_WINDOWS))
 endif
 	# Remove Cargo made package cache
 	rm -vf $(CURDIR)/debian/cargo/.package-cache
+	rm -vf $(CURDIR)/debian/cargo/.package-cache-mutate
 
 
 override_dh_auto_install-indep: debian/dh_auto_install.stamp
@@ -463,7 +465,7 @@ ifeq (true,$(BUILD_DOCS))
 	@set -e; \
 	find $(DEB_DESTDIR)/usr/share/doc/*/html -iname '*.html' | \
 	while read file; do \
-	  topdir=$$(echo "$$file" | sed 's,^$(DEB_DESTDIR)/usr/share/doc/rust/html/,,; s,/[^/]*$$,/,; s,^[^/]*$$,,; s,[^/]\+/,../,g'); \
+	  topdir=$$(echo "$$file" | sed 's,^$(DEB_DESTDIR)/usr/share/doc/docs/html/,,; s,/[^/]*$$,/,; s,^[^/]*$$,,; s,[^/]\+/,../,g'); \
 	  sed -i \
 	    -e "s,https://\(doc\|www\).rust-lang.org/\(favicon.ico\|logos/rust-logo-32x32-blk.png\),$${topdir}rust-logo-32x32-blk.png," \
 	    -e 's,<img src="https://github.com/rust-lang/rust-clippy/workflows/Clippy%20Test%20(bors)/badge.svg[^"]*" alt="\([^"]*\)" />,<span class="deb-privacy-replace--github.com-badge">\1</span>,g' \
@@ -472,10 +474,11 @@ ifeq (true,$(BUILD_DOCS))
 	find $(DEB_DESTDIR) \( -iname '*.html' -empty -o -name .lock -o -name '*.inc' \) -delete;
 
 	# mv cargo book to cargo-docs
-	mv $(DEB_DESTDIR)/usr/share/doc/rust/html/cargo $(DEB_DESTDIR)/usr/share/doc/cargo/book
+	mv $(DEB_DESTDIR)/usr/share/doc/docs/html/cargo $(DEB_DESTDIR)/usr/share/doc/cargo/book
 endif
 	# Remove Cargo made package cache
 	rm -vf $(CURDIR)/debian/cargo/.package-cache
+	rm -vf $(CURDIR)/debian/cargo/.package-cache-mutate
 
 
 override_dh_install-indep:

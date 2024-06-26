@@ -15,7 +15,7 @@ Forwarded: not-needed
  3 files changed, 4 insertions(+), 3 deletions(-)
 
 diff --git a/compiler/rustc_target/src/spec/targets/i686_unknown_linux_gnu.rs b/compiler/rustc_target/src/spec/targets/i686_unknown_linux_gnu.rs
-index 9bc38a7..c4a83b4 100644
+index 1d4916c..aca4928 100644
 --- a/compiler/rustc_target/src/spec/targets/i686_unknown_linux_gnu.rs
 +++ b/compiler/rustc_target/src/spec/targets/i686_unknown_linux_gnu.rs
 @@ -2,7 +2,7 @@ use crate::spec::{base, Cc, LinkerFlavor, Lld, SanitizerSet, StackProbeType, Tar
@@ -28,7 +28,7 @@ index 9bc38a7..c4a83b4 100644
      base.supported_sanitizers = SanitizerSet::ADDRESS;
      base.add_pre_link_args(LinkerFlavor::Gnu(Cc::Yes, Lld::No), &["-m32"]);
 diff --git a/tests/ui/abi/homogenous-floats-target-feature-mixup.rs b/tests/ui/abi/homogenous-floats-target-feature-mixup.rs
-index 4600bd0..e178964 100644
+index 3a8540a..bc4fea5 100644
 --- a/tests/ui/abi/homogenous-floats-target-feature-mixup.rs
 +++ b/tests/ui/abi/homogenous-floats-target-feature-mixup.rs
 @@ -24,7 +24,8 @@ fn main() {
@@ -42,7 +42,7 @@ index 4600bd0..e178964 100644
              }
          }
 diff --git a/tests/ui/sse2.rs b/tests/ui/sse2.rs
-index 172f407..bf39939 100644
+index fa6d797..8822846 100644
 --- a/tests/ui/sse2.rs
 +++ b/tests/ui/sse2.rs
 @@ -15,7 +15,7 @@ fn main() {

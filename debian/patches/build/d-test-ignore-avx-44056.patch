@@ -11,13 +11,13 @@ Forwarded: not-needed
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/tests/ui/issues/issue-44056.rs b/tests/ui/issues/issue-44056.rs
-index a4903ed..ebe8402 100644
+index 12e4f01..156dd9c 100644
 --- a/tests/ui/issues/issue-44056.rs
 +++ b/tests/ui/issues/issue-44056.rs
 @@ -1,5 +1,5 @@
- // build-pass (FIXME(55996): should be run on targets supporting avx)
--// only-x86_64
-+// ignore-test
- // no-prefer-dynamic
- // compile-flags: -Ctarget-feature=+avx -Clto
+ //@ build-pass (FIXME(55996): should be run on targets supporting avx)
+-//@ only-x86_64
++//@ ignore-test
+ //@ no-prefer-dynamic
+ //@ compile-flags: -Ctarget-feature=+avx -Clto
  

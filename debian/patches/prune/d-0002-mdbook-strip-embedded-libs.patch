@@ -19,7 +19,7 @@ Forwarded: not-needed
  8 files changed, 51 insertions(+), 303 deletions(-)
 
 diff --git a/src/doc/rust-by-example/theme/index.hbs b/src/doc/rust-by-example/theme/index.hbs
-index 1ae579f..effac81 100644
+index 3876555..18ec61f 100644
 --- a/src/doc/rust-by-example/theme/index.hbs
 +++ b/src/doc/rust-by-example/theme/index.hbs
 @@ -33,10 +33,7 @@
@@ -79,7 +79,7 @@ index 1ae579f..effac81 100644
          <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
  
          <!-- Hide / unhide sidebar before it is displayed -->
-@@ -309,54 +277,8 @@
+@@ -312,54 +280,8 @@
          </script>
          {{/if}}
  
@@ -137,10 +137,10 @@ index 1ae579f..effac81 100644
          <!-- Custom JS scripts -->
          {{#each additional_js}}
 diff --git a/src/tools/linkchecker/main.rs b/src/tools/linkchecker/main.rs
-index 7f73cac..e4805cc 100644
+index f49c6e7..c8ecfd3 100644
 --- a/src/tools/linkchecker/main.rs
 +++ b/src/tools/linkchecker/main.rs
-@@ -159,7 +159,17 @@ impl Checker {
+@@ -162,7 +162,17 @@ impl Checker {
          for entry in t!(dir.read_dir()).map(|e| t!(e)) {
              let path = entry.path();
              // Goes through symlinks
@@ -159,7 +159,7 @@ index 7f73cac..e4805cc 100644
              if metadata.is_dir() {
                  self.walk(&path, report);
              } else {
-@@ -172,7 +182,15 @@ impl Checker {
+@@ -175,7 +185,15 @@ impl Checker {
      fn check(&mut self, file: &Path, report: &mut Report) {
          let (pretty_path, entry) = self.load_file(file, report);
          let source = match entry {
@@ -176,19 +176,19 @@ index 7f73cac..e4805cc 100644
              FileEntry::Dir => unreachable!("never with `check` path"),
              FileEntry::OtherFile => return,
              FileEntry::Redirect { .. } => return,
-@@ -238,6 +256,12 @@ impl Checker {
-             let (target_pretty_path, target_entry) = self.load_file(&path, report);
-             let (target_source, target_ids) = match target_entry {
-                 FileEntry::Missing => {
-+                    if let Ok(target) = fs::read_link(&path) {
-+                        if target.starts_with("/usr/share") {
-+                            // broken symlink to /usr/share, ok for our Debian build
-+                            return;
-+                        }
+@@ -264,6 +282,12 @@ impl Checker {
+         let (target_pretty_path, target_entry) = self.load_file(&path, report);
+         let (target_source, target_ids) = match target_entry {
+             FileEntry::Missing => {
++                if let Ok(target) = fs::read_link(&path) {
++                    if target.starts_with("/usr/share") {
++                        // broken symlink to /usr/share, ok for our Debian build
++                        return;
 +                    }
-                     if is_exception(file, &target_pretty_path) {
-                         report.links_ignored_exception += 1;
-                     } else {
++                }
+                 if is_exception(file, &target_pretty_path) {
+                     report.links_ignored_exception += 1;
+                 } else {
 diff --git a/vendor/mdbook/src/book/init.rs b/vendor/mdbook/src/book/init.rs
 index faca1d0..c1a82a3 100644
 --- a/vendor/mdbook/src/book/init.rs
@@ -220,7 +220,7 @@ index faca1d0..c1a82a3 100644
      }
  
 diff --git a/vendor/mdbook/src/renderer/html_handlebars/hbs_renderer.rs b/vendor/mdbook/src/renderer/html_handlebars/hbs_renderer.rs
-index 8ea2f49..3cb1c9f 100644
+index b706108..b16552c 100644
 --- a/vendor/mdbook/src/renderer/html_handlebars/hbs_renderer.rs
 +++ b/vendor/mdbook/src/renderer/html_handlebars/hbs_renderer.rs
 @@ -3,13 +3,14 @@ use crate::config::{BookConfig, Code, Config, HtmlConfig, Playground, RustEditio
@@ -239,7 +239,7 @@ index 8ea2f49..3cb1c9f 100644
  use std::path::{Path, PathBuf};
  
  use crate::utils::fs::get_404_output_file;
-@@ -250,99 +251,28 @@ impl HtmlHandlebars {
+@@ -249,99 +250,28 @@ impl HtmlHandlebars {
          if let Some(contents) = &theme.favicon_svg {
              write_file(destination, "favicon.svg", contents)?;
          }
@@ -252,44 +252,44 @@ index 8ea2f49..3cb1c9f 100644
 -            destination,
 -            "FontAwesome/css/font-awesome.css",
 -            theme::FONT_AWESOME,
--        )?;
--        write_file(
--            destination,
--            "FontAwesome/fonts/fontawesome-webfont.eot",
--            theme::FONT_AWESOME_EOT,
--        )?;
--        write_file(
--            destination,
--            "FontAwesome/fonts/fontawesome-webfont.svg",
--            theme::FONT_AWESOME_SVG,
 +        symlink(
 +            "/usr/share/fonts-font-awesome/css/font-awesome.min.css",
 +            destination.join("css/font-awesome.min.css"),
          )?;
 -        write_file(
 -            destination,
--            "FontAwesome/fonts/fontawesome-webfont.ttf",
--            theme::FONT_AWESOME_TTF,
+-            "FontAwesome/fonts/fontawesome-webfont.eot",
+-            theme::FONT_AWESOME_EOT,
 +        symlink(
 +            "/usr/share/fonts-font-awesome/fonts",
 +            destination.join("fonts"),
          )?;
 -        write_file(
 -            destination,
--            "FontAwesome/fonts/fontawesome-webfont.woff",
--            theme::FONT_AWESOME_WOFF,
+-            "FontAwesome/fonts/fontawesome-webfont.svg",
+-            theme::FONT_AWESOME_SVG,
 +        symlink(
 +            "/usr/share/javascript/highlight.js/styles/atelier-dune-light.css",
 +            destination.join("highlight.css"),
          )?;
 -        write_file(
 -            destination,
--            "FontAwesome/fonts/fontawesome-webfont.woff2",
--            theme::FONT_AWESOME_WOFF2,
+-            "FontAwesome/fonts/fontawesome-webfont.ttf",
+-            theme::FONT_AWESOME_TTF,
 +        symlink(
 +            "/usr/share/javascript/highlight.js/highlight.js",
 +            destination.join("highlight.js"),
          )?;
+-        write_file(
+-            destination,
+-            "FontAwesome/fonts/fontawesome-webfont.woff",
+-            theme::FONT_AWESOME_WOFF,
+-        )?;
+-        write_file(
+-            destination,
+-            "FontAwesome/fonts/fontawesome-webfont.woff2",
+-            theme::FONT_AWESOME_WOFF2,
+-        )?;
 -        write_file(
 -            destination,
 -            "FontAwesome/fonts/FontAwesome.ttf",
@@ -355,7 +355,7 @@ index 8ea2f49..3cb1c9f 100644
          Ok(())
      }
 diff --git a/vendor/mdbook/src/renderer/html_handlebars/search.rs b/vendor/mdbook/src/renderer/html_handlebars/search.rs
-index 24d62fd..849a48c 100644
+index 1144c9f..97f9b0d 100644
 --- a/vendor/mdbook/src/renderer/html_handlebars/search.rs
 +++ b/vendor/mdbook/src/renderer/html_handlebars/search.rs
 @@ -53,8 +53,6 @@ pub fn create_files(search_config: &Search, destination: &Path, book: &Book) ->

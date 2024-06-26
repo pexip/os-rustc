@@ -158,12 +158,12 @@ index a1a5d80..0c3b0c8 100644
  [documentation tests]: ../../rustdoc/documentation-tests.html
  [JSON messages]: ../../rustc/json.html
 diff --git a/src/doc/edition-guide/src/editions/transitioning-an-existing-project-to-a-new-edition.md b/src/doc/edition-guide/src/editions/transitioning-an-existing-project-to-a-new-edition.md
-index d4ebd23..afbb17d 100644
+index 9e22504..5ba0dcc 100644
 --- a/src/doc/edition-guide/src/editions/transitioning-an-existing-project-to-a-new-edition.md
 +++ b/src/doc/edition-guide/src/editions/transitioning-an-existing-project-to-a-new-edition.md
-@@ -83,7 +83,7 @@ If new warnings are issued, you may want to consider running `cargo fix` again (
- 
- Congrats! Your code is now valid in both Rust 2015 and Rust 2018!
+@@ -101,8 +101,8 @@ The steps are roughly similar to the stable channel:
+ > on nightly along with more information about their status.
+ > A few months before the edition is stabilized, all of the new features should be fully implemented, and the [Rust Blog] will announce a call for testing.
  
 -[`cargo fix`]: ../../cargo/commands/cargo-fix.html
 -[`cargo test`]: ../../cargo/commands/cargo-test.html
@@ -171,6 +171,7 @@ index d4ebd23..afbb17d 100644
 +[`cargo test`]: ../../../../cargo/book/commands/cargo-test.html
  [Advanced migration strategies]: advanced-migrations.md
  [nightly channel]: ../../book/appendix-07-nightly-rust.html
+ [Rust Blog]: https://blog.rust-lang.org/
 diff --git a/src/doc/edition-guide/src/rust-2021/default-cargo-resolver.md b/src/doc/edition-guide/src/rust-2021/default-cargo-resolver.md
 index 5f6653d..99332c3 100644
 --- a/src/doc/edition-guide/src/rust-2021/default-cargo-resolver.md
@@ -211,10 +212,10 @@ index 8ad5b42..f93d3da 100644
  
  ### The Rustdoc Book
 diff --git a/src/doc/reference/src/conditional-compilation.md b/src/doc/reference/src/conditional-compilation.md
-index e724b21..803d31c 100644
+index e245c13..ee5104b 100644
 --- a/src/doc/reference/src/conditional-compilation.md
 +++ b/src/doc/reference/src/conditional-compilation.md
-@@ -377,6 +377,6 @@ println!("I'm running on a {} machine!", machine_kind);
+@@ -392,6 +392,6 @@ println!("I'm running on a {} machine!", machine_kind);
  [`target_feature` attribute]: attributes/codegen.md#the-target_feature-attribute
  [attribute]: attributes.md
  [attributes]: attributes.md
@@ -358,10 +359,10 @@ index dbb7414..73876b0 100644
  For example:
  ```cmd
 diff --git a/src/doc/unstable-book/src/compiler-flags/sanitizer.md b/src/doc/unstable-book/src/compiler-flags/sanitizer.md
-index 502853f..00a3b1f 100644
+index c8fd154..40e1ea4 100644
 --- a/src/doc/unstable-book/src/compiler-flags/sanitizer.md
 +++ b/src/doc/unstable-book/src/compiler-flags/sanitizer.md
-@@ -813,7 +813,7 @@ It is strongly recommended to combine sanitizers with recompiled and
+@@ -851,7 +851,7 @@ It is strongly recommended to combine sanitizers with recompiled and
  instrumented standard library, for example using [cargo `-Zbuild-std`
  functionality][build-std].
  
@@ -371,17 +372,17 @@ index 502853f..00a3b1f 100644
  # Build scripts and procedural macros
  
 diff --git a/src/tools/linkchecker/main.rs b/src/tools/linkchecker/main.rs
-index e4805cc..02f43456 100644
+index c8ecfd3..e625bc8 100644
 --- a/src/tools/linkchecker/main.rs
 +++ b/src/tools/linkchecker/main.rs
-@@ -262,6 +262,10 @@ impl Checker {
-                             return;
-                         }
+@@ -288,6 +288,10 @@ impl Checker {
+                         return;
                      }
-+                    if url.contains("../../cargo/book/") {
-+                        // link to related cargo-doc, ok for our Debian build
-+                        return;
-+                    }
-                     if is_exception(file, &target_pretty_path) {
-                         report.links_ignored_exception += 1;
-                     } else {
+                 }
++                if url.contains("../../cargo/book/") {
++                    // link to related cargo-doc, ok for our Debian build
++                    return;
++                }
+                 if is_exception(file, &target_pretty_path) {
+                     report.links_ignored_exception += 1;
+                 } else {
