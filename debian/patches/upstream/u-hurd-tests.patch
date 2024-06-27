@@ -4,12 +4,24 @@ Subject: These tests hang or make the box OOM
 
 Forwarded: no
 ---
+ tests/crashes/115994.rs                               | 1 +
  tests/run-make/long-linker-command-lines/foo.rs       | 7 +++++++
  tests/ui/associated-consts/issue-93775.rs             | 1 +
  tests/ui/issues/issue-74564-if-expr-stack-overflow.rs | 1 +
  tests/ui/threads-sendsync/mpsc_stress.rs              | 1 +
- 4 files changed, 10 insertions(+)
+ 5 files changed, 11 insertions(+)
 
+diff --git a/tests/crashes/115994.rs b/tests/crashes/115994.rs
+index 23d1507..e0714e5 100644
+--- a/tests/crashes/115994.rs
++++ b/tests/crashes/115994.rs
+@@ -1,5 +1,6 @@
+ //@ known-bug: #115994
+ //@ compile-flags: -Cdebuginfo=2 --crate-type lib
++//@ ignore-hurd
+ 
+ // To prevent "overflow while adding drop-check rules".
+ use std::mem::ManuallyDrop;
 diff --git a/tests/run-make/long-linker-command-lines/foo.rs b/tests/run-make/long-linker-command-lines/foo.rs
 index db238c0..c8ad6b8 100644
 --- a/tests/run-make/long-linker-command-lines/foo.rs

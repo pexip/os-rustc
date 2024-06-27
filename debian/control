@@ -13,9 +13,9 @@ Build-Depends:
  debhelper-compat (= 13),
  dpkg-dev (>= 1.17.14),
  python3:native,
- cargo:native (>= 1.77.0+dfsg)      <!pkg.rustc.dlstage0>,
- rustc:native (>= 1.77.0+dfsg) <!pkg.rustc.dlstage0>,
- rustc:native (<= 1.78.0++)    <!pkg.rustc.dlstage0>,
+ cargo:native (>= 1.78.0+dfsg)      <!pkg.rustc.dlstage0>,
+ rustc:native (>= 1.78.0+dfsg) <!pkg.rustc.dlstage0>,
+ rustc:native (<= 1.79.0++)    <!pkg.rustc.dlstage0>,
  llvm-17-dev:native,
  llvm-17-tools:native,
  gcc-mingw-w64-x86-64-posix:native [amd64] <!nowindows>,
@@ -52,11 +52,11 @@ Build-Depends:
  curl <pkg.rustc.dlstage0>,
  ca-certificates <pkg.rustc.dlstage0>,
 Build-Depends-Indep:
- wasi-libc (>= 0.0~git20230821.ec4566b~~) <!nowasm>,
- wasi-libc (<= 0.0~git20230821.ec4566b++) <!nowasm>,
+ wasi-libc (>= 0.0~git20240411.9e8c542~~) <!nowasm>,
+ wasi-libc (<= 0.0~git20240411.9e8c542++) <!nowasm>,
  clang-17:native,
 Build-Conflicts: gdb-minimal <!nocheck>
-Standards-Version: 4.6.2
+Standards-Version: 4.7.0
 Homepage: http://www.rust-lang.org/
 Vcs-Git: https://salsa.debian.org/rust-team/rust.git
 Vcs-Browser: https://salsa.debian.org/rust-team/rust
@@ -87,7 +87,7 @@ Description: Rust systems programming language
  generic programming and meta-programming, in both static and dynamic
  styles.
 
-Package: libstd-rust-1.78
+Package: libstd-rust-1.79
 Section: libs
 Architecture: any
 Multi-Arch: same
@@ -114,7 +114,7 @@ Section: libdevel
 Architecture: any
 Multi-Arch: same
 Depends: ${shlibs:Depends}, ${misc:Depends},
- libstd-rust-1.78 (= ${binary:Version}),
+ libstd-rust-1.79 (= ${binary:Version}),
 Description: Rust standard libraries - development files
  Rust is a curly-brace, block-structured expression language.  It
  visually resembles the C language family, but differs significantly
@@ -309,7 +309,7 @@ Package: rust-clippy
 Architecture: any
 Multi-Arch: allowed
 Depends: ${misc:Depends}, ${shlibs:Depends},
- libstd-rust-1.78 (= ${binary:Version})
+ libstd-rust-1.79 (= ${binary:Version})
 Recommends: cargo
 Description: Rust linter
  Rust is a curly-brace, block-structured expression language.  It
@@ -337,6 +337,7 @@ Package: rustfmt
 Architecture: any
 Multi-Arch: allowed
 Depends: ${misc:Depends}, ${shlibs:Depends},
+ libstd-rust-1.79 (= ${binary:Version}),
 Recommends: cargo
 Description: Rust formatting helper
  Rust is a curly-brace, block-structured expression language.  It

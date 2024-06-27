@@ -24,7 +24,6 @@ find vendor -name .cargo-checksum.json -execdir "$scriptdir/debian/prune-checksu
 
 # re-generate Cargo.lock after patching
 cargo update --offline
-# temporary, versions until 1.85 are broken for bootstrapping, and this would pick up 1.83 otherwise
 
 # re-generate src/bootstrap/Cargo.lock after patching
 (cd src/bootstrap && cargo update --offline)
