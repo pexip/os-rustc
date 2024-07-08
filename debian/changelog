@@ -1,3 +1,30 @@
+rustc (1.79.0+dfsg1-2) unstable; urgency=medium
+
+  [ Fabian Grünbichler ]
+  * build: remove more cache files (Closes: #1074373)
+  * d/control: update Standards-Version to 4.7.0
+
+  [ Samuel Thibault ]
+  * Avoid hurd-stuck test
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Thu, 27 Jun 2024 14:30:53 +0200
+
+rustc (1.79.0+dfsg1-1) unstable; urgency=medium
+
+  * cargo wrapper: switch to config.toml
+  * cargo wrapper: ensure debug symbols are not stripped
+  * add missing rustfmt dependency (Closes: #1074290)
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Wed, 26 Jun 2024 08:36:52 +0200
+
+rustc (1.79.0+dfsg1-1~exp1) experimental; urgency=medium
+
+  * New upstream release
+  * New wasi-libc version (SDK 22)
+  * config: adapt to new change tracking mechanism
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Tue, 25 Jun 2024 09:40:12 +0200
+
 rustc (1.78.0+dfsg1-2+pexip24u1) pexip; urgency=medium
 
   * New upstream release
