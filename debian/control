@@ -21,7 +21,7 @@ Build-Depends:
  llvm-17-tools:native,
  gcc-mingw-w64-x86-64-posix:native [amd64] <!nowindows>,
  gcc-mingw-w64-i686-posix:native [i386] <!nowindows>,
- libllvm17 (>= 1:17.0.0),
+ libllvm17t64 (>= 1:17.0.0),
  libclang-rt-17-dev:native,
  libclang-rt-17-dev,
  cmake (>= 3.0),

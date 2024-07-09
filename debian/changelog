@@ -1,3 +1,9 @@
+rustc (1.79.0+dfsg1-2+pexip24u3) pexip; urgency=medium
+
+  * libllvm17 has the t64 suffix
+
+ -- Huw Jones <huw@pexip.com>  Tue, 09 Jul 2024 16:42:42 +0100
+
 rustc (1.79.0+dfsg1-2+pexip24u2) pexip; urgency=medium
 
   * Revert use llvm16
