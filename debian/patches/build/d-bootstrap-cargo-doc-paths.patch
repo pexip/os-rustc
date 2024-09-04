@@ -212,10 +212,10 @@ index 8ad5b42..f93d3da 100644
  
  ### The Rustdoc Book
 diff --git a/src/doc/reference/src/conditional-compilation.md b/src/doc/reference/src/conditional-compilation.md
-index e245c13..ee5104b 100644
+index f83dbfe..578b524 100644
 --- a/src/doc/reference/src/conditional-compilation.md
 +++ b/src/doc/reference/src/conditional-compilation.md
-@@ -392,6 +392,6 @@ println!("I'm running on a {} machine!", machine_kind);
+@@ -394,6 +394,6 @@ println!("I'm running on a {} machine!", machine_kind);
  [`target_feature` attribute]: attributes/codegen.md#the-target_feature-attribute
  [attribute]: attributes.md
  [attributes]: attributes.md
@@ -265,7 +265,7 @@ index 32b847c..0cf09eb 100644
  [Function-like macros]: #function-like-procedural-macros
  [`Delimiter::None`]: ../proc_macro/enum.Delimiter.html#variant.None
 diff --git a/src/doc/rustc/src/linker-plugin-lto.md b/src/doc/rustc/src/linker-plugin-lto.md
-index ff80f14..99745bc 100644
+index ab95aa2..8023f33 100644
 --- a/src/doc/rustc/src/linker-plugin-lto.md
 +++ b/src/doc/rustc/src/linker-plugin-lto.md
 @@ -112,7 +112,7 @@ targeting Windows-like targets
@@ -278,10 +278,10 @@ index ff80f14..99745bc 100644
  If you have dependencies using the `cc` crate, you will need to set these
  environment variables:
 diff --git a/src/doc/rustc/src/platform-support/fuchsia.md b/src/doc/rustc/src/platform-support/fuchsia.md
-index 34ab3cd..d3dac67 100644
+index 5643c6a..a3458d8 100644
 --- a/src/doc/rustc/src/platform-support/fuchsia.md
 +++ b/src/doc/rustc/src/platform-support/fuchsia.md
-@@ -931,7 +931,7 @@ attach and load any relevant debug symbols.
+@@ -940,7 +940,7 @@ attach and load any relevant debug symbols.
  [Fuchsia]: https://fuchsia.dev/
  [source tree]: https://fuchsia.dev/fuchsia-src/get-started/learn/build
  [rustup]: https://rustup.rs/
@@ -372,10 +372,10 @@ index 72b44e0..cfe71b2 100644
  # Working with other languages
  
 diff --git a/src/tools/linkchecker/main.rs b/src/tools/linkchecker/main.rs
-index c8ecfd3..e625bc8 100644
+index 18ea70c..760d377 100644
 --- a/src/tools/linkchecker/main.rs
 +++ b/src/tools/linkchecker/main.rs
-@@ -288,6 +288,10 @@ impl Checker {
+@@ -290,6 +290,10 @@ impl Checker {
                          return;
                      }
                  }

@@ -13,9 +13,9 @@ Build-Depends:
  debhelper-compat (= 13),
  dpkg-dev (>= 1.17.14),
  python3:native,
- cargo:native (>= 1.78.0+dfsg)      <!pkg.rustc.dlstage0>,
- rustc:native (>= 1.78.0+dfsg) <!pkg.rustc.dlstage0>,
- rustc:native (<= 1.79.0++)    <!pkg.rustc.dlstage0>,
+ cargo:native (>= 1.79.0+dfsg)      <!pkg.rustc.dlstage0>,
+ rustc:native (>= 1.79.0+dfsg) <!pkg.rustc.dlstage0>,
+ rustc:native (<= 1.80.1++)    <!pkg.rustc.dlstage0>,
  llvm-17-dev:native,
  llvm-17-tools:native,
  gcc-mingw-w64-x86-64-posix:native [amd64] <!nowindows>,
@@ -41,6 +41,7 @@ Build-Depends:
  libgit2-dev (>= 1.7.2),
  libgit2-dev (<< 1.8~~),
  libhttp-parser-dev,
+ libonig-dev,
 # test dependencies:
  binutils (>= 2.26) <!nocheck> | binutils-2.26 <!nocheck>,
 # temporarily disabled cause of #1066794 / t64 transition
@@ -52,10 +53,11 @@ Build-Depends:
  curl <pkg.rustc.dlstage0>,
  ca-certificates <pkg.rustc.dlstage0>,
 Build-Depends-Indep:
- wasi-libc (>= 0.0~git20240411.9e8c542~~) <!nowasm>,
+ wasi-libc (>= 0.0~git20240411.9e8c542-3~~) <!nowasm>,
  wasi-libc (<= 0.0~git20240411.9e8c542++) <!nowasm>,
  clang-17:native,
-Build-Conflicts: gdb-minimal <!nocheck>
+# see #1057780, gdb now Conflicts gdb-minimal
+#Build-Conflicts: gdb-minimal <!nocheck>
 Standards-Version: 4.7.0
 Homepage: http://www.rust-lang.org/
 Vcs-Git: https://salsa.debian.org/rust-team/rust.git
@@ -87,7 +89,7 @@ Description: Rust systems programming language
  generic programming and meta-programming, in both static and dynamic
  styles.
 
-Package: libstd-rust-1.79
+Package: libstd-rust-1.80
 Section: libs
 Architecture: any
 Multi-Arch: same
@@ -114,7 +116,7 @@ Section: libdevel
 Architecture: any
 Multi-Arch: same
 Depends: ${shlibs:Depends}, ${misc:Depends},
- libstd-rust-1.79 (= ${binary:Version}),
+ libstd-rust-1.80 (= ${binary:Version}),
 Description: Rust standard libraries - development files
  Rust is a curly-brace, block-structured expression language.  It
  visually resembles the C language family, but differs significantly
@@ -186,7 +188,7 @@ Description: Rust standard libraries - development files
  .
  This package contains the standard Rust libraries including development files,
  needed to cross-compile Rust programs to the wasm32-unknown-unknown and
- wasm32-wasi targets.
+ wasm32-wasip1/wasm32-wasip2 targets.
 
 Package: rust-gdb
 Architecture: all
@@ -309,7 +311,7 @@ Package: rust-clippy
 Architecture: any
 Multi-Arch: allowed
 Depends: ${misc:Depends}, ${shlibs:Depends},
- libstd-rust-1.79 (= ${binary:Version})
+ libstd-rust-1.80 (= ${binary:Version})
 Recommends: cargo
 Description: Rust linter
  Rust is a curly-brace, block-structured expression language.  It
@@ -337,7 +339,7 @@ Package: rustfmt
 Architecture: any
 Multi-Arch: allowed
 Depends: ${misc:Depends}, ${shlibs:Depends},
- libstd-rust-1.79 (= ${binary:Version}),
+ libstd-rust-1.80 (= ${binary:Version}),
 Recommends: cargo
 Description: Rust formatting helper
  Rust is a curly-brace, block-structured expression language.  It

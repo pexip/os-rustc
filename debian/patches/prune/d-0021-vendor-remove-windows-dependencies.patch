@@ -22,8 +22,8 @@ Signed-off-by: Fabian Grünbichler <f.gruenbichler@proxmox.com>
 ---
  vendor/android-tzdata-0.1.1/Cargo.toml       |  1 +
  vendor/ansi_term-0.12.1/Cargo.toml           |  3 --
- vendor/anstream-0.6.13/Cargo.toml            |  7 -----
- vendor/anstyle-query-1.0.2/Cargo.toml        |  6 ----
+ vendor/anstream-0.6.14/Cargo.toml            |  6 ----
+ vendor/anstyle-query-1.0.3/Cargo.toml        |  6 ----
  vendor/backtrace-0.3.71/Cargo.toml           | 14 ----------
  vendor/chrono-0.4.38/Cargo.toml              |  9 +-----
  vendor/colored-2.1.0/Cargo.toml              |  7 -----
@@ -33,10 +33,11 @@ Signed-off-by: Fabian Grünbichler <f.gruenbichler@proxmox.com>
  vendor/curl-sys-0.4.72+curl-8.6.0/Cargo.toml |  7 -----
  vendor/dbus-0.9.7/Cargo.toml                 |  4 ---
  vendor/dirs-sys-0.3.7/Cargo.toml             |  3 --
+ vendor/dirs-sys-0.4.1/Cargo.toml             |  9 ------
  vendor/dirs-sys-next-0.1.2/Cargo.toml        |  3 --
  vendor/dlmalloc-0.2.6/Cargo.toml             |  9 ------
  vendor/env_logger-0.11.3/Cargo.toml          |  2 +-
- vendor/errno-0.3.8/Cargo.toml                |  6 ----
+ vendor/errno-0.3.9/Cargo.toml                |  7 -----
  vendor/fd-lock-4.0.2/Cargo.toml              |  8 ------
  vendor/filetime-0.2.23/Cargo.toml            |  7 -----
  vendor/gix-sec-0.10.6/Cargo.toml             | 13 ---------
@@ -47,33 +48,29 @@ Signed-off-by: Fabian Grünbichler <f.gruenbichler@proxmox.com>
  vendor/is-terminal-0.4.12/Cargo.toml         | 11 --------
  vendor/libloading-0.8.3/Cargo.toml           |  7 -----
  vendor/libssh2-sys-0.3.0/Cargo.toml          |  8 ------
- vendor/mio-0.8.11/Cargo.toml                 | 11 --------
- vendor/native-tls-0.2.11/Cargo.toml          |  3 --
  vendor/nu-ansi-term-0.46.0/Cargo.toml        | 10 -------
  vendor/nu-ansi-term-0.49.0/Cargo.toml        | 10 -------
  vendor/opener-0.5.2/Cargo.toml               |  4 ---
  vendor/opener-0.6.1/Cargo.toml               |  9 ------
- vendor/opener-0.7.0/Cargo.toml               | 12 --------
+ vendor/opener-0.7.1/Cargo.toml               | 12 --------
  vendor/os_info-3.8.2/Cargo.toml              | 12 --------
- vendor/parking_lot_core-0.9.9/Cargo.toml     |  3 --
- vendor/reqwest-0.11.27/Cargo.toml            |  6 ----
- vendor/rustix-0.38.32/Cargo.toml             | 17 ------------
+ vendor/parking_lot_core-0.9.10/Cargo.toml    |  3 --
+ vendor/rustix-0.38.34/Cargo.toml             | 17 ------------
  vendor/same-file-1.0.6/Cargo.toml            |  2 --
- vendor/snapbox-0.5.9/Cargo.toml              |  6 ----
- vendor/socket2-0.5.6/Cargo.toml              | 10 -------
+ vendor/snapbox-0.6.7/Cargo.toml              |  7 -----
+ vendor/socket2-0.5.7/Cargo.toml              | 10 -------
  vendor/stacker-0.1.15/Cargo.toml             | 10 -------
- vendor/sysinfo-0.30.8/Cargo.toml             | 41 ----------------------------
+ vendor/sysinfo-0.30.12/Cargo.toml            | 41 ----------------------------
  vendor/tempfile-3.10.1/Cargo.toml            |  7 -----
  vendor/term-0.7.0/Cargo.toml                 |  6 ----
  vendor/termcolor-1.4.1/Cargo.toml            |  3 --
  vendor/terminal_size-0.3.0/Cargo.toml        |  7 -----
  vendor/termize-0.1.1/Cargo.toml              |  3 --
  vendor/tokio-1.37.0/Cargo.toml               | 21 --------------
- vendor/tokio-native-tls-0.3.1/Cargo.toml     | 17 ------------
  vendor/uuid-1.8.0/Cargo.toml                 |  1 -
  vendor/walkdir-2.5.0/Cargo.toml              |  3 --
  vendor/yansi-term-0.1.2/Cargo.toml           |  3 --
- 53 files changed, 3 insertions(+), 426 deletions(-)
+ 50 files changed, 3 insertions(+), 399 deletions(-)
 
 diff --git a/vendor/android-tzdata-0.1.1/Cargo.toml b/vendor/android-tzdata-0.1.1/Cargo.toml
 index 805128a..0682717 100644
@@ -95,27 +92,30 @@ index 0e5feba..3256c75 100644
 -[target."cfg(target_os=\"windows\")".dependencies.winapi]
 -version = "0.3.4"
 -features = ["consoleapi", "errhandlingapi", "fileapi", "handleapi", "processenv"]
-diff --git a/vendor/anstream-0.6.13/Cargo.toml b/vendor/anstream-0.6.13/Cargo.toml
-index 94b329d..de559f1 100644
---- a/vendor/anstream-0.6.13/Cargo.toml
-+++ b/vendor/anstream-0.6.13/Cargo.toml
-@@ -130,11 +130,4 @@ version = "0.2.0"
+diff --git a/vendor/anstream-0.6.14/Cargo.toml b/vendor/anstream-0.6.14/Cargo.toml
+index 853619d..b37c9d9 100644
+--- a/vendor/anstream-0.6.14/Cargo.toml
++++ b/vendor/anstream-0.6.14/Cargo.toml
+@@ -138,14 +138,8 @@ version = "0.2.0"
  auto = ["dep:anstyle-query"]
  default = [
      "auto",
 -    "wincon",
  ]
--test = []
+ test = []
 -wincon = ["dep:anstyle-wincon"]
 -
 -[target."cfg(windows)".dependencies.anstyle-wincon]
 -version = "3.0.1"
 -optional = true
-diff --git a/vendor/anstyle-query-1.0.2/Cargo.toml b/vendor/anstyle-query-1.0.2/Cargo.toml
-index 63fead3..b3cc66e 100644
---- a/vendor/anstyle-query-1.0.2/Cargo.toml
-+++ b/vendor/anstyle-query-1.0.2/Cargo.toml
-@@ -72,9 +72,3 @@ replace = """
+ 
+ [lints.clippy]
+ bool_assert_comparison = "allow"
+diff --git a/vendor/anstyle-query-1.0.3/Cargo.toml b/vendor/anstyle-query-1.0.3/Cargo.toml
+index 14f916f..eb48a59 100644
+--- a/vendor/anstyle-query-1.0.3/Cargo.toml
++++ b/vendor/anstyle-query-1.0.3/Cargo.toml
+@@ -79,12 +79,6 @@ replace = """
  [Unreleased]: https://github.com/rust-cli/anstyle/compare/{{tag_name}}...HEAD"""
  search = "<!-- next-url -->"
  
@@ -125,6 +125,9 @@ index 63fead3..b3cc66e 100644
 -    "Win32_System_Console",
 -    "Win32_Foundation",
 -]
+ 
+ [lints.clippy]
+ bool_assert_comparison = "allow"
 diff --git a/vendor/backtrace-0.3.71/Cargo.toml b/vendor/backtrace-0.3.71/Cargo.toml
 index 6ac3a6d..0749f23 100644
 --- a/vendor/backtrace-0.3.71/Cargo.toml
@@ -313,6 +316,23 @@ index 9951d24..0a86f4d 100644
 -[target."cfg(windows)".dependencies.winapi]
 -version = "0.3"
 -features = ["knownfolders", "objbase", "shlobj", "winbase", "winerror"]
+diff --git a/vendor/dirs-sys-0.4.1/Cargo.toml b/vendor/dirs-sys-0.4.1/Cargo.toml
+index 4a992ae..86aec87 100644
+--- a/vendor/dirs-sys-0.4.1/Cargo.toml
++++ b/vendor/dirs-sys-0.4.1/Cargo.toml
+@@ -27,12 +27,3 @@ default-features = false
+ 
+ [target."cfg(unix)".dependencies.libc]
+ version = "0.2"
+-
+-[target."cfg(windows)".dependencies.windows-sys]
+-version = "0.48.0"
+-features = [
+-    "Win32_UI_Shell",
+-    "Win32_Foundation",
+-    "Win32_Globalization",
+-    "Win32_System_Com",
+-]
 diff --git a/vendor/dirs-sys-next-0.1.2/Cargo.toml b/vendor/dirs-sys-next-0.1.2/Cargo.toml
 index e9d8d0c..acb2eb7 100644
 --- a/vendor/dirs-sys-next-0.1.2/Cargo.toml
@@ -356,14 +376,15 @@ index 8ef5b93..44ae34a 100644
  optional = true
  default-features = false
  
-diff --git a/vendor/errno-0.3.8/Cargo.toml b/vendor/errno-0.3.8/Cargo.toml
-index e1d0bf5..60eeb86 100644
---- a/vendor/errno-0.3.8/Cargo.toml
-+++ b/vendor/errno-0.3.8/Cargo.toml
-@@ -41,9 +41,3 @@ default-features = false
+diff --git a/vendor/errno-0.3.9/Cargo.toml b/vendor/errno-0.3.9/Cargo.toml
+index d06c01f..c56eef1 100644
+--- a/vendor/errno-0.3.9/Cargo.toml
++++ b/vendor/errno-0.3.9/Cargo.toml
+@@ -40,10 +40,3 @@ default-features = false
+ [target."cfg(unix)".dependencies.libc]
  version = "0.2"
  default-features = false
- 
+-
 -[target."cfg(windows)".dependencies.windows-sys]
 -version = "0.52"
 -features = [
@@ -528,43 +549,6 @@ index 45f4a71..516644c 100644
 -[target."cfg(windows)".dependencies.openssl-sys]
 -version = "0.9.35"
 -optional = true
-diff --git a/vendor/mio-0.8.11/Cargo.toml b/vendor/mio-0.8.11/Cargo.toml
-index 5d112d9..467ab24 100644
---- a/vendor/mio-0.8.11/Cargo.toml
-+++ b/vendor/mio-0.8.11/Cargo.toml
-@@ -103,8 +103,6 @@ default = ["log"]
- net = []
- os-ext = [
-     "os-poll",
--    "windows-sys/Win32_System_Pipes",
--    "windows-sys/Win32_Security",
- ]
- os-poll = []
- 
-@@ -117,12 +115,3 @@ version = "0.11.0"
- [target."cfg(unix)".dependencies.libc]
- version = "0.2.149"
- 
--[target."cfg(windows)".dependencies.windows-sys]
--version = "0.48"
--features = [
--    "Win32_Foundation",
--    "Win32_Networking_WinSock",
--    "Win32_Storage_FileSystem",
--    "Win32_System_IO",
--    "Win32_System_WindowsProgramming",
--]
-diff --git a/vendor/native-tls-0.2.11/Cargo.toml b/vendor/native-tls-0.2.11/Cargo.toml
-index a059236..d36b44b 100644
---- a/vendor/native-tls-0.2.11/Cargo.toml
-+++ b/vendor/native-tls-0.2.11/Cargo.toml
-@@ -61,6 +61,3 @@ version = "0.1"
- 
- [target."cfg(not(any(target_os = \"windows\", target_os = \"macos\", target_os = \"ios\")))".dependencies.openssl-sys]
- version = "0.9.55"
--
--[target."cfg(target_os = \"windows\")".dependencies.schannel]
--version = "0.1.17"
 diff --git a/vendor/nu-ansi-term-0.46.0/Cargo.toml b/vendor/nu-ansi-term-0.46.0/Cargo.toml
 index 209e055..aa40f02 100644
 --- a/vendor/nu-ansi-term-0.46.0/Cargo.toml
@@ -643,10 +627,10 @@ index 79b4be9..69cc269 100644
  [badges.appveyor]
  branch = "master"
  repository = "Seeker14491/opener"
-diff --git a/vendor/opener-0.7.0/Cargo.toml b/vendor/opener-0.7.0/Cargo.toml
-index 46739db..df53740 100644
---- a/vendor/opener-0.7.0/Cargo.toml
-+++ b/vendor/opener-0.7.0/Cargo.toml
+diff --git a/vendor/opener-0.7.1/Cargo.toml b/vendor/opener-0.7.1/Cargo.toml
+index bfd045a..0a324de 100644
+--- a/vendor/opener-0.7.1/Cargo.toml
++++ b/vendor/opener-0.7.1/Cargo.toml
 @@ -39,7 +39,6 @@ default = ["dbus-vendored"]
  reveal = [
      "dep:url",
@@ -692,36 +676,22 @@ index 9aa2067..c1a79b8 100644
 -    "Win32_System_Threading",
 -    "Win32_UI_WindowsAndMessaging",
 -]
-diff --git a/vendor/parking_lot_core-0.9.9/Cargo.toml b/vendor/parking_lot_core-0.9.9/Cargo.toml
-index 83d9f23..dbe1534 100644
---- a/vendor/parking_lot_core-0.9.9/Cargo.toml
-+++ b/vendor/parking_lot_core-0.9.9/Cargo.toml
-@@ -61,6 +61,3 @@ version = "0.4"
+diff --git a/vendor/parking_lot_core-0.9.10/Cargo.toml b/vendor/parking_lot_core-0.9.10/Cargo.toml
+index 3111f2b..c7a53ca 100644
+--- a/vendor/parking_lot_core-0.9.10/Cargo.toml
++++ b/vendor/parking_lot_core-0.9.10/Cargo.toml
+@@ -61,6 +61,3 @@ version = "0.5"
  
  [target."cfg(unix)".dependencies.libc]
  version = "0.2.95"
 -
 -[target."cfg(windows)".dependencies.windows-targets]
--version = "0.48.0"
-diff --git a/vendor/reqwest-0.11.27/Cargo.toml b/vendor/reqwest-0.11.27/Cargo.toml
-index 6a6a648..32e2c9e 100644
---- a/vendor/reqwest-0.11.27/Cargo.toml
-+++ b/vendor/reqwest-0.11.27/Cargo.toml
-@@ -455,9 +455,3 @@ features = ["serde-serialize"]
- 
- [target."cfg(target_arch = \"wasm32\")".dev-dependencies.wasm-bindgen-test]
- version = "0.3"
--
--[target."cfg(target_os = \"macos\")".dependencies.system-configuration]
--version = "0.5.1"
--
--[target."cfg(windows)".dependencies.winreg]
--version = "0.50.0"
-diff --git a/vendor/rustix-0.38.32/Cargo.toml b/vendor/rustix-0.38.32/Cargo.toml
-index 589611b..55de475 100644
---- a/vendor/rustix-0.38.32/Cargo.toml
-+++ b/vendor/rustix-0.38.32/Cargo.toml
-@@ -253,20 +253,3 @@ package = "errno"
+-version = "0.52.0"
+diff --git a/vendor/rustix-0.38.34/Cargo.toml b/vendor/rustix-0.38.34/Cargo.toml
+index 613cc6b..8cb2637 100644
+--- a/vendor/rustix-0.38.34/Cargo.toml
++++ b/vendor/rustix-0.38.34/Cargo.toml
+@@ -254,20 +254,3 @@ package = "errno"
  [target."cfg(any(target_os = \"android\", target_os = \"linux\"))".dependencies.once_cell]
  version = "1.5.2"
  optional = true
@@ -752,11 +722,11 @@ index 4f66820..11ef472 100644
  version = "0.3"
 -[target."cfg(windows)".dependencies.winapi-util]
 -version = "0.1.1"
-diff --git a/vendor/snapbox-0.5.9/Cargo.toml b/vendor/snapbox-0.5.9/Cargo.toml
-index 9c80c0f..79e3485 100644
---- a/vendor/snapbox-0.5.9/Cargo.toml
-+++ b/vendor/snapbox-0.5.9/Cargo.toml
-@@ -169,7 +169,6 @@ cmd = [
+diff --git a/vendor/snapbox-0.6.7/Cargo.toml b/vendor/snapbox-0.6.7/Cargo.toml
+index 2f9e2f4..d944ff8 100644
+--- a/vendor/snapbox-0.6.7/Cargo.toml
++++ b/vendor/snapbox-0.6.7/Cargo.toml
+@@ -174,7 +174,6 @@ cmd = [
      "dep:os_pipe",
      "dep:wait-timeout",
      "dep:libc",
@@ -764,7 +734,7 @@ index 9c80c0f..79e3485 100644
  ]
  color = [
      "dep:anstream",
-@@ -211,8 +210,3 @@ term-svg = [
+@@ -215,12 +214,6 @@ term-svg = [
  [target."cfg(unix)".dependencies.libc]
  version = "0.2.137"
  optional = true
@@ -773,10 +743,14 @@ index 9c80c0f..79e3485 100644
 -version = "0.52.0"
 -features = ["Win32_Foundation"]
 -optional = true
-diff --git a/vendor/socket2-0.5.6/Cargo.toml b/vendor/socket2-0.5.6/Cargo.toml
-index 8d36ede..2fb6394 100644
---- a/vendor/socket2-0.5.6/Cargo.toml
-+++ b/vendor/socket2-0.5.6/Cargo.toml
+-
+ [lints.clippy]
+ bool_assert_comparison = "allow"
+ branches_sharing_code = "allow"
+diff --git a/vendor/socket2-0.5.7/Cargo.toml b/vendor/socket2-0.5.7/Cargo.toml
+index d63e890..a38a474 100644
+--- a/vendor/socket2-0.5.7/Cargo.toml
++++ b/vendor/socket2-0.5.7/Cargo.toml
 @@ -75,13 +75,3 @@ all = []
  
  [target."cfg(unix)".dependencies.libc]
@@ -809,10 +783,10 @@ index 160cbc0..ba02aac 100644
 -    "processthreadsapi",
 -    "minwindef",
 -]
-diff --git a/vendor/sysinfo-0.30.8/Cargo.toml b/vendor/sysinfo-0.30.8/Cargo.toml
-index fc1b398..92387fc 100644
---- a/vendor/sysinfo-0.30.8/Cargo.toml
-+++ b/vendor/sysinfo-0.30.8/Cargo.toml
+diff --git a/vendor/sysinfo-0.30.12/Cargo.toml b/vendor/sysinfo-0.30.12/Cargo.toml
+index 76de872..7b80d26 100644
+--- a/vendor/sysinfo-0.30.12/Cargo.toml
++++ b/vendor/sysinfo-0.30.12/Cargo.toml
 @@ -78,44 +78,3 @@ version = "1.18"
  
  [target."cfg(not(any(target_os = \"unknown\", target_arch = \"wasm32\")))".dependencies.libc]
@@ -978,31 +952,6 @@ index 0826335..6273a66 100644
 -features = [
 -    "Win32_Foundation",
 -    "Win32_Security_Authorization",
--]
-diff --git a/vendor/tokio-native-tls-0.3.1/Cargo.toml b/vendor/tokio-native-tls-0.3.1/Cargo.toml
-index 76be3d3..3ada811 100644
---- a/vendor/tokio-native-tls-0.3.1/Cargo.toml
-+++ b/vendor/tokio-native-tls-0.3.1/Cargo.toml
-@@ -76,20 +76,3 @@ version = "0.10"
- 
- [target."cfg(any(target_os = \"macos\", target_os = \"ios\"))".dev-dependencies.security-framework]
- version = "0.2"
--
--[target."cfg(windows)".dev-dependencies.schannel]
--version = "0.1"
--
--[target."cfg(windows)".dev-dependencies.winapi]
--version = "0.3"
--features = [
--    "lmcons",
--    "basetsd",
--    "minwinbase",
--    "minwindef",
--    "ntdef",
--    "sysinfoapi",
--    "timezoneapi",
--    "wincrypt",
--    "winerror",
 -]
 diff --git a/vendor/uuid-1.8.0/Cargo.toml b/vendor/uuid-1.8.0/Cargo.toml
 index 6bc7d113..e6df87a 100644

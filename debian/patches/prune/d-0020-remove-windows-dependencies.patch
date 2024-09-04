@@ -20,7 +20,7 @@ Forwarded: not-needed
  compiler/rustc_driver_impl/Cargo.toml              |  6 -----
  compiler/rustc_errors/Cargo.toml                   |  8 -------
  compiler/rustc_session/Cargo.toml                  |  7 ------
- library/backtrace/Cargo.toml                       | 13 -----------
+ library/backtrace/Cargo.toml                       | 15 -------------
  src/bootstrap/Cargo.toml                           | 15 -------------
  src/tools/cargo/Cargo.toml                         | 26 ++++------------------
  .../cargo/crates/cargo-test-support/Cargo.toml     |  3 ---
@@ -30,15 +30,23 @@ Forwarded: not-needed
  src/tools/cargo/src/cargo/util/auth/mod.rs         |  5 -----
  src/tools/compiletest/Cargo.toml                   | 10 ---------
  src/tools/rust-analyzer/crates/profile/Cargo.toml  |  3 ---
- .../rust-analyzer/crates/rust-analyzer/Cargo.toml  |  6 -----
+ .../rust-analyzer/crates/rust-analyzer/Cargo.toml  |  3 ---
  src/tools/rust-analyzer/crates/stdx/Cargo.toml     |  4 ----
- 17 files changed, 4 insertions(+), 129 deletions(-)
+ src/tools/rustc-perf/collector/Cargo.toml          |  4 ----
+ .../compile-benchmarks/cargo-0.60.0/Cargo.toml     | 24 --------------------
+ .../style-servo/components/gfx/Cargo.toml          |  4 ----
+ .../style-servo/components/style/Cargo.toml        |  3 ---
+ .../native-tls-0.1.5/Cargo.toml                    |  4 +---
+ .../example-compositor/compositor/Cargo.toml       |  3 ---
+ .../webrender-2022/webrender/Cargo.toml            |  3 ---
+ .../webrender-2022/wrench/Cargo.toml               |  4 ----
+ 25 files changed, 5 insertions(+), 176 deletions(-)
 
 diff --git a/compiler/rustc_codegen_ssa/Cargo.toml b/compiler/rustc_codegen_ssa/Cargo.toml
-index f347a7f..364ee43 100644
+index 3771fc6..7165686 100644
 --- a/compiler/rustc_codegen_ssa/Cargo.toml
 +++ b/compiler/rustc_codegen_ssa/Cargo.toml
-@@ -51,7 +51,3 @@ libc = "0.2.50"
+@@ -53,7 +53,3 @@ libc = "0.2.50"
  version = "0.32.1"
  default-features = false
  features = ["read_core", "elf", "macho", "pe", "xcoff", "unaligned", "archive", "write", "wasm"]
@@ -47,7 +55,7 @@ index f347a7f..364ee43 100644
 -version = "0.52.0"
 -features = ["Win32_Globalization"]
 diff --git a/compiler/rustc_data_structures/Cargo.toml b/compiler/rustc_data_structures/Cargo.toml
-index 80b6e72..be1f100 100644
+index 2b61e17..67c289c 100644
 --- a/compiler/rustc_data_structures/Cargo.toml
 +++ b/compiler/rustc_data_structures/Cargo.toml
 @@ -32,16 +32,6 @@ tracing = "0.1"
@@ -68,10 +76,10 @@ index 80b6e72..be1f100 100644
  # tidy-alphabetical-start
  memmap2 = "0.2.1"
 diff --git a/compiler/rustc_driver_impl/Cargo.toml b/compiler/rustc_driver_impl/Cargo.toml
-index a8bba3a..31f122c 100644
+index 5f7504a..db00180 100644
 --- a/compiler/rustc_driver_impl/Cargo.toml
 +++ b/compiler/rustc_driver_impl/Cargo.toml
-@@ -59,12 +59,6 @@ tracing = { version = "0.1.35" }
+@@ -58,12 +58,6 @@ tracing = { version = "0.1.35" }
  libc = "0.2"
  # tidy-alphabetical-end
  
@@ -119,10 +127,10 @@ index 721a927..099c79d 100644
 -    "Win32_System_LibraryLoader",
 -]
 diff --git a/library/backtrace/Cargo.toml b/library/backtrace/Cargo.toml
-index 9bd7b63..acef294 100644
+index 3c71024..f1c049a 100644
 --- a/library/backtrace/Cargo.toml
 +++ b/library/backtrace/Cargo.toml
-@@ -49,9 +49,6 @@ version = "0.32.0"
+@@ -49,9 +49,6 @@ version = "0.36.0"
  default-features = false
  features = ['read_core', 'elf', 'macho', 'pe', 'xcoff', 'unaligned', 'archive']
  
@@ -132,7 +140,7 @@ index 9bd7b63..acef294 100644
  [build-dependencies]
  # Only needed for Android, but cannot be target dependent
  # https://github.com/rust-lang/cargo/issues/4932
-@@ -88,16 +85,6 @@ libbacktrace = []
+@@ -83,18 +80,6 @@ kernel32 = []
  libunwind = []
  unix-backtrace = []
  verify-winapi = [
@@ -146,14 +154,16 @@ index 9bd7b63..acef294 100644
 -  'winapi/tlhelp32',
 -  'winapi/winbase',
 -  'winapi/winnt',
+-  'winapi/winnls',
+-  'winapi/stringapiset',
  ]
  
  [[example]]
 diff --git a/src/bootstrap/Cargo.toml b/src/bootstrap/Cargo.toml
-index c7a513d..3c6bfc5 100644
+index 32dd3ef..17d14bc 100644
 --- a/src/bootstrap/Cargo.toml
 +++ b/src/bootstrap/Cargo.toml
-@@ -66,21 +66,6 @@ xz2 = "0.1"
+@@ -67,21 +67,6 @@ xz2 = "0.1"
  # Dependencies needed by the build-metrics feature
  sysinfo = { version = "0.30", default-features = false, optional = true }
  
@@ -176,7 +186,7 @@ index c7a513d..3c6bfc5 100644
  pretty_assertions = "1.4"
  
 diff --git a/src/tools/cargo/Cargo.toml b/src/tools/cargo/Cargo.toml
-index c844fd4..0a430c4 100644
+index 2ce85e46..70c08a5 100644
 --- a/src/tools/cargo/Cargo.toml
 +++ b/src/tools/cargo/Cargo.toml
 @@ -2,7 +2,9 @@
@@ -244,10 +254,10 @@ index c844fd4..0a430c4 100644
  annotate-snippets = { workspace = true, features = ["testing-colors"] }
  cargo-test-macro.workspace = true
 diff --git a/src/tools/cargo/crates/cargo-test-support/Cargo.toml b/src/tools/cargo/crates/cargo-test-support/Cargo.toml
-index fd64a66..3f1d64a 100644
+index 9d6ca73..443ca9d 100644
 --- a/src/tools/cargo/crates/cargo-test-support/Cargo.toml
 +++ b/src/tools/cargo/crates/cargo-test-support/Cargo.toml
-@@ -33,8 +33,5 @@ toml.workspace = true
+@@ -34,8 +34,5 @@ toml.workspace = true
  url.workspace = true
  walkdir.workspace = true
  
@@ -257,7 +267,7 @@ index fd64a66..3f1d64a 100644
  [lints]
  workspace = true
 diff --git a/src/tools/cargo/crates/cargo-util/Cargo.toml b/src/tools/cargo/crates/cargo-util/Cargo.toml
-index 28877ee..e859b49 100644
+index f084dad..02c451c 100644
 --- a/src/tools/cargo/crates/cargo-util/Cargo.toml
 +++ b/src/tools/cargo/crates/cargo-util/Cargo.toml
 @@ -21,15 +21,8 @@ tempfile.workspace = true
@@ -290,7 +300,7 @@ index 91742e5..0054cad 100644
  [lints]
  workspace = true
 diff --git a/src/tools/cargo/credential/cargo-credential/Cargo.toml b/src/tools/cargo/credential/cargo-credential/Cargo.toml
-index 4ed0d32..fc2df44 100644
+index 63fd823..55f8d9c 100644
 --- a/src/tools/cargo/credential/cargo-credential/Cargo.toml
 +++ b/src/tools/cargo/credential/cargo-credential/Cargo.toml
 @@ -18,9 +18,6 @@ time.workspace = true
@@ -338,7 +348,7 @@ index 52beb4c8..50acf5b 100644
 -    "Win32_System_Diagnostics_Debug",
 -]
 diff --git a/src/tools/rust-analyzer/crates/profile/Cargo.toml b/src/tools/rust-analyzer/crates/profile/Cargo.toml
-index fe256c5..8178a9d 100644
+index 9de8031..8178a9d 100644
 --- a/src/tools/rust-analyzer/crates/profile/Cargo.toml
 +++ b/src/tools/rust-analyzer/crates/profile/Cargo.toml
 @@ -22,9 +22,6 @@ countme = { version = "3.0.1", features = ["enable"] }
@@ -346,30 +356,27 @@ index fe256c5..8178a9d 100644
  perf-event = "=0.4.7"
  
 -[target.'cfg(windows)'.dependencies]
--winapi = { version = "0.3.9", features = ["processthreadsapi", "psapi"] }
+-windows-sys = { version = "0.52", features = ["Win32_System_Threading", "Win32_System_ProcessStatus"] }
 -
  [features]
  cpu_profiler = []
  
 diff --git a/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml b/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml
-index cd33498..5a4a443 100644
+index 34b3e49..a684752 100644
 --- a/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml
 +++ b/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml
-@@ -68,12 +68,6 @@ vfs-notify.workspace = true
+@@ -69,9 +69,6 @@ vfs-notify.workspace = true
  vfs.workspace = true
  paths.workspace = true
  
 -[target.'cfg(windows)'.dependencies]
--winapi = "0.3.9"
+-windows-sys = { version = "0.52", features = ["Win32_System_Threading"] }
 -
--[target.'cfg(not(target_env = "msvc"))'.dependencies]
--jemallocator = { version = "0.5.0", package = "tikv-jemallocator", optional = true }
--
- [dev-dependencies]
- expect-test = "1.4.0"
- xshell.workspace = true
+ [target.'cfg(not(target_env = "msvc"))'.dependencies]
+ jemallocator = { version = "0.5.0", package = "tikv-jemallocator", optional = true }
+ 
 diff --git a/src/tools/rust-analyzer/crates/stdx/Cargo.toml b/src/tools/rust-analyzer/crates/stdx/Cargo.toml
-index 6cca116..7e3b4c1 100644
+index 99824df..7e3b4c1 100644
 --- a/src/tools/rust-analyzer/crates/stdx/Cargo.toml
 +++ b/src/tools/rust-analyzer/crates/stdx/Cargo.toml
 @@ -20,10 +20,6 @@ crossbeam-channel = "0.5.5"
@@ -378,8 +385,138 @@ index 6cca116..7e3b4c1 100644
  
 -[target.'cfg(windows)'.dependencies]
 -miow = "0.6.0"
--winapi = { version = "0.3.9", features = ["winerror"] }
+-windows-sys = { version = "0.52", features = ["Win32_Foundation"] }
 -
  [features]
  # Uncomment to enable for the whole crate graph
  # default = [ "backtrace" ]
+diff --git a/src/tools/rustc-perf/collector/Cargo.toml b/src/tools/rustc-perf/collector/Cargo.toml
+index fed0fa9..2163f64 100644
+--- a/src/tools/rustc-perf/collector/Cargo.toml
++++ b/src/tools/rustc-perf/collector/Cargo.toml
+@@ -45,10 +45,6 @@ analyzeme = "12.0.0"
+ 
+ benchlib = { path = "benchlib" }
+ 
+-[target.'cfg(windows)'.dependencies]
+-miow = "0.3"
+-windows-sys = { version = "0.45.0", features = ["Win32_Foundation"] }
+-
+ [features]
+ # Enable more precise Cachegrind profiles for runtime benchmarks.
+ # Requires a recent Valgrind to be installed.
+diff --git a/src/tools/rustc-perf/collector/compile-benchmarks/cargo-0.60.0/Cargo.toml b/src/tools/rustc-perf/collector/compile-benchmarks/cargo-0.60.0/Cargo.toml
+index 12ee1ee..a89f82f 100644
+--- a/src/tools/rustc-perf/collector/compile-benchmarks/cargo-0.60.0/Cargo.toml
++++ b/src/tools/rustc-perf/collector/compile-benchmarks/cargo-0.60.0/Cargo.toml
+@@ -209,28 +209,4 @@ deny-warnings = []
+ pretty-env-logger = ["pretty_env_logger"]
+ vendored-openssl = ["openssl/vendored"]
+ 
+-[target."cfg(windows)".dependencies.fwdansi]
+-version = "1.1.0"
+-
+-[target."cfg(windows)".dependencies.winapi]
+-version = "0.3"
+-features = [
+-    "basetsd",
+-    "handleapi",
+-    "jobapi",
+-    "jobapi2",
+-    "memoryapi",
+-    "minwindef",
+-    "ntdef",
+-    "ntstatus",
+-    "processenv",
+-    "processthreadsapi",
+-    "psapi",
+-    "synchapi",
+-    "winerror",
+-    "winbase",
+-    "wincon",
+-    "winnt",
+-]
+-
+ [workspace]
+diff --git a/src/tools/rustc-perf/collector/compile-benchmarks/style-servo/components/gfx/Cargo.toml b/src/tools/rustc-perf/collector/compile-benchmarks/style-servo/components/gfx/Cargo.toml
+index 3d7aea1..57feefe 100644
+--- a/src/tools/rustc-perf/collector/compile-benchmarks/style-servo/components/gfx/Cargo.toml
++++ b/src/tools/rustc-perf/collector/compile-benchmarks/style-servo/components/gfx/Cargo.toml
+@@ -59,7 +59,3 @@ xml5ever = {version = "0.10"}
+ 
+ [target.'cfg(any(target_feature = "sse2", target_feature = "neon"))'.dependencies]
+ simd = "0.2.0"
+-
+-[target.'cfg(target_os = "windows")'.dependencies]
+-dwrote = "0.4"
+-truetype = "0.26"
+diff --git a/src/tools/rustc-perf/collector/compile-benchmarks/style-servo/components/style/Cargo.toml b/src/tools/rustc-perf/collector/compile-benchmarks/style-servo/components/style/Cargo.toml
+index 23130d0..5f33889 100644
+--- a/src/tools/rustc-perf/collector/compile-benchmarks/style-servo/components/style/Cargo.toml
++++ b/src/tools/rustc-perf/collector/compile-benchmarks/style-servo/components/style/Cargo.toml
+@@ -77,9 +77,6 @@ time = "0.1"
+ unicode-bidi = "0.3"
+ unicode-segmentation = "1.0"
+ 
+-[target.'cfg(windows)'.dependencies]
+-kernel32-sys = "0.2"
+-
+ [build-dependencies]
+ lazy_static = "0.2"
+ log = "0.3"
+diff --git a/src/tools/rustc-perf/collector/compile-benchmarks/tokio-webpush-simple/native-tls-0.1.5/Cargo.toml b/src/tools/rustc-perf/collector/compile-benchmarks/tokio-webpush-simple/native-tls-0.1.5/Cargo.toml
+index 38bd630e..6abd17c 100644
+--- a/src/tools/rustc-perf/collector/compile-benchmarks/tokio-webpush-simple/native-tls-0.1.5/Cargo.toml
++++ b/src/tools/rustc-perf/collector/compile-benchmarks/tokio-webpush-simple/native-tls-0.1.5/Cargo.toml
+@@ -33,7 +33,5 @@ version = "0.1.15"
+ 
+ [target."cfg(any(target_os = \"macos\", target_os = \"ios\"))".dependencies.tempdir]
+ version = "0.3"
+-[target."cfg(target_os = \"windows\")".dependencies.schannel]
+-version = "0.1.7"
+ 
+-[workspace]
+\ No newline at end of file
++[workspace]
+diff --git a/src/tools/rustc-perf/collector/compile-benchmarks/webrender-2022/example-compositor/compositor/Cargo.toml b/src/tools/rustc-perf/collector/compile-benchmarks/webrender-2022/example-compositor/compositor/Cargo.toml
+index 4202332..2d35787 100644
+--- a/src/tools/rustc-perf/collector/compile-benchmarks/webrender-2022/example-compositor/compositor/Cargo.toml
++++ b/src/tools/rustc-perf/collector/compile-benchmarks/webrender-2022/example-compositor/compositor/Cargo.toml
+@@ -9,8 +9,5 @@ license = "MPL-2.0"
+ webrender = { path = "../../webrender" }
+ gleam = "0.13.1"
+ 
+-[target.'cfg(windows)'.dependencies]
+-compositor-windows = { path = "../compositor-windows" }
+-
+ [target.'cfg(target_os = "linux")'.dependencies]
+ compositor-wayland = { path = "../compositor-wayland" }
+diff --git a/src/tools/rustc-perf/collector/compile-benchmarks/webrender-2022/webrender/Cargo.toml b/src/tools/rustc-perf/collector/compile-benchmarks/webrender-2022/webrender/Cargo.toml
+index ee727d4..ddc3c14 100644
+--- a/src/tools/rustc-perf/collector/compile-benchmarks/webrender-2022/webrender/Cargo.toml
++++ b/src/tools/rustc-perf/collector/compile-benchmarks/webrender-2022/webrender/Cargo.toml
+@@ -61,9 +61,6 @@ rand = "0.4"
+ freetype = { version = "0.7", default-features = false }
+ libc = "0.2"
+ 
+-[target.'cfg(target_os = "windows")'.dependencies]
+-dwrote = "0.11"
+-
+ [target.'cfg(target_os = "macos")'.dependencies]
+ core-foundation = "0.9.2"
+ core-graphics = "0.22.3"
+diff --git a/src/tools/rustc-perf/collector/compile-benchmarks/webrender-2022/wrench/Cargo.toml b/src/tools/rustc-perf/collector/compile-benchmarks/webrender-2022/wrench/Cargo.toml
+index 04101b9..9b6e1e5 100644
+--- a/src/tools/rustc-perf/collector/compile-benchmarks/webrender-2022/wrench/Cargo.toml
++++ b/src/tools/rustc-perf/collector/compile-benchmarks/webrender-2022/wrench/Cargo.toml
+@@ -42,10 +42,6 @@ default = [ "env_logger" ]
+ headless = [ "osmesa-sys", "osmesa-src" ]
+ software = [ "swgl" ]
+ 
+-[target.'cfg(target_os = "windows")'.dependencies]
+-dwrote = "0.11"
+-mozangle = { version = "0.3.2", features = ["egl"] }
+-
+ [target.'cfg(all(unix, not(target_os = "android")))'.dependencies]
+ font-loader = "0.11"
+ 

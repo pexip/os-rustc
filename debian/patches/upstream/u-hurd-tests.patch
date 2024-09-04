@@ -23,10 +23,10 @@ index 23d1507..e0714e5 100644
  // To prevent "overflow while adding drop-check rules".
  use std::mem::ManuallyDrop;
 diff --git a/tests/run-make/long-linker-command-lines/foo.rs b/tests/run-make/long-linker-command-lines/foo.rs
-index db238c0..c8ad6b8 100644
+index 9d4a701..f05130f 100644
 --- a/tests/run-make/long-linker-command-lines/foo.rs
 +++ b/tests/run-make/long-linker-command-lines/foo.rs
-@@ -44,6 +44,13 @@ fn read_linker_args(path: &Path) -> String {
+@@ -42,6 +42,13 @@ fn read_linker_args(path: &Path) -> String {
      }
  }
  
