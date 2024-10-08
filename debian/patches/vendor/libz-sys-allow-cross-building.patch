@@ -1,0 +1,32 @@
+From: =?utf-8?q?Fabian_Gr=C3=BCnbichler?= <debian@fabian.gruenbichler.email>
+Date: Tue, 8 Oct 2024 12:58:44 +0200
+Subject: libz-sys: allow cross-building
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Fabian Grünbichler <debian@fabian.gruenbichler.email>
+---
+ vendor/libz-sys-1.1.18/build.rs | 8 +++-----
+ 1 file changed, 3 insertions(+), 5 deletions(-)
+
+diff --git a/vendor/libz-sys-1.1.18/build.rs b/vendor/libz-sys-1.1.18/build.rs
+index 898c95c..66c5936 100644
+--- a/vendor/libz-sys-1.1.18/build.rs
++++ b/vendor/libz-sys-1.1.18/build.rs
+@@ -81,12 +81,10 @@ fn main() {
+     //
+     // Apple platforms have libz.1.dylib, and it's usually available even when
+     // cross compiling (via fat binary or in the target's Xcode SDK)
++    //
++    // Debian: allow cross-building!
+     let cross_compiling = target != host;
+-    if target.contains("msvc")
+-        || target.contains("pc-windows-gnu")
+-        || want_static
+-        || (cross_compiling && !target.contains("-apple-"))
+-    {
++    if target.contains("msvc") || target.contains("pc-windows-gnu") || want_static {
+         return build_zlib(&mut cfg, &target);
+     }
+ 

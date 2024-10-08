@@ -1,3 +1,38 @@
+rustc (1.81.0+dfsg1-2) unstable; urgency=medium
+
+  * use system libz-sys even when cross-building (Closes: #1084754)
+  * drop no longer needed loongarch64 patch
+  * add temporary Breaks to force migration of libgit2
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Tue, 08 Oct 2024 14:34:41 +0200
+
+rustc (1.81.0+dfsg1-1) unstable; urgency=medium
+
+  * Upload to unstable
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Sat, 05 Oct 2024 15:54:29 +0200
+
+rustc (1.81.0+dfsg1-1~exp2) experimental; urgency=medium
+
+  * source: duplicate lintian overrides to make ftp-masters happy
+  * cargo wrapper: fix LTO handling (Closes: #1079071)
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Sat, 05 Oct 2024 15:54:14 +0200
+
+rustc (1.81.0+dfsg1-1~exp1) experimental; urgency=medium
+
+  [ Fabian Grünbichler ]
+  * New upstream release
+  * switch to LLVM 18
+  * bump libgit2 to 1.8.1
+  * build and install wasm-component-ld for wasm-wasip2
+  * make rust-llvm arch:any
+
+  [ Samuel Thibault ]
+  * add hurd-amd64 support
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Wed, 11 Sep 2024 08:26:59 +0200
+
 rustc (1.80.1+dfsg1-1) unstable; urgency=medium
 
   * upload to unstable

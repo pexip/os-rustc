@@ -9,12 +9,12 @@ Forwarded: not-needed
  1 file changed, 21 insertions(+), 6 deletions(-)
 
 diff --git a/src/bootstrap/src/core/build_steps/doc.rs b/src/bootstrap/src/core/build_steps/doc.rs
-index b37b2b5..9ad5e81 100644
+index 633e66a..d34d6bd 100644
 --- a/src/bootstrap/src/core/build_steps/doc.rs
 +++ b/src/bootstrap/src/core/build_steps/doc.rs
-@@ -380,7 +380,27 @@ impl Step for Standalone {
+@@ -387,7 +387,27 @@ impl Step for Standalone {
                  .arg("--index-page")
-                 .arg(&builder.src.join("src/doc/index.md"))
+                 .arg(builder.src.join("src/doc/index.md"))
                  .arg("--markdown-playground-url")
 -                .arg("https://play.rust-lang.org/")
 +                .arg("https://play.rust-lang.org/");
@@ -41,7 +41,7 @@ index b37b2b5..9ad5e81 100644
                  .arg("-o")
                  .arg(&out)
                  .arg(&path);
-@@ -389,11 +409,6 @@ impl Step for Standalone {
+@@ -396,11 +416,6 @@ impl Step for Standalone {
                  cmd.arg("--disable-minification");
              }
  
@@ -50,6 +50,6 @@ index b37b2b5..9ad5e81 100644
 -            } else {
 -                cmd.arg("--markdown-css").arg("rust.css");
 -            }
-             builder.run(&mut cmd);
+             cmd.run(builder);
          }
  

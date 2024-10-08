@@ -10,6 +10,7 @@ upstream/u-rustc-llvm-cross-flags.patch
 upstream/u-hurd-tests.patch
 upstream/d-ignore-test_arc_condvar_poison-ppc.patch
 upstream/d-disable-download-tests.patch
+upstream/u-hurd-amd64.patch
 prune/d-0000-ignore-removed-submodules.patch
 prune/d-0001-pkg-config-no-special-snowflake.patch
 prune/d-0002-mdbook-strip-embedded-libs.patch
@@ -18,10 +19,10 @@ prune/d-0010-cargo-remove-vendored-c-crates.patch
 prune/d-0011-cargo-remove-nghttp2.patch
 prune/d-0020-remove-windows-dependencies.patch
 prune/d-0021-vendor-remove-windows-dependencies.patch
-vendor/u-hurd-gix-index.patch
 vendor/u-hurd-gix-index-2.patch
 vendor/u-hurd-rustix.patch
 vendor/d-0003-cc-psm-rebuild-wasm32.patch
+vendor/u-libc-hurd-amd64.patch
 build/d-bootstrap-rustflags.patch
 build/d-bootstrap-install-symlinks.patch
 build/d-bootstrap-disable-git.patch
@@ -31,7 +32,6 @@ build/d-bootstrap-use-local-css.patch
 build/d-bootstrap-custom-debuginfo-path.patch
 build/d-bootstrap-permit-symlink-in-docs.patch
 build/d-test-ignore-avx-44056.patch
-build/d-armel-fix-lldb.patch
 behaviour/d-rust-gdb-paths.patch
 behaviour/d-rust-lldb-paths.patch
 behaviour/d-rustc-add-soname.patch
@@ -40,5 +40,6 @@ behaviour/d-rustc-i686-baseline.patch
 behaviour/d-rustdoc-disable-embedded-fonts.patch
 ubuntu/ubuntu-disable-ppc64el-asm-tests.patch
 ubuntu/ubuntu-ignore-arm-doctest.patch
-upstream/Revert-loongarch-add-frecipe-and-relax-target-feature.patch
 vendor/onig_sys-use-system-lib.patch
+upstream/Fix-inclusion-of-wasm-component-ld-in-dist-artifacts.patch
+vendor/libz-sys-allow-cross-building.patch

@@ -14,10 +14,10 @@ Last-Update: 2023-03-29
  1 file changed, 26 insertions(+), 2 deletions(-)
 
 diff --git a/src/bootstrap/src/core/config/config.rs b/src/bootstrap/src/core/config/config.rs
-index 17e37c1..cf0048b 100644
+index 9d5aa79..9e8337b 100644
 --- a/src/bootstrap/src/core/config/config.rs
 +++ b/src/bootstrap/src/core/config/config.rs
-@@ -1188,8 +1188,32 @@ impl Config {
+@@ -1187,8 +1187,32 @@ impl Config {
  
      pub fn parse(args: &[String]) -> Config {
          #[cfg(test)]

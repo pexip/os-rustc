@@ -23,16 +23,15 @@ Signed-off-by: Fabian Grünbichler <f.gruenbichler@proxmox.com>
  vendor/android-tzdata-0.1.1/Cargo.toml       |  1 +
  vendor/ansi_term-0.12.1/Cargo.toml           |  3 --
  vendor/anstream-0.6.14/Cargo.toml            |  6 ----
- vendor/anstyle-query-1.0.3/Cargo.toml        |  6 ----
+ vendor/anstyle-query-1.1.0/Cargo.toml        |  6 ----
  vendor/backtrace-0.3.71/Cargo.toml           | 14 ----------
  vendor/chrono-0.4.38/Cargo.toml              |  9 +-----
  vendor/colored-2.1.0/Cargo.toml              |  7 -----
  vendor/console-0.15.8/Cargo.toml             | 12 --------
  vendor/ctrlc-3.4.4/Cargo.toml                | 18 ------------
  vendor/curl-0.4.46/Cargo.toml                | 11 --------
- vendor/curl-sys-0.4.72+curl-8.6.0/Cargo.toml |  7 -----
+ vendor/curl-sys-0.4.73+curl-8.8.0/Cargo.toml |  7 -----
  vendor/dbus-0.9.7/Cargo.toml                 |  4 ---
- vendor/dirs-sys-0.3.7/Cargo.toml             |  3 --
  vendor/dirs-sys-0.4.1/Cargo.toml             |  9 ------
  vendor/dirs-sys-next-0.1.2/Cargo.toml        |  3 --
  vendor/dlmalloc-0.2.6/Cargo.toml             |  9 ------
@@ -40,16 +39,17 @@ Signed-off-by: Fabian Grünbichler <f.gruenbichler@proxmox.com>
  vendor/errno-0.3.9/Cargo.toml                |  7 -----
  vendor/fd-lock-4.0.2/Cargo.toml              |  8 ------
  vendor/filetime-0.2.23/Cargo.toml            |  7 -----
- vendor/gix-sec-0.10.6/Cargo.toml             | 13 ---------
+ vendor/gix-path-0.10.9/Cargo.toml            | 10 -------
+ vendor/gix-sec-0.10.7/Cargo.toml             | 13 ---------
  vendor/home-0.5.9/Cargo.toml                 |  8 ------
  vendor/iana-time-zone-0.1.60/Cargo.toml      |  3 --
  vendor/ignore-0.4.20/Cargo.toml              |  3 --
  vendor/ignore-0.4.22/Cargo.toml              |  2 --
  vendor/is-terminal-0.4.12/Cargo.toml         | 11 --------
- vendor/libloading-0.8.3/Cargo.toml           |  7 -----
+ vendor/libloading-0.8.4/Cargo.toml           |  7 -----
  vendor/libssh2-sys-0.3.0/Cargo.toml          |  8 ------
  vendor/nu-ansi-term-0.46.0/Cargo.toml        | 10 -------
- vendor/nu-ansi-term-0.49.0/Cargo.toml        | 10 -------
+ vendor/nu-ansi-term-0.50.0/Cargo.toml        | 10 -------
  vendor/opener-0.5.2/Cargo.toml               |  4 ---
  vendor/opener-0.6.1/Cargo.toml               |  9 ------
  vendor/opener-0.7.1/Cargo.toml               | 12 --------
@@ -57,7 +57,7 @@ Signed-off-by: Fabian Grünbichler <f.gruenbichler@proxmox.com>
  vendor/parking_lot_core-0.9.10/Cargo.toml    |  3 --
  vendor/rustix-0.38.34/Cargo.toml             | 17 ------------
  vendor/same-file-1.0.6/Cargo.toml            |  2 --
- vendor/snapbox-0.6.7/Cargo.toml              |  7 -----
+ vendor/snapbox-0.6.10/Cargo.toml             |  7 -----
  vendor/socket2-0.5.7/Cargo.toml              | 10 -------
  vendor/stacker-0.1.15/Cargo.toml             | 10 -------
  vendor/sysinfo-0.30.12/Cargo.toml            | 41 ----------------------------
@@ -66,11 +66,11 @@ Signed-off-by: Fabian Grünbichler <f.gruenbichler@proxmox.com>
  vendor/termcolor-1.4.1/Cargo.toml            |  3 --
  vendor/terminal_size-0.3.0/Cargo.toml        |  7 -----
  vendor/termize-0.1.1/Cargo.toml              |  3 --
- vendor/tokio-1.37.0/Cargo.toml               | 21 --------------
+ vendor/tokio-1.38.0/Cargo.toml               | 21 --------------
  vendor/uuid-1.8.0/Cargo.toml                 |  1 -
  vendor/walkdir-2.5.0/Cargo.toml              |  3 --
  vendor/yansi-term-0.1.2/Cargo.toml           |  3 --
- 50 files changed, 3 insertions(+), 399 deletions(-)
+ 50 files changed, 3 insertions(+), 406 deletions(-)
 
 diff --git a/vendor/android-tzdata-0.1.1/Cargo.toml b/vendor/android-tzdata-0.1.1/Cargo.toml
 index 805128a..0682717 100644
@@ -111,10 +111,10 @@ index 853619d..b37c9d9 100644
  
  [lints.clippy]
  bool_assert_comparison = "allow"
-diff --git a/vendor/anstyle-query-1.0.3/Cargo.toml b/vendor/anstyle-query-1.0.3/Cargo.toml
-index 14f916f..eb48a59 100644
---- a/vendor/anstyle-query-1.0.3/Cargo.toml
-+++ b/vendor/anstyle-query-1.0.3/Cargo.toml
+diff --git a/vendor/anstyle-query-1.1.0/Cargo.toml b/vendor/anstyle-query-1.1.0/Cargo.toml
+index fca6426f..ced2967 100644
+--- a/vendor/anstyle-query-1.1.0/Cargo.toml
++++ b/vendor/anstyle-query-1.1.0/Cargo.toml
 @@ -79,12 +79,6 @@ replace = """
  [Unreleased]: https://github.com/rust-cli/anstyle/compare/{{tag_name}}...HEAD"""
  search = "<!-- next-url -->"
@@ -273,11 +273,11 @@ index fc961dd..d102279 100644
  [badges.appveyor]
  repository = "alexcrichton/curl-rust"
  
-diff --git a/vendor/curl-sys-0.4.72+curl-8.6.0/Cargo.toml b/vendor/curl-sys-0.4.72+curl-8.6.0/Cargo.toml
-index ea20c03..0751f3d 100644
---- a/vendor/curl-sys-0.4.72+curl-8.6.0/Cargo.toml
-+++ b/vendor/curl-sys-0.4.72+curl-8.6.0/Cargo.toml
-@@ -73,13 +73,6 @@ zlib-ng-compat = [
+diff --git a/vendor/curl-sys-0.4.73+curl-8.8.0/Cargo.toml b/vendor/curl-sys-0.4.73+curl-8.8.0/Cargo.toml
+index 2f09823..fa8876b 100644
+--- a/vendor/curl-sys-0.4.73+curl-8.8.0/Cargo.toml
++++ b/vendor/curl-sys-0.4.73+curl-8.8.0/Cargo.toml
+@@ -77,13 +77,6 @@ zlib-ng-compat = [
  version = "0.9.64"
  optional = true
  
@@ -305,17 +305,6 @@ index d9f6d84..e04d90b 100644
 -
  [badges.maintenance]
  status = "actively-developed"
-diff --git a/vendor/dirs-sys-0.3.7/Cargo.toml b/vendor/dirs-sys-0.3.7/Cargo.toml
-index 9951d24..0a86f4d 100644
---- a/vendor/dirs-sys-0.3.7/Cargo.toml
-+++ b/vendor/dirs-sys-0.3.7/Cargo.toml
-@@ -22,6 +22,3 @@ version = "0.4"
- default-features = false
- [target."cfg(unix)".dependencies.libc]
- version = "0.2"
--[target."cfg(windows)".dependencies.winapi]
--version = "0.3"
--features = ["knownfolders", "objbase", "shlobj", "winbase", "winerror"]
 diff --git a/vendor/dirs-sys-0.4.1/Cargo.toml b/vendor/dirs-sys-0.4.1/Cargo.toml
 index 4a992ae..86aec87 100644
 --- a/vendor/dirs-sys-0.4.1/Cargo.toml
@@ -422,17 +411,35 @@ index 0540ffb..2c65fa5 100644
 -    "Win32_Foundation",
 -    "Win32_Storage_FileSystem",
 -]
-diff --git a/vendor/gix-sec-0.10.6/Cargo.toml b/vendor/gix-sec-0.10.6/Cargo.toml
-index df523e8..da37840 100644
---- a/vendor/gix-sec-0.10.6/Cargo.toml
-+++ b/vendor/gix-sec-0.10.6/Cargo.toml
-@@ -57,16 +57,3 @@ serde = [
+diff --git a/vendor/gix-path-0.10.9/Cargo.toml b/vendor/gix-path-0.10.9/Cargo.toml
+index 7c7ef76..028314f 100644
+--- a/vendor/gix-path-0.10.9/Cargo.toml
++++ b/vendor/gix-path-0.10.9/Cargo.toml
+@@ -53,13 +53,3 @@ version = "3.3.0"
+ 
+ [target.'cfg(not(target_family = "wasm"))'.dependencies.home]
+ version = "0.5.5"
+-
+-[target."cfg(windows)".dev-dependencies.known-folders]
+-version = "1.1.0"
+-
+-[target."cfg(windows)".dev-dependencies.windows]
+-version = "0.58.0"
+-features = ["Win32_System_Threading"]
+-
+-[target."cfg(windows)".dev-dependencies.winreg]
+-version = "0.52.0"
+diff --git a/vendor/gix-sec-0.10.7/Cargo.toml b/vendor/gix-sec-0.10.7/Cargo.toml
+index f85bb5c..09c510f 100644
+--- a/vendor/gix-sec-0.10.7/Cargo.toml
++++ b/vendor/gix-sec-0.10.7/Cargo.toml
+@@ -65,16 +65,3 @@ serde = [
  
  [target."cfg(not(windows))".dependencies.libc]
  version = "0.2.123"
 -
 -[target."cfg(windows)".dependencies.gix-path]
--version = "^0.10.7"
+-version = "^0.10.9"
 -
 -[target."cfg(windows)".dependencies.windows-sys]
 -version = "0.52.0"
@@ -513,21 +520,24 @@ index 98a8829..01ce09a 100644
 -
 -[target."cfg(windows)".dev-dependencies.tempfile]
 -version = "3"
-diff --git a/vendor/libloading-0.8.3/Cargo.toml b/vendor/libloading-0.8.3/Cargo.toml
-index d5e5548..2204533 100644
---- a/vendor/libloading-0.8.3/Cargo.toml
-+++ b/vendor/libloading-0.8.3/Cargo.toml
-@@ -42,10 +42,3 @@ version = "1.1"
- 
+diff --git a/vendor/libloading-0.8.4/Cargo.toml b/vendor/libloading-0.8.4/Cargo.toml
+index 5a14d08..5d816d7 100644
+--- a/vendor/libloading-0.8.4/Cargo.toml
++++ b/vendor/libloading-0.8.4/Cargo.toml
+@@ -43,13 +43,6 @@ version = "1.1"
  [target."cfg(unix)".dependencies.cfg-if]
  version = "1"
--
+ 
 -[target."cfg(windows)".dependencies.windows-targets]
 -version = ">=0.48, <0.53"
 -
 -[target."cfg(windows)".dev-dependencies.windows-sys]
 -version = "0.52"
 -features = ["Win32_Foundation"]
+-
+ [lints.rust.unexpected_cfgs]
+ level = "warn"
+ priority = 0
 diff --git a/vendor/libssh2-sys-0.3.0/Cargo.toml b/vendor/libssh2-sys-0.3.0/Cargo.toml
 index 45f4a71..516644c 100644
 --- a/vendor/libssh2-sys-0.3.0/Cargo.toml
@@ -567,10 +577,10 @@ index 209e055..aa40f02 100644
 -    "handleapi",
 -    "processenv",
 -]
-diff --git a/vendor/nu-ansi-term-0.49.0/Cargo.toml b/vendor/nu-ansi-term-0.49.0/Cargo.toml
-index f36dade..3e86523 100644
---- a/vendor/nu-ansi-term-0.49.0/Cargo.toml
-+++ b/vendor/nu-ansi-term-0.49.0/Cargo.toml
+diff --git a/vendor/nu-ansi-term-0.50.0/Cargo.toml b/vendor/nu-ansi-term-0.50.0/Cargo.toml
+index 1728436..29de144 100644
+--- a/vendor/nu-ansi-term-0.50.0/Cargo.toml
++++ b/vendor/nu-ansi-term-0.50.0/Cargo.toml
 @@ -42,13 +42,3 @@ version = "1.0.94"
  [features]
  derive_serde_style = ["serde"]
@@ -722,10 +732,10 @@ index 4f66820..11ef472 100644
  version = "0.3"
 -[target."cfg(windows)".dependencies.winapi-util]
 -version = "0.1.1"
-diff --git a/vendor/snapbox-0.6.7/Cargo.toml b/vendor/snapbox-0.6.7/Cargo.toml
-index 2f9e2f4..d944ff8 100644
---- a/vendor/snapbox-0.6.7/Cargo.toml
-+++ b/vendor/snapbox-0.6.7/Cargo.toml
+diff --git a/vendor/snapbox-0.6.10/Cargo.toml b/vendor/snapbox-0.6.10/Cargo.toml
+index 982ab86..1a4d9cd 100644
+--- a/vendor/snapbox-0.6.10/Cargo.toml
++++ b/vendor/snapbox-0.6.10/Cargo.toml
 @@ -174,7 +174,6 @@ cmd = [
      "dep:os_pipe",
      "dep:wait-timeout",
@@ -903,10 +913,10 @@ index d248f4d..9bd9f37 100644
 -features = ["handleapi", "processenv", "wincon", "winbase"]
  [badges.cirrus-ci]
  repository = "JohnTitor/termize"
-diff --git a/vendor/tokio-1.37.0/Cargo.toml b/vendor/tokio-1.37.0/Cargo.toml
-index 0826335..6273a66 100644
---- a/vendor/tokio-1.37.0/Cargo.toml
-+++ b/vendor/tokio-1.37.0/Cargo.toml
+diff --git a/vendor/tokio-1.38.0/Cargo.toml b/vendor/tokio-1.38.0/Cargo.toml
+index e15cfac..356f03e 100644
+--- a/vendor/tokio-1.38.0/Cargo.toml
++++ b/vendor/tokio-1.38.0/Cargo.toml
 @@ -130,11 +130,6 @@ net = [
      "mio/os-ext",
      "mio/net",
@@ -938,7 +948,7 @@ index 0826335..6273a66 100644
  ]
  sync = []
  test-util = [
-@@ -224,14 +214,3 @@ features = [
+@@ -225,14 +215,3 @@ features = [
      "socket",
  ]
  default-features = false
