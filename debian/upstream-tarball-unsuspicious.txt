@@ -22,7 +22,7 @@ vendor/pasetors-*/src/version2.rs
 vendor/pasetors-*/src/version3.rs
 vendor/pasetors-*/src/version4.rs
 vendor/term-*/src/terminfo/parser/names.rs
-vendor/wit-component-0.210.0/libdl.so
+vendor/wit-component-*/libdl.so
 
 # False-positive, "verylongtext" but OK
 CONTRIBUTING.md
@@ -34,6 +34,7 @@ compiler/rustc_codegen_gcc/.github/workflows/stdarch.yml
 compiler/rustc_codegen_gcc/Readme.md
 compiler/rustc_codegen_ssa/messages.ftl
 compiler/rustc_incremental/messages.ftl
+library/backtrace/src/windows_sys.rs
 library/core/src/ffi/c_*.md
 library/portable-simd/*.md
 library/std/src/sys/pal/sgx/abi/entry.S
@@ -50,6 +51,7 @@ src/doc/edition-guide/src/rust-2021/prelude.md
 src/doc/embedded-book/src/*/*.md
 src/doc/nomicon/src/intro.md
 src/doc/reference/docs/authoring.md
+src/doc/reference/docs/review-policy.md
 src/doc/reference/src/conditional-compilation.md
 src/doc/reference/src/expressions/closure-expr.md
 src/doc/reference/src/inline-assembly.md
@@ -88,6 +90,8 @@ src/tools/rust-analyzer/crates/rust-analyzer/src/diagnostics/to_proto.rs
 src/tools/rust-analyzer/docs/user/manual.adoc
 src/tools/rustc-perf/collector/src/compile/execute/etw_parser.rs
 src/tools/rustc-perf/docs/*.md
+src/tools/rustc-perf/LICENSES/Apache-2.0.txt
+src/tools/rustc-perf/LICENSES/MIT.txt
 src/tools/rustc-perf/triage/*.md
 src/tools/rustfmt/*.md
 tests/mir-opt/building/*.mir
@@ -307,8 +311,6 @@ vendor/libz-sys-*/src/smoke.c
 vendor/openssl-sys-*/build/expando.c
 vendor/sharded-slab-*/flake.lock
 vendor/wasm-bindgen-macro-*/src/worker.js
-vendor/wasm-bindgen-*/_package.json
-vendor/wasm-bindgen-*/examples/import_js/package.json
 
 # Embedded libraries, justified in README.source
 vendor/dlmalloc-*/src/dlmalloc.c
@@ -394,6 +396,8 @@ library/stdarch/ci/gba.json
 library/stdarch/crates/std_detect/src/detect/test_data/*.auxv
 library/stdarch/crates/stdarch-verify/x86-intel.xml
 library/stdarch/intrinsics_data/arm_intrinsics.json
+src/etc/test-float-parse/src/gen/spot_checks.rs
+src/librustdoc/html/render/write_shared/tests.rs
 src/tools/*/tests/*/*.stderr
 src/tools/cargo/benches/benchsuite/global-cache-tracker/global-cache-sample
 src/tools/cargo/benches/benchsuite/global-cache-tracker/random-sample
@@ -458,8 +462,6 @@ tests/ui/suggestions/incorrect-variant-literal.svg
 tests/ui/traits/object/print_vtable_sizes.stdout
 vendor/annotate-snippets-*/tests/fixtures/no-color/*.svg
 vendor/annotate-snippets-*/tests/fixtures/no-color/strip_line_non_ws.toml
-vendor/askama_parser-*/tests/target-recursion.txt
-vendor/askama_parser-*/tests/unary-recursion.txt
 vendor/basic-toml-*/tests/invalid-encoder/array-mixed-types-ints-and-floats.json
 vendor/basic-toml-*/tests/valid/*.json
 vendor/basic-toml-*/tests/valid/table-whitespace.toml
@@ -500,9 +502,6 @@ vendor/idna-*/tests/punycode_tests.json
 vendor/im-rc-*/proptest-regressions/*.txt
 vendor/im-rc-*/proptest-regressions/*/*.txt
 vendor/im-rc-*/proptest-regressions/ord/map
-vendor/js-sys-*/tests/headless.js
-vendor/js-sys-*/tests/wasm/*.js
-vendor/js-sys-*/tests/wasm/global_fns.rs
 vendor/lsp-types-*/tests/tsc-unix.lsif
 vendor/md-5-*/tests/data/*.blb
 vendor/mdbook-*/test_book/src/individual/paragraph.md
@@ -529,6 +528,7 @@ vendor/plist-*/tests/fuzzer.rs
 vendor/proptest-*/proptest-regressions/test_runner/rng.txt
 vendor/proptest-*/src/regex-contrib/crates_regex.rs
 vendor/regex-*/record/compile-test/2023*
+vendor/regex-*/src/testdata/basic.dat
 vendor/regex-*/testdata/fowler/dat/basic.dat
 vendor/regex-*/tests/fuzz/testdata/*
 vendor/regex-1.*/tests/*.rs
@@ -536,6 +536,11 @@ vendor/regex-automata-*/tests/gen/*/*.dfa
 vendor/regex-automata-0.1.10/data/fowler-tests/basic.dat
 vendor/regex-automata-0.1.10/data/tests/fowler/basic.dat
 vendor/regex-automata-0.2.0/tests/data/fowler/dat/basic.dat
+vendor/rinja_parser-0.*/benches/librustdoc/page.html
+vendor/rinja_parser-0.*/tests/comment-depth.txt
+vendor/rinja_parser-0.*/tests/filter-recursion.txt
+vendor/rinja_parser-0.*/tests/target-recursion.txt
+vendor/rinja_parser-0.*/tests/unary-recursion.txt
 vendor/rusqlite-*/test.csv
 vendor/rustc-demangle-*/src/lib.rs
 vendor/rustc-demangle-*/src/v0-large-test-symbols/early-recursion-limit
@@ -559,9 +564,6 @@ vendor/varisat-*/proptest-regressions/solver.txt
 vendor/vcpkg-*/test-data/no-status/installed/vcpkg/updates/*
 vendor/vcpkg-*/test-data/normalized/installed/vcpkg/updates/status
 vendor/walkdir-*/compare/nftw.c
-vendor/wasm-bindgen-*/tests/headless/*
-vendor/wasm-bindgen-*/tests/wasm/*
-vendor/wasm-bindgen-*/tests/worker/modules.js
 vendor/wast-*/tests/parse-fail/*.wat
 vendor/wast-*/tests/parse-fail/*.wat.err
 vendor/web-sys-*/tests/wasm/*.js
@@ -569,7 +571,6 @@ vendor/wit-component-*/tests/components/link-dl-openable-builtin-libdl-with-unus
 vendor/wit-component-*/tests/interfaces/*.wat
 vendor/wit-parser-*/tests/ui/*.wit.json
 vendor/wit-parser-*/tests/ui/kinds-of-deps/deps/e.wasm
-vendor/xmlparser-*/tests/integration/*.rs
 vendor/yaml-rust-*/tests/specexamples.rs.inc
 vendor/zip-*/tests/data/*.zip
 
@@ -603,7 +604,7 @@ vendor/unicode-normalization-*/src/tables.rs
 vendor/unicode-script-*/src/tables.rs
 vendor/unicode-segmentation-*/src/tables.rs
 vendor/wasi-*/src/lib_generated.rs
-vendor/wasm-component-ld-*/src/wasi_snapshot_preview1.*.wasm
+vendor/wasi-preview1-component-adapter-provider-*/artefacts/wasi_snapshot_preview1.*.wasm
 vendor/windows-bindgen-*/default/*.winmd
 vendor/wit-component-*/tests/components/error-link-missing-symbols/error.txt
 
@@ -647,7 +648,6 @@ vendor/ahash-*/src/fallback_hash.rs
 vendor/ahash-*/src/hash_quality_test.rs
 vendor/ahash-*/src/lib.rs
 vendor/aho-corasick-*/src/ahocorasick.rs
-vendor/askama_parser-*/src/lib.rs
 vendor/base16ct-*/benches/mod.rs
 vendor/base16ct-*/src/lower.rs
 vendor/base16ct-*/src/mixed.rs
@@ -672,11 +672,6 @@ vendor/color-print-proc-macro-*/src/parse/color_tag.rs
 vendor/color-print-proc-macro-*/src/parse/util.rs
 vendor/compiler_builtins-*/libm/src/math/atan.rs
 vendor/datafrog-*/src/lib.rs
-vendor/derivative-*/src/cmp.rs
-vendor/derivative-*/src/debug.rs
-vendor/derivative-*/src/hash.rs
-vendor/derivative-*/src/lib.rs
-vendor/derivative-*/src/matcher.rs
 vendor/derive_more-*/src/*.rs
 vendor/digest-*/src/core_api/rt_variable.rs
 vendor/digest-*/src/core_api/wrapper.rs
@@ -772,6 +767,8 @@ vendor/regex-automata-*/src/dfa/automaton.rs
 vendor/regex-automata-*/src/hybrid/dfa.rs
 vendor/regex-automata-*/src/meta/regex.rs
 vendor/regex-automata-*/src/regex.rs
+vendor/rinja-0.*/src/filters/mod.rs
+vendor/rinja_parser-0.*/src/lib.rs
 vendor/rusqlite-*/src/util/sqlite_string.rs
 vendor/rustc-rayon-*/tests/sort-panic-safe.rs
 vendor/rustc_apfloat-*/src/lib.rs

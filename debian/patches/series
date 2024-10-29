@@ -4,7 +4,6 @@ cargo/c-2200-workaround-x32-test.patch
 cargo/c-disable-fs-specific-test.patch
 cargo/c-0003-tests-add-missing-cross-disabled-checks.patch
 cargo/d-0012-cargo-always-return-dev-channel.patch
-upstream/u-fix-get-toml-when-test.patch
 upstream/u-ignore-ppc-hangs.patch
 upstream/u-rustc-llvm-cross-flags.patch
 upstream/u-hurd-tests.patch
@@ -41,5 +40,8 @@ behaviour/d-rustdoc-disable-embedded-fonts.patch
 ubuntu/ubuntu-disable-ppc64el-asm-tests.patch
 ubuntu/ubuntu-ignore-arm-doctest.patch
 vendor/onig_sys-use-system-lib.patch
-upstream/Fix-inclusion-of-wasm-component-ld-in-dist-artifacts.patch
 vendor/libz-sys-allow-cross-building.patch
+build/bootstrap-tests-disable-compiler-rt-optimizing.patch
+build/disable-broken-i386-tests.patch
+build/Make-option-like-enum.rs-UB-free-and-portable.patch
+build/ignore-broken-debuginfo-tests.patch

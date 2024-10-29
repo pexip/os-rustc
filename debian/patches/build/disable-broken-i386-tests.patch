@@ -1,0 +1,40 @@
+From: =?utf-8?q?Fabian_Gr=C3=BCnbichler?= <git@fabian.gruenbichler.email>
+Date: Wed, 23 Oct 2024 22:29:50 +0200
+Subject: disable broken i386 tests
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+
+Signed-off-by: Fabian Grünbichler <git@fabian.gruenbichler.email>
+---
+ tests/ui/consts/const-float-bits-conv.rs     | 3 ++-
+ tests/ui/traits/object/print_vtable_sizes.rs | 2 ++
+ 2 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/tests/ui/consts/const-float-bits-conv.rs b/tests/ui/consts/const-float-bits-conv.rs
+index 3a526c5..682eff2 100644
+--- a/tests/ui/consts/const-float-bits-conv.rs
++++ b/tests/ui/consts/const-float-bits-conv.rs
+@@ -26,7 +26,8 @@ macro_rules! const_assert {
+ 
+ fn has_broken_floats() -> bool {
+     // i586 targets are broken due to <https://github.com/rust-lang/rust/issues/114479>.
+-    std::env::var("TARGET").is_ok_and(|v| v.contains("i586"))
++    // Debian: this is true for our i686 target (i368 arch)
++    std::env::var("TARGET").is_ok_and(|v| v.contains("i686"))
+ }
+ 
+ #[cfg(target_arch = "x86_64")]
+diff --git a/tests/ui/traits/object/print_vtable_sizes.rs b/tests/ui/traits/object/print_vtable_sizes.rs
+index 684458d..d288d18 100644
+--- a/tests/ui/traits/object/print_vtable_sizes.rs
++++ b/tests/ui/traits/object/print_vtable_sizes.rs
+@@ -1,5 +1,7 @@
+ //@ check-pass
+ //@ compile-flags: -Z print-vtable-sizes
++//Debian: broken floats break the expected output on i386
++//@ ignore-i686
+ #![crate_type = "lib"]
+ 
+ trait A<T: help::V>: AsRef<[T::V]> + AsMut<[T::V]> {}

@@ -9,10 +9,10 @@ Forwarded: not-needed
  1 file changed, 2 insertions(+), 3 deletions(-)
 
 diff --git a/src/tools/cargo/src/cargo/core/features.rs b/src/tools/cargo/src/cargo/core/features.rs
-index f613bdf..d3e76ee 100644
+index 3dc2a1d..7900e88 100644
 --- a/src/tools/cargo/src/cargo/core/features.rs
 +++ b/src/tools/cargo/src/cargo/core/features.rs
-@@ -1389,9 +1389,8 @@ pub fn channel() -> String {
+@@ -1394,9 +1394,8 @@ pub fn channel() -> String {
              return "dev".to_string();
          }
      }

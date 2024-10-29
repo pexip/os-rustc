@@ -8,10 +8,10 @@ Forwarded: no
  1 file changed, 6 insertions(+)
 
 diff --git a/src/bootstrap/src/core/config/tests.rs b/src/bootstrap/src/core/config/tests.rs
-index bfb2c02..7fb81f6 100644
+index 219c5a6..4a51358 100644
 --- a/src/bootstrap/src/core/config/tests.rs
 +++ b/src/bootstrap/src/core/config/tests.rs
-@@ -21,6 +21,9 @@ fn parse(config: &str) -> Config {
+@@ -20,6 +20,9 @@ fn parse(config: &str) -> Config {
  
  #[test]
  fn download_ci_llvm() {
@@ -21,7 +21,7 @@ index bfb2c02..7fb81f6 100644
      if crate::core::build_steps::llvm::is_ci_llvm_modified(&parse("")) {
          eprintln!("Detected LLVM as non-available: running in CI and modified LLVM in this change");
          return;
-@@ -52,6 +55,9 @@ fn download_ci_llvm() {
+@@ -51,6 +54,9 @@ fn download_ci_llvm() {
  //   - https://github.com/rust-lang/rust/pull/109162#issuecomment-1496782487
  #[test]
  fn detect_src_and_out() {

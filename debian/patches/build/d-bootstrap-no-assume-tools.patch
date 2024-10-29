@@ -9,10 +9,10 @@ Forwarded: not-needed
  1 file changed, 4 insertions(+)
 
 diff --git a/src/bootstrap/src/core/builder/tests.rs b/src/bootstrap/src/core/builder/tests.rs
-index 97c9ece..b3415c8 100644
+index c554684..cd351be 100644
 --- a/src/bootstrap/src/core/builder/tests.rs
 +++ b/src/bootstrap/src/core/builder/tests.rs
-@@ -429,10 +429,14 @@ mod dist {
+@@ -432,10 +432,14 @@ mod dist {
      #[test]
      fn dist_only_cross_host() {
          let b = TargetSelection::from_user("B-B");

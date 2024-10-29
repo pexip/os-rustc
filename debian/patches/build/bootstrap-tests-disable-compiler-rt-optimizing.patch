@@ -1,0 +1,30 @@
+From: =?utf-8?q?Fabian_Gr=C3=BCnbichler?= <f.gruenbichler@proxmox.com>
+Date: Tue, 22 Oct 2024 09:03:38 +0200
+Subject: bootstrap tests: disable compiler-rt optimizing
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+it cannot work since there are no bundled LLVM (and thus no bundled
+compiler-rt) sources available. during the regular build this is handled by our
+config, but bootstrap tests don't use that..
+
+
+Signed-off-by: Fabian Grünbichler <f.gruenbichler@proxmox.com>
+---
+ src/bootstrap/src/core/config/config.rs | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/bootstrap/src/core/config/config.rs b/src/bootstrap/src/core/config/config.rs
+index bdfee55..13a84d3 100644
+--- a/src/bootstrap/src/core/config/config.rs
++++ b/src/bootstrap/src/core/config/config.rs
+@@ -1372,6 +1372,8 @@ impl Config {
+             let build = toml.build.get_or_insert_with(Default::default);
+             build.rustc = build.rustc.take().or(std::env::var_os("RUSTC").map(|p| p.into()));
+             build.cargo = build.cargo.take().or(std::env::var_os("CARGO").map(|p| p.into()));
++            // Debian: don't optimize compiler-rt, the bundled sources are not available..
++            build.optimized_compiler_builtins = Some(false);
+         }
+ 
+         if let Some(include) = &toml.profile {

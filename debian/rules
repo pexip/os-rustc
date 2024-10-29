@@ -34,8 +34,8 @@ export RUST_LONG_VERSION
 DEB_DESTDIR := $(CURDIR)/debian/tmp
 
 # Use system LLVM (comment out to use vendored LLVM)
-LLVM_VERSION = 18
-OLD_LLVM_VERSION = 17
+LLVM_VERSION = 19
+OLD_LLVM_VERSION = 18
 # Cargo-specific flags
 export LIBSSH2_SYS_USE_PKG_CONFIG=1
 # Make it easier to test against a custom LLVM
@@ -59,9 +59,10 @@ ifneq (,$(filter $(DEB_TARGET_ARCH),sparc64 mips64el hurd-i386 hurd-amd64))
 # mips64el: has profiler, but buggy atm (32-bit overflow in some counter?)
 CLANG_RT_ARCH =
 PROFILER = "false"
+PROFILER_PATH = ""
 else
-export LLVM_PROFILER_RT_LIB=/usr/lib/llvm-$(LLVM_VERSION)/lib/clang/$(LLVM_VERSION)/lib/linux/libclang_rt.profile-$(CLANG_RT_ARCH).a
 PROFILER = "true"
+PROFILER_PATH = profiler = \"/usr/lib/llvm-$(LLVM_VERSION)/lib/clang/$(LLVM_VERSION)/lib/linux/libclang_rt.profile-$(CLANG_RT_ARCH).a\"
 endif
 
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
@@ -233,6 +234,8 @@ debian/config.toml: debian/config.toml.in debian/rules
 		-DLLVM_VERSION="$(LLVM_VERSION)" \
 		-DRUST_DESTDIR="$(RUST_DESTDIR)" \
 		-DPROFILER="$(PROFILER)" \
+		-DPROFILER_PATH="$(PROFILER_PATH)" \
+		-DWINDOWS_ARCH="$(WINDOWS_ARCH)" \
 		"$<" > "$@"
 	if $(DOWNLOAD_BOOTSTRAP) || [ $(HAVE_BINARY_TARBALL) != 0 ]; \
 	  then sed -i -e '/^rustc = /d' -e '/^cargo = /d' "$@"; fi
@@ -271,8 +274,12 @@ debian/dh_auto_configure.stamp: debian/config.toml check-no-old-llvm extra-vendo
 	# work around #842634
 	if test $$(grep "127.0.0.1\s*localhost" /etc/hosts | wc -l) -gt 1; then \
 	  debian/ensure-patch -N debian/patches-unused/d-test-host-duplicates.patch; fi
-	# don't care about lock changes
-	rm -f Cargo.lock src/bootstrap/Cargo.lock src/tools/rust-analyzer/Cargo.lock src/tools/cargo/Cargo.lock
+
+	# allow lock changes during build, but keep originals around in case we need them for rust-src
+	# keep in sync with d/prune-unused-deps
+	for ws in . src/bootstrap library src/tools/rust-analyzer src/tools/cargo src/tools/rustbook; do \
+	  if [ -f "$$ws/Cargo.lock" ]; then mv "$$ws/Cargo.lock" "$$ws/Cargo.lock.orig"; fi \
+	done
 	# We patched some crates so have to rm the checksums
 	find vendor -name .cargo-checksum.json -execdir "$(CURDIR)/debian/prune-checksums" "{}" +
 	# Link against system liblzma, see https://github.com/alexcrichton/xz2-rs/issues/16
@@ -483,8 +490,11 @@ endif
 override_dh_install-indep:
 	dh_install
 	$(RM) -rf $(SRC_CLEAN:%=debian/rust-src/usr/src/rustc-$(RUST_LONG_VERSION)/%)
+
+	mv debian/rust-src/usr/src/rustc-$(RUST_LONG_VERSION)/library/Cargo.lock.orig \
+		debian/rust-src/usr/src/rustc-$(RUST_LONG_VERSION)/library/Cargo.lock
 	# Get rid of lintian warnings
-	find debian/rust-src/usr/src/rustc-$(RUST_LONG_VERSION) \
+	find debian/rust-src/usr/src/rustc-$(RUST_LONG_VERSION) -type f \
 		\( -name .gitignore \
 		-o -name 'LICENSE*' \
 		-o -name 'LICENCE' \

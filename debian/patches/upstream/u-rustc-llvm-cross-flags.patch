@@ -8,10 +8,10 @@ Subject: u-rustc-llvm-cross-flags
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/compiler/rustc_llvm/build.rs b/compiler/rustc_llvm/build.rs
-index 4c1f78e..7134fb6 100644
+index b2ff9ef..f8debd9 100644
 --- a/compiler/rustc_llvm/build.rs
 +++ b/compiler/rustc_llvm/build.rs
-@@ -302,7 +302,7 @@ fn main() {
+@@ -325,7 +325,7 @@ fn main() {
              if let Some(stripped) = lib.strip_prefix("-LIBPATH:") {
                  println!("cargo:rustc-link-search=native={}", stripped.replace(&host, &target));
              } else if let Some(stripped) = lib.strip_prefix("-L") {

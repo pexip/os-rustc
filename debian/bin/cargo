@@ -217,6 +217,9 @@ def main(*args):
             subcmd = a
             newargs.extend(["-Zavoid-dev-deps", a, "--verbose", "--verbose"] +
                 parallel + ["--target", host_rust_type])
+            if lto:
+                newargs.append("--config")
+                newargs.append(f"profile.release.lto={lto}")
         elif (subcmd is None) and (a == "clean"):
             subcmd = a
             newargs.extend([a, "--verbose", "--verbose"])
@@ -231,9 +234,6 @@ def main(*args):
     if nocheck and subcmd in ("test", "bench"):
         return 0
 
-    if lto:
-        newargs.append("--config")
-        newargs.append(f"profile.release.lto={lto}")
 
     if subcmd == "clean":
         logrun(["env", "RUST_BACKTRACE=1", "/usr/bin/cargo"] + list(newargs), check=True)

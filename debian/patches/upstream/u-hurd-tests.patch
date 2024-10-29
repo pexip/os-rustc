@@ -1,16 +1,50 @@
 From: Debian Rust Maintainers <pkg-rust-maintainers@alioth-lists.debian.net>
 Date: Thu, 13 Jun 2024 11:16:39 +0200
-Subject: These tests hang or make the box OOM
+Subject: compiletest: add ignore-hurd support and annotate some tests
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+These tests hang or make the box OOM
 
 Forwarded: no
+
+
+Signed-off-by: Fabian Grünbichler <git@fabian.gruenbichler.email>
 ---
+ src/tools/compiletest/src/command-list.rs             | 1 +
+ src/tools/compiletest/src/header/tests.rs             | 1 +
  tests/crashes/115994.rs                               | 1 +
  tests/run-make/long-linker-command-lines/foo.rs       | 7 +++++++
  tests/ui/associated-consts/issue-93775.rs             | 1 +
  tests/ui/issues/issue-74564-if-expr-stack-overflow.rs | 1 +
  tests/ui/threads-sendsync/mpsc_stress.rs              | 1 +
- 5 files changed, 11 insertions(+)
+ 7 files changed, 13 insertions(+)
 
+diff --git a/src/tools/compiletest/src/command-list.rs b/src/tools/compiletest/src/command-list.rs
+index a559d6f..1c2ff87 100644
+--- a/src/tools/compiletest/src/command-list.rs
++++ b/src/tools/compiletest/src/command-list.rs
+@@ -54,6 +54,7 @@ const KNOWN_DIRECTIVE_NAMES: &[&str] = &[
+     "ignore-gnu",
+     "ignore-haiku",
+     "ignore-horizon",
++    "ignore-hurd",
+     "ignore-i686-pc-windows-gnu",
+     "ignore-i686-pc-windows-msvc",
+     "ignore-illumos",
+diff --git a/src/tools/compiletest/src/header/tests.rs b/src/tools/compiletest/src/header/tests.rs
+index 29e11e7..eeb54e9 100644
+--- a/src/tools/compiletest/src/header/tests.rs
++++ b/src/tools/compiletest/src/header/tests.rs
+@@ -282,6 +282,7 @@ fn ignore_target() {
+     assert!(check_ignore(&config, "//@ ignore-x86_64-unknown-linux-gnu"));
+     assert!(check_ignore(&config, "//@ ignore-x86_64"));
+     assert!(check_ignore(&config, "//@ ignore-linux"));
++    assert!(check_ignore(&config, "//@ ignore-hurd"));
+     assert!(check_ignore(&config, "//@ ignore-unix"));
+     assert!(check_ignore(&config, "//@ ignore-gnu"));
+     assert!(check_ignore(&config, "//@ ignore-64bit"));
 diff --git a/tests/crashes/115994.rs b/tests/crashes/115994.rs
 index 23d1507..e0714e5 100644
 --- a/tests/crashes/115994.rs
@@ -23,10 +57,10 @@ index 23d1507..e0714e5 100644
  // To prevent "overflow while adding drop-check rules".
  use std::mem::ManuallyDrop;
 diff --git a/tests/run-make/long-linker-command-lines/foo.rs b/tests/run-make/long-linker-command-lines/foo.rs
-index 9d4a701..f05130f 100644
+index 5b30c06..9ef0d5a 100644
 --- a/tests/run-make/long-linker-command-lines/foo.rs
 +++ b/tests/run-make/long-linker-command-lines/foo.rs
-@@ -42,6 +42,13 @@ fn read_linker_args(path: &Path) -> String {
+@@ -33,6 +33,13 @@ fn read_linker_args(path: &Path) -> String {
      }
  }
  
@@ -38,32 +72,32 @@ index 9d4a701..f05130f 100644
 +
 +#[cfg(not(target_os = "hurd"))]
  fn main() {
-     let tmpdir = PathBuf::from(env::var_os("TMPDIR").unwrap());
-     let ok = tmpdir.join("ok");
+     let ok = PathBuf::from("ok");
+     if env::var("YOU_ARE_A_LINKER").is_ok() {
 diff --git a/tests/ui/associated-consts/issue-93775.rs b/tests/ui/associated-consts/issue-93775.rs
-index c9044e2..a49a280 100644
+index c9044e2..5fb093d 100644
 --- a/tests/ui/associated-consts/issue-93775.rs
 +++ b/tests/ui/associated-consts/issue-93775.rs
 @@ -1,5 +1,6 @@
  //@ build-pass
  // ignore-tidy-linelength
-+// ignore-hurd
++//@ ignore-hurd
  
  // Regression for #93775, needs build-pass to test it.
  
 diff --git a/tests/ui/issues/issue-74564-if-expr-stack-overflow.rs b/tests/ui/issues/issue-74564-if-expr-stack-overflow.rs
-index c0ffed2..6693c07 100644
+index c0ffed2..1e97353 100644
 --- a/tests/ui/issues/issue-74564-if-expr-stack-overflow.rs
 +++ b/tests/ui/issues/issue-74564-if-expr-stack-overflow.rs
 @@ -1,5 +1,6 @@
  //@ build-pass
  // ignore-tidy-filelength
-+// ignore-hurd
++//@ ignore-hurd
  #![crate_type = "rlib"]
  
  fn banana(v: &str) -> u32 {
 diff --git a/tests/ui/threads-sendsync/mpsc_stress.rs b/tests/ui/threads-sendsync/mpsc_stress.rs
-index f5354c6..413239e 100644
+index fe0b47f..77ce6d5 100644
 --- a/tests/ui/threads-sendsync/mpsc_stress.rs
 +++ b/tests/ui/threads-sendsync/mpsc_stress.rs
 @@ -1,6 +1,7 @@
@@ -72,5 +106,5 @@ index f5354c6..413239e 100644
  //@ needs-threads
 +//@ ignore-hurd
  
- use std::sync::mpsc::channel;
- use std::sync::mpsc::TryRecvError;
+ use std::sync::atomic::{AtomicUsize, Ordering};
+ use std::sync::mpsc::{channel, RecvError, RecvTimeoutError, TryRecvError};
