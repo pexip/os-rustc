@@ -11,7 +11,7 @@ Forwarded: not-needed
  2 files changed, 8 deletions(-)
 
 diff --git a/compiler/rustc/Cargo.toml b/compiler/rustc/Cargo.toml
-index 5008069..af37dfc 100644
+index a2fc9d5..7a9aafc 100644
 --- a/compiler/rustc/Cargo.toml
 +++ b/compiler/rustc/Cargo.toml
 @@ -20,14 +20,8 @@ rustc_smir = { path = "../rustc_smir" }
@@ -28,7 +28,7 @@ index 5008069..af37dfc 100644
 -jemalloc = ['dep:jemalloc-sys']
  llvm = ['rustc_driver_impl/llvm']
  max_level_info = ['rustc_driver_impl/max_level_info']
- rustc_use_parallel_compiler = ['rustc_driver_impl/rustc_use_parallel_compiler']
+ rustc_randomized_layouts = ['rustc_driver_impl/rustc_randomized_layouts']
 diff --git a/src/tools/rust-analyzer/crates/profile/Cargo.toml b/src/tools/rust-analyzer/crates/profile/Cargo.toml
 index 2e3413f..f823aa1 100644
 --- a/src/tools/rust-analyzer/crates/profile/Cargo.toml

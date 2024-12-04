@@ -9,10 +9,10 @@ Forwarded: not-needed
  1 file changed, 4 insertions(+)
 
 diff --git a/src/bootstrap/src/core/builder/tests.rs b/src/bootstrap/src/core/builder/tests.rs
-index c554684..cd351be 100644
+index 695a668..4fb7cf4 100644
 --- a/src/bootstrap/src/core/builder/tests.rs
 +++ b/src/bootstrap/src/core/builder/tests.rs
-@@ -432,10 +432,14 @@ mod dist {
+@@ -435,10 +435,14 @@ mod dist {
      #[test]
      fn dist_only_cross_host() {
          let b = TargetSelection::from_user("B-B");
@@ -26,4 +26,4 @@ index c554684..cd351be 100644
 +        config.tools = Some(tools);
          let mut cache = run_build(&[], config);
  
-         assert_eq!(
+         assert_eq!(first(cache.all::<dist::Rustc>()), &[dist::Rustc {

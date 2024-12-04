@@ -8,10 +8,10 @@ Subject: c-2003-workaround-qemu-vfork-command-not-found
  1 file changed, 8 insertions(+)
 
 diff --git a/src/tools/cargo/crates/cargo-test-macro/src/lib.rs b/src/tools/cargo/crates/cargo-test-macro/src/lib.rs
-index 2e62f6a..dd9aac9 100644
+index 93bf0ec..2afc809 100644
 --- a/src/tools/cargo/crates/cargo-test-macro/src/lib.rs
 +++ b/src/tools/cargo/crates/cargo-test-macro/src/lib.rs
-@@ -283,6 +283,14 @@ fn check_command(command_path: &Path, args: &[&str]) -> bool {
+@@ -281,6 +281,14 @@ fn check_command(command_path: &Path, args: &[&str]) -> bool {
          }
      };
      if !output.status.success() {

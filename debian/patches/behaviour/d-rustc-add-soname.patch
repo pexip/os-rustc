@@ -22,13 +22,14 @@ using a GNU linker).
 Forwarded: no
 ---
  compiler/rustc_codegen_ssa/src/back/link.rs | 7 +++++++
- 1 file changed, 7 insertions(+)
+ tests/run-make/dylib-soname/rmake.rs        | 4 +++-
+ 2 files changed, 10 insertions(+), 1 deletion(-)
 
 diff --git a/compiler/rustc_codegen_ssa/src/back/link.rs b/compiler/rustc_codegen_ssa/src/back/link.rs
-index 1518e45..d29f3c3 100644
+index 34dc599..2fbe842 100644
 --- a/compiler/rustc_codegen_ssa/src/back/link.rs
 +++ b/compiler/rustc_codegen_ssa/src/back/link.rs
-@@ -2531,6 +2531,13 @@ fn add_order_independent_options(
+@@ -2530,6 +2530,13 @@ fn add_order_independent_options(
      }
  
      add_rpath_args(cmd, sess, codegen_results, out_filename);
@@ -42,3 +43,21 @@ index 1518e45..d29f3c3 100644
  }
  
  // Write the NatVis debugger visualizer files for each crate to the temp directory and gather the file paths.
+diff --git a/tests/run-make/dylib-soname/rmake.rs b/tests/run-make/dylib-soname/rmake.rs
+index 714997c..653a0fe 100644
+--- a/tests/run-make/dylib-soname/rmake.rs
++++ b/tests/run-make/dylib-soname/rmake.rs
+@@ -3,10 +3,12 @@
+ 
+ //@ only-linux
+ //@ ignore-cross-compile
+-
+ use run_make_support::{cmd, run_in_tmpdir, rustc};
+ 
+ fn main() {
++    // Debian: we patch rustc to intentionally insert the soname
++    return;
++
+     let check = |ty: &str| {
+         rustc().crate_name("foo").crate_type(ty).input("foo.rs").run();
+         cmd("readelf").arg("-d").arg("libfoo.so").run()

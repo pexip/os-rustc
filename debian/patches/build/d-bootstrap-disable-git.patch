@@ -4,29 +4,11 @@ Subject: bootstrap: always use commit info file instead of checking .git
 
 Forwarded: not-needed
 ---
- src/bootstrap/src/core/build_steps/dist.rs | 6 ++++--
- src/bootstrap/src/utils/channel.rs         | 5 +++--
- 2 files changed, 7 insertions(+), 4 deletions(-)
+ src/bootstrap/src/utils/channel.rs | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
 
-diff --git a/src/bootstrap/src/core/build_steps/dist.rs b/src/bootstrap/src/core/build_steps/dist.rs
-index 4957de2..1bdc965 100644
---- a/src/bootstrap/src/core/build_steps/dist.rs
-+++ b/src/bootstrap/src/core/build_steps/dist.rs
-@@ -1013,8 +1013,10 @@ impl Step for PlainSourceTarball {
- 
-         // If we're building from git or tarball sources, we need to vendor
-         // a complete distribution.
--        if builder.rust_info().is_managed_git_subrepository()
--            || builder.rust_info().is_from_tarball()
-+        //
-+        // Debian: short-circuited because the Debian package is also in a git
-+        //         repository, but cargo-vendor should not be installed or run.
-+        if false
-         {
-             builder.require_and_update_all_submodules();
- 
 diff --git a/src/bootstrap/src/utils/channel.rs b/src/bootstrap/src/utils/channel.rs
-index 3ae512e..fbc3472 100644
+index c361abb..6a0ab10 100644
 --- a/src/bootstrap/src/utils/channel.rs
 +++ b/src/bootstrap/src/utils/channel.rs
 @@ -36,12 +36,13 @@ pub struct Info {

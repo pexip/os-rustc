@@ -212,10 +212,10 @@ index 8ad5b42..f93d3da 100644
  
  ### The Rustdoc Book
 diff --git a/src/doc/reference/src/conditional-compilation.md b/src/doc/reference/src/conditional-compilation.md
-index e445475..45bcc99 100644
+index f73f835..8ecc9d3 100644
 --- a/src/doc/reference/src/conditional-compilation.md
 +++ b/src/doc/reference/src/conditional-compilation.md
-@@ -375,6 +375,6 @@ println!("I'm running on a {} machine!", machine_kind);
+@@ -372,6 +372,6 @@ println!("I'm running on a {} machine!", machine_kind);
  [`target_feature` attribute]: attributes/codegen.md#the-target_feature-attribute
  [attribute]: attributes.md
  [attributes]: attributes.md
@@ -224,10 +224,10 @@ index e445475..45bcc99 100644
  [crate type]: linkage.md
  [static C runtime]: linkage.md#static-and-dynamic-c-runtimes
 diff --git a/src/doc/reference/src/introduction.md b/src/doc/reference/src/introduction.md
-index 2bf5beb..e06aa50 100644
+index 4cd205b..25a7b49 100644
 --- a/src/doc/reference/src/introduction.md
 +++ b/src/doc/reference/src/introduction.md
-@@ -135,8 +135,8 @@ We also want the reference to be as normative as possible, so if you see anythin
+@@ -137,8 +137,8 @@ We also want the reference to be as normative as possible, so if you see anythin
  [the Rust Reference repository]: https://github.com/rust-lang/reference/
  [Unstable Book]: https://doc.rust-lang.org/nightly/unstable-book/
  [_Expression_]: expressions.md
@@ -252,10 +252,10 @@ index 48a1c8e..8cf841b 100644
  To use this feature locally, you typically will use the `RUSTFLAGS` environment
  variable to specify flags to the compiler through Cargo. For example to compile
 diff --git a/src/doc/reference/src/procedural-macros.md b/src/doc/reference/src/procedural-macros.md
-index a97755f..b43f2ff 100644
+index 0ae6e26..e6b61be 100644
 --- a/src/doc/reference/src/procedural-macros.md
 +++ b/src/doc/reference/src/procedural-macros.md
-@@ -335,7 +335,7 @@ Note that neither declarative nor procedural macros support doc comment tokens
+@@ -381,7 +381,7 @@ Note that neither declarative nor procedural macros support doc comment tokens
  their equivalent `#[doc = r"str"]` attributes when passed to macros.
  
  [Attribute macros]: #attribute-macros
@@ -339,10 +339,10 @@ index 39a05cf..7e450ae 100644
  
  ```bash
 diff --git a/src/doc/unstable-book/src/compiler-flags/branch-protection.md b/src/doc/unstable-book/src/compiler-flags/branch-protection.md
-index ca56648..85285e3 100644
+index 9276220..0250ab0 100644
 --- a/src/doc/unstable-book/src/compiler-flags/branch-protection.md
 +++ b/src/doc/unstable-book/src/compiler-flags/branch-protection.md
-@@ -15,4 +15,4 @@ For example, `-Z branch-protection=bti,pac-ret,leaf` is valid, but
+@@ -19,4 +19,4 @@ For example, `-Z branch-protection=bti,pac-ret,leaf` is valid, but
  
  Rust's standard library does not ship with BTI or pointer authentication enabled by default.
  In Cargo projects the standard library can be recompiled with pointer authentication using the nightly

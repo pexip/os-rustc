@@ -19,7 +19,7 @@ Forwarded: not-needed
  8 files changed, 51 insertions(+), 303 deletions(-)
 
 diff --git a/src/doc/rust-by-example/theme/index.hbs b/src/doc/rust-by-example/theme/index.hbs
-index 3876555..18ec61f 100644
+index 4723667..a358f8c 100644
 --- a/src/doc/rust-by-example/theme/index.hbs
 +++ b/src/doc/rust-by-example/theme/index.hbs
 @@ -33,10 +33,7 @@
@@ -79,7 +79,7 @@ index 3876555..18ec61f 100644
          <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
  
          <!-- Hide / unhide sidebar before it is displayed -->
-@@ -312,54 +280,8 @@
+@@ -315,54 +283,8 @@
          </script>
          {{/if}}
  

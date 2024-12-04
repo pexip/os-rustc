@@ -4,28 +4,28 @@ Subject: d-0003-cc-psm-rebuild-wasm32
 
 Forwarded: not-needed
 ---
- vendor/cc-1.0.97/src/lib.rs | 2 +-
- vendor/psm-0.1.21/build.rs  | 7 ++-----
+ vendor/cc-1.1.22/src/lib.rs | 2 +-
+ vendor/psm-0.1.23/build.rs  | 7 ++-----
  2 files changed, 3 insertions(+), 6 deletions(-)
 
-diff --git a/vendor/cc-1.0.97/src/lib.rs b/vendor/cc-1.0.97/src/lib.rs
-index d7122ae..d2b7cf7 100644
---- a/vendor/cc-1.0.97/src/lib.rs
-+++ b/vendor/cc-1.0.97/src/lib.rs
-@@ -2863,7 +2863,7 @@ impl Build {
-                     || target == "wasm32-unknown-wasi"
-                     || target == "wasm32-unknown-unknown"
-                 {
--                    "clang".to_string()
-+                    "rust-clang".to_string()
+diff --git a/vendor/cc-1.1.22/src/lib.rs b/vendor/cc-1.1.22/src/lib.rs
+index 9855698..d238251 100644
+--- a/vendor/cc-1.1.22/src/lib.rs
++++ b/vendor/cc-1.1.22/src/lib.rs
+@@ -2954,7 +2954,7 @@ impl Build {
+                     if self.cpp {
+                         "clang++".to_string()
+                     } else {
+-                        "clang".to_string()
++                        "rust-clang".to_string()
+                     }
                  } else if target.contains("vxworks") {
                      if self.cpp {
-                         "wr-c++".to_string()
-diff --git a/vendor/psm-0.1.21/build.rs b/vendor/psm-0.1.21/build.rs
-index 9d40212..e39549d 100644
---- a/vendor/psm-0.1.21/build.rs
-+++ b/vendor/psm-0.1.21/build.rs
-@@ -50,7 +50,7 @@ fn find_assembly(
+diff --git a/vendor/psm-0.1.23/build.rs b/vendor/psm-0.1.23/build.rs
+index bc84149..a299ab5 100644
+--- a/vendor/psm-0.1.23/build.rs
++++ b/vendor/psm-0.1.23/build.rs
+@@ -51,7 +51,7 @@ fn find_assembly(
          ("sparc", _, _, _) => Some(("src/arch/sparc_sysv.s", true)),
          ("riscv32", _, _, _) => Some(("src/arch/riscv.s", true)),
          ("riscv64", _, _, _) => Some(("src/arch/riscv64.s", true)),
@@ -34,7 +34,7 @@ index 9d40212..e39549d 100644
          ("loongarch64", _, _, _) => Some(("src/arch/loongarch64.s", true)),
          _ => None,
      }
-@@ -97,11 +97,8 @@ fn main() {
+@@ -99,11 +99,8 @@ fn main() {
          cfg.define(&*format!("CFG_TARGET_ENV_{}", env), None);
      }
  

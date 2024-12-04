@@ -9,10 +9,10 @@ Forwarded: not-needed
  2 files changed, 6 insertions(+), 1 deletion(-)
 
 diff --git a/compiler/rustc_lint/src/builtin.rs b/compiler/rustc_lint/src/builtin.rs
-index d848256..953bd26 100644
+index 8bd9c89..bac3bdb 100644
 --- a/compiler/rustc_lint/src/builtin.rs
 +++ b/compiler/rustc_lint/src/builtin.rs
-@@ -2748,7 +2748,10 @@ declare_lint! {
+@@ -2724,7 +2724,10 @@ declare_lint! {
      /// ### Example
      ///
      /// ```rust,compile_fail
@@ -25,20 +25,20 @@ index d848256..953bd26 100644
      ///
      /// fn main() {
 diff --git a/compiler/rustc_lint_defs/src/builtin.rs b/compiler/rustc_lint_defs/src/builtin.rs
-index 04fd7c9..84ac633 100644
+index 23dc521..99e194e 100644
 --- a/compiler/rustc_lint_defs/src/builtin.rs
 +++ b/compiler/rustc_lint_defs/src/builtin.rs
-@@ -2991,11 +2991,13 @@ declare_lint! {
+@@ -2929,11 +2929,13 @@ declare_lint! {
      ///
-     /// use std::arch::asm;
+     /// use std::arch::naked_asm;
      ///
 +    /// #[cfg(not(any(target_arch = "powerpc64", target_arch = "s390x")))]
      /// #[naked]
      /// pub fn default_abi() -> u32 {
-     ///     unsafe { asm!("", options(noreturn)); }
+     ///     unsafe { naked_asm!(""); }
      /// }
      ///
 +    /// #[cfg(not(any(target_arch = "powerpc64", target_arch = "s390x")))]
      /// #[naked]
      /// pub extern "Rust" fn rust_abi() -> u32 {
-     ///     unsafe { asm!("", options(noreturn)); }
+     ///     unsafe { naked_asm!(""); }

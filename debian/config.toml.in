@@ -1,4 +1,4 @@
-change-id = 129295
+change-id = 131075
 
 [build]
 submodules = false
@@ -69,6 +69,7 @@ profiler = false
 )dnl
 [llvm]
 link-shared = true
+download-ci-llvm = false
 
 [rust]
 jemalloc = false
