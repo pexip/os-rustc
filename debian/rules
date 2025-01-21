@@ -146,8 +146,7 @@ ifneq (,$(findstring nodoc,$(DEB_BUILD_OPTIONS)))
 endif
 
 BUILD_WASM := true
-# NOTE: drop wasm32-wasi with next upstream version, it's deprecated and will be removed soon
-WASM_TARGETS := "wasm32-unknown-unknown,wasm32-wasip1,wasm32-wasip2,wasm32-wasi"
+WASM_TARGETS := "wasm32-unknown-unknown,wasm32-wasip1,wasm32-wasip2"
 ifneq (,$(findstring nowasm,$(DEB_BUILD_PROFILES)))
   BUILD_WASM := false
 endif

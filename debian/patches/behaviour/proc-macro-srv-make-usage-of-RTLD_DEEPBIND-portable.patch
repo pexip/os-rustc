@@ -1,0 +1,71 @@
+From: =?utf-8?q?Fabian_Gr=C3=BCnbichler?= <f.gruenbichler@proxmox.com>
+Date: Thu, 16 Jan 2025 16:34:12 +0100
+Subject: proc-macro-srv: make usage of RTLD_DEEPBIND portable
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+the constant is wrong on some platforms (e.g., on mips64el it's 0x10, and 0x8
+is RTLD_NOLOAD which makes all this functionality broken), the libc crate takes
+care of those differences for us.
+
+fallback to old hard-coded value for non-glibc environments (which might or
+might not of DEEPBIND support).
+
+Forwarded: https://github.com/rust-lang/rust/pull/135591
+
+Signed-off-by: Fabian Grünbichler <f.gruenbichler@proxmox.com>
+---
+ src/tools/rust-analyzer/Cargo.lock                         |  1 +
+ src/tools/rust-analyzer/crates/proc-macro-srv/Cargo.toml   |  1 +
+ src/tools/rust-analyzer/crates/proc-macro-srv/src/dylib.rs | 11 ++++++++---
+ 3 files changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/src/tools/rust-analyzer/Cargo.lock b/src/tools/rust-analyzer/Cargo.lock
+index 019609e..bf08430 100644
+--- a/src/tools/rust-analyzer/Cargo.lock
++++ b/src/tools/rust-analyzer/Cargo.lock
+@@ -1357,6 +1357,7 @@ dependencies = [
+  "base-db",
+  "expect-test",
+  "intern",
++ "libc",
+  "libloading",
+  "memmap2",
+  "object 0.33.0",
+diff --git a/src/tools/rust-analyzer/crates/proc-macro-srv/Cargo.toml b/src/tools/rust-analyzer/crates/proc-macro-srv/Cargo.toml
+index 4fabcc9..28ca44b 100644
+--- a/src/tools/rust-analyzer/crates/proc-macro-srv/Cargo.toml
++++ b/src/tools/rust-analyzer/crates/proc-macro-srv/Cargo.toml
+@@ -14,6 +14,7 @@ doctest = false
+ 
+ [dependencies]
+ object.workspace = true
++libc.workspace = true
+ libloading.workspace = true
+ memmap2.workspace = true
+ 
+diff --git a/src/tools/rust-analyzer/crates/proc-macro-srv/src/dylib.rs b/src/tools/rust-analyzer/crates/proc-macro-srv/src/dylib.rs
+index 78ae457..745bfc3 100644
+--- a/src/tools/rust-analyzer/crates/proc-macro-srv/src/dylib.rs
++++ b/src/tools/rust-analyzer/crates/proc-macro-srv/src/dylib.rs
+@@ -65,11 +65,16 @@ fn load_library(file: &Utf8Path) -> Result<Library, libloading::Error> {
+ 
+ #[cfg(unix)]
+ fn load_library(file: &Utf8Path) -> Result<Library, libloading::Error> {
++    // not defined by POSIX, different values on mips vs other targets
++    #[cfg(target_env = "gnu")]
++    use libc::RTLD_DEEPBIND;
+     use libloading::os::unix::Library as UnixLibrary;
+-    use std::os::raw::c_int;
++    // defined by POSIX
++    use libloading::os::unix::RTLD_NOW;
+ 
+-    const RTLD_NOW: c_int = 0x00002;
+-    const RTLD_DEEPBIND: c_int = 0x00008;
++    // MUSL and bionic don't have it..
++    #[cfg(not(target_env = "gnu"))]
++    const RTLD_DEEPBIND: std::os::raw::c_int = 0x0;
+ 
+     unsafe { UnixLibrary::open(Some(file), RTLD_NOW | RTLD_DEEPBIND).map(|lib| lib.into()) }
+ }

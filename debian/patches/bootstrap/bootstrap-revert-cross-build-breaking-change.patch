@@ -1,0 +1,49 @@
+From: =?utf-8?q?Fabian_Gr=C3=BCnbichler?= <f.gruenbichler@proxmox.com>
+Date: Tue, 21 Jan 2025 10:43:33 +0100
+Subject: bootstrap: revert cross-build breaking change
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+this reverts 68034f837a39387e49fc7d7c5b088f5372a1127e modulo file split that
+happened afterwards.
+
+Forwarded: https://github.com/rust-lang/rust/issues/133629
+
+Signed-off-by: Fabian Grünbichler <f.gruenbichler@proxmox.com>
+---
+ src/bootstrap/src/core/builder/cargo.rs | 20 +++-----------------
+ 1 file changed, 3 insertions(+), 17 deletions(-)
+
+diff --git a/src/bootstrap/src/core/builder/cargo.rs b/src/bootstrap/src/core/builder/cargo.rs
+index 0e53660..e76bcb2 100644
+--- a/src/bootstrap/src/core/builder/cargo.rs
++++ b/src/bootstrap/src/core/builder/cargo.rs
+@@ -655,24 +655,10 @@ impl Builder<'_> {
+         match mode {
+             Mode::Std | Mode::ToolBootstrap | Mode::ToolStd => {}
+             Mode::Rustc | Mode::Codegen | Mode::ToolRustc => {
+-                // Build proc macros both for the host and the target unless proc-macros are not
+-                // supported by the target.
++                // Build proc macros both for the host and the target
+                 if target != compiler.host && cmd_kind != Kind::Check {
+-                    let error = command(self.rustc(compiler))
+-                        .arg("--target")
+-                        .arg(target.rustc_target_arg())
+-                        .arg("--print=file-names")
+-                        .arg("--crate-type=proc-macro")
+-                        .arg("-")
+-                        .run_capture(self)
+-                        .stderr();
+-                    let not_supported = error
+-                        .lines()
+-                        .any(|line| line.contains("unsupported crate type `proc-macro`"));
+-                    if !not_supported {
+-                        cargo.arg("-Zdual-proc-macros");
+-                        rustflags.arg("-Zdual-proc-macros");
+-                    }
++                    cargo.arg("-Zdual-proc-macros");
++                    rustflags.arg("-Zdual-proc-macros");
+                 }
+             }
+         }

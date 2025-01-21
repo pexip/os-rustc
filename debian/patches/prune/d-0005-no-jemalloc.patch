@@ -6,12 +6,13 @@ Description: remove jemalloc-sys
 
 Forwarded: not-needed
 ---
- compiler/rustc/Cargo.toml                         | 6 ------
- src/tools/rust-analyzer/crates/profile/Cargo.toml | 2 --
- 2 files changed, 8 deletions(-)
+ compiler/rustc/Cargo.toml                               | 6 ------
+ src/tools/rust-analyzer/crates/profile/Cargo.toml       | 2 --
+ src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml | 4 ----
+ 3 files changed, 12 deletions(-)
 
 diff --git a/compiler/rustc/Cargo.toml b/compiler/rustc/Cargo.toml
-index a2fc9d5..7a9aafc 100644
+index f85c30a..2256524 100644
 --- a/compiler/rustc/Cargo.toml
 +++ b/compiler/rustc/Cargo.toml
 @@ -20,14 +20,8 @@ rustc_smir = { path = "../rustc_smir" }
@@ -49,3 +50,25 @@ index 2e3413f..f823aa1 100644
  
  # Uncomment to enable for the whole crate graph
  # default = [ "cpu_profiler" ]
+diff --git a/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml b/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml
+index 2dd2f22..50a4bab 100644
+--- a/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml
++++ b/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml
+@@ -74,9 +74,6 @@ paths.workspace = true
+ [target.'cfg(windows)'.dependencies]
+ windows-sys = { version = "0.52", features = ["Win32_System_Threading"] }
+ 
+-[target.'cfg(not(target_env = "msvc"))'.dependencies]
+-jemallocator = { version = "0.5.0", package = "tikv-jemallocator", optional = true }
+-
+ [dev-dependencies]
+ expect-test = "1.4.0"
+ xshell.workspace = true
+@@ -86,7 +83,6 @@ test-fixture.workspace = true
+ syntax-bridge.workspace = true
+ 
+ [features]
+-jemalloc = ["jemallocator", "profile/jemalloc"]
+ force-always-assert = ["always-assert/force"]
+ sysroot-abi = []
+ in-rust-tree = [

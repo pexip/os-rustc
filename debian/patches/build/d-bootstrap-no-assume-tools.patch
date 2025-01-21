@@ -9,7 +9,7 @@ Forwarded: not-needed
  1 file changed, 4 insertions(+)
 
 diff --git a/src/bootstrap/src/core/builder/tests.rs b/src/bootstrap/src/core/builder/tests.rs
-index 695a668..4fb7cf4 100644
+index 21c5f72..d6580fe 100644
 --- a/src/bootstrap/src/core/builder/tests.rs
 +++ b/src/bootstrap/src/core/builder/tests.rs
 @@ -435,10 +435,14 @@ mod dist {

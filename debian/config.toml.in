@@ -1,4 +1,4 @@
-change-id = 131075
+change-id = 133207
 
 [build]
 submodules = false
@@ -23,7 +23,15 @@ target = ["DEB_TARGET_RUST_TYPE"]
 docs = false
 
 extended = true
-tools = ["cargo", "clippy", "rustfmt", "rustdoc", "rust-analyzer-proc-macro-srv", "wasm-component-ld"]
+tools = [
+  "cargo",
+  "clippy",
+  "rust-analyzer",
+  "rust-analyzer-proc-macro-srv",
+  "rustdoc",
+  "rustfmt",
+  "wasm-component-ld",
+]
 
 # we use pre-built LLVM, so can't optimize compiler-rt
 optimized-compiler-builtins = false
@@ -50,9 +58,6 @@ linker = "DEB_TARGET_GNU_TYPE-gcc"
 PROFILER_PATH
 
 )dnl
-[target.wasm32-wasi]
-wasi-root = "/usr"
-profiler = false
 [target.wasm32-wasip1]
 wasi-root = "/usr"
 profiler = false
@@ -72,6 +77,7 @@ link-shared = true
 download-ci-llvm = false
 
 [rust]
+download-rustc = false
 jemalloc = false
 optimize = MAKE_OPTIMISATIONS
 dist-src = false

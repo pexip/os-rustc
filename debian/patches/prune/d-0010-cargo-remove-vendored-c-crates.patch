@@ -12,19 +12,19 @@ Forwarded: not-needed
  1 file changed, 2 insertions(+), 4 deletions(-)
 
 diff --git a/src/tools/cargo/Cargo.toml b/src/tools/cargo/Cargo.toml
-index c797f11..32dc2c5 100644
+index c2cbff8..b1386fc 100644
 --- a/src/tools/cargo/Cargo.toml
 +++ b/src/tools/cargo/Cargo.toml
-@@ -79,7 +79,7 @@ proptest = "1.5.0"
- pulldown-cmark = { version = "0.11.0", default-features = false, features = ["html"] }
+@@ -80,7 +80,7 @@ proptest = "1.5.0"
+ pulldown-cmark = { version = "0.12.0", default-features = false, features = ["html"] }
  rand = "0.8.5"
  regex = "1.10.5"
 -rusqlite = { version = "0.32.0", features = ["bundled"] }
-+rusqlite = { version = "0.32.0", features = [] }
- rustfix = { version = "0.8.2", path = "crates/rustfix" }
++rusqlite = { version = "0.32.0" }
+ rustc-hash = "2.0.0"
+ rustfix = { version = "0.9.0", path = "crates/rustfix" }
  same-file = "1.0.6"
- security-framework = "2.11.1"
-@@ -258,10 +258,8 @@ test = false
+@@ -264,10 +264,8 @@ test = false
  doc = false
  
  [features]

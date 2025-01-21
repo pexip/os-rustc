@@ -5,7 +5,6 @@ MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 8bit
 
-Gbp-Pq: Topic build
 Forwarded: not-needed
 
 Signed-off-by: Fabian Grünbichler <git@fabian.gruenbichler.email>
@@ -14,7 +13,7 @@ Signed-off-by: Fabian Grünbichler <git@fabian.gruenbichler.email>
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/src/bootstrap/src/core/builder/tests.rs b/src/bootstrap/src/core/builder/tests.rs
-index 4fb7cf4..f0ab410 100644
+index d6580fe..6ddeacd 100644
 --- a/src/bootstrap/src/core/builder/tests.rs
 +++ b/src/bootstrap/src/core/builder/tests.rs
 @@ -212,7 +212,8 @@ fn alias_and_path_for_library() {

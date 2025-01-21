@@ -4,6 +4,11 @@ usr/bin/llvm-dwp-19 usr/bin/rust-llvm-dwp
 # for -Z gcc-ld=lld, see compiler/rustc_codegen_ssa/src/back/link.rs for logic
 usr/bin/rust-lld usr/lib/rustlib/${env:DEB_HOST_RUST_TYPE}/bin/gcc-ld/ld
 usr/bin/rust-lld usr/lib/rustlib/${env:DEB_HOST_RUST_TYPE}/bin/gcc-ld/ld64
+
+# instead of shipping the one copied by bootstrap, which would be for the wrong
+# architecture in case of a cross build anyway
+usr/bin/llvm-objcopy-19 usr/lib/rustlib/${env:DEB_HOST_RUST_TYPE}/bin/rust-objcopy
+
 # For applications that use cargo-binutils, e.g. grcov
 usr/bin/llvm-profdata-19 usr/lib/rustlib/${env:DEB_HOST_RUST_TYPE}/bin/llvm-profdata
 usr/bin/llvm-cov-19 usr/lib/rustlib/${env:DEB_HOST_RUST_TYPE}/bin/llvm-cov

@@ -94,7 +94,7 @@ index 12876e2..09bd221 100644
   * Recompiling the crate with different metadata (different name/
     `crate_type`).
 diff --git a/src/doc/edition-guide/book.toml b/src/doc/edition-guide/book.toml
-index 77867ae..a9b440b 100644
+index 998a817..9ca0dc7 100644
 --- a/src/doc/edition-guide/book.toml
 +++ b/src/doc/edition-guide/book.toml
 @@ -55,15 +55,15 @@ search.use-boolean-and = true
@@ -121,7 +121,7 @@ index 77867ae..a9b440b 100644
  "/rust-2018/cargo-and-crates-io/crates-io-disallows-wildcard-dependencies.html" = "https://blog.rust-lang.org/2016/01/21/Rust-1.6.html#cratesio-disallows-wildcards"
  "/rust-2018/documentation/index.html" = "../../../index.html"
  "/rust-2018/documentation/new-editions-of-the-book.html" = "../../../book/index.html"
-@@ -95,4 +95,4 @@ search.use-boolean-and = true
+@@ -96,4 +96,4 @@ search.use-boolean-and = true
  "/rust-next/future.html" = "../../std/future/trait.Future.html"
  "/rust-next/alloc.html" = "https://blog.rust-lang.org/2019/07/04/Rust-1.36.0.html#the-alloc-crate-is-stable"
  "/rust-next/maybe-uninit.html" = "https://blog.rust-lang.org/2019/07/04/Rust-1.36.0.html#maybeuninitt-instead-of-memuninitialized"
@@ -212,10 +212,10 @@ index 8ad5b42..f93d3da 100644
  
  ### The Rustdoc Book
 diff --git a/src/doc/reference/src/conditional-compilation.md b/src/doc/reference/src/conditional-compilation.md
-index f73f835..8ecc9d3 100644
+index 5255bb8..46a477b 100644
 --- a/src/doc/reference/src/conditional-compilation.md
 +++ b/src/doc/reference/src/conditional-compilation.md
-@@ -372,6 +372,6 @@ println!("I'm running on a {} machine!", machine_kind);
+@@ -483,6 +483,6 @@ println!("I'm running on a {} machine!", machine_kind);
  [`target_feature` attribute]: attributes/codegen.md#the-target_feature-attribute
  [attribute]: attributes.md
  [attributes]: attributes.md
@@ -239,10 +239,10 @@ index 4cd205b..25a7b49 100644
  [file an issue]: https://github.com/rust-lang/reference/issues
  [lifetime of temporaries]: expressions.html#temporaries
 diff --git a/src/doc/reference/src/linkage.md b/src/doc/reference/src/linkage.md
-index 48a1c8e..8cf841b 100644
+index ff41a14..4d1b72e 100644
 --- a/src/doc/reference/src/linkage.md
 +++ b/src/doc/reference/src/linkage.md
-@@ -216,7 +216,7 @@ fn main() {
+@@ -242,7 +242,7 @@ fn main() {
  }
  ```
  
@@ -278,10 +278,10 @@ index ab95aa2..8023f33 100644
  If you have dependencies using the `cc` crate, you will need to set these
  environment variables:
 diff --git a/src/doc/rustc/src/platform-support/fuchsia.md b/src/doc/rustc/src/platform-support/fuchsia.md
-index 5643c6a..a3458d8 100644
+index 489f46e..8f299a9 100644
 --- a/src/doc/rustc/src/platform-support/fuchsia.md
 +++ b/src/doc/rustc/src/platform-support/fuchsia.md
-@@ -940,7 +940,7 @@ attach and load any relevant debug symbols.
+@@ -925,7 +925,7 @@ attach and load any relevant debug symbols.
  [Fuchsia]: https://fuchsia.dev/
  [source tree]: https://fuchsia.dev/fuchsia-src/get-started/learn/build
  [rustup]: https://rustup.rs/
@@ -339,10 +339,10 @@ index 39a05cf..7e450ae 100644
  
  ```bash
 diff --git a/src/doc/unstable-book/src/compiler-flags/branch-protection.md b/src/doc/unstable-book/src/compiler-flags/branch-protection.md
-index 9276220..0250ab0 100644
+index f0cc44a..bf92669 100644
 --- a/src/doc/unstable-book/src/compiler-flags/branch-protection.md
 +++ b/src/doc/unstable-book/src/compiler-flags/branch-protection.md
-@@ -19,4 +19,4 @@ For example, `-Z branch-protection=bti,pac-ret,leaf` is valid, but
+@@ -20,4 +20,4 @@ For example, `-Z branch-protection=bti,pac-ret,leaf` is valid, but
  
  Rust's standard library does not ship with BTI or pointer authentication enabled by default.
  In Cargo projects the standard library can be recompiled with pointer authentication using the nightly
@@ -362,10 +362,10 @@ index dbb7414..73876b0 100644
  For example:
  ```cmd
 diff --git a/src/doc/unstable-book/src/compiler-flags/sanitizer.md b/src/doc/unstable-book/src/compiler-flags/sanitizer.md
-index 24940f0..73446fa 100644
+index 4679acf..b6c3eb5 100644
 --- a/src/doc/unstable-book/src/compiler-flags/sanitizer.md
 +++ b/src/doc/unstable-book/src/compiler-flags/sanitizer.md
-@@ -883,7 +883,7 @@ It is strongly recommended to combine sanitizers with recompiled and
+@@ -882,7 +882,7 @@ It is strongly recommended to combine sanitizers with recompiled and
  instrumented standard library, for example using [cargo `-Zbuild-std`
  functionality][build-std].
  
@@ -375,10 +375,10 @@ index 24940f0..73446fa 100644
  # Working with other languages
  
 diff --git a/src/tools/linkchecker/main.rs b/src/tools/linkchecker/main.rs
-index 318d1be..ad881a7 100644
+index abaa1d2d7..5a90ea4 100644
 --- a/src/tools/linkchecker/main.rs
 +++ b/src/tools/linkchecker/main.rs
-@@ -294,6 +294,10 @@ impl Checker {
+@@ -297,6 +297,10 @@ impl Checker {
                          return;
                      }
                  }

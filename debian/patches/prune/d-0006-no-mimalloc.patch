@@ -1,0 +1,23 @@
+From: Debian Rust Maintainers <pkg-rust-maintainers@alioth-lists.debian.net>
+Date: Sat, 11 Jan 2025 11:37:00 +0100
+Subject: d-0006-no-mimalloc
+
+Description: remove mimalloc(-sys)
+
+Forwarded: not-needed
+---
+ src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml b/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml
+index 50a4bab..f63798d 100644
+--- a/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml
++++ b/src/tools/rust-analyzer/crates/rust-analyzer/Cargo.toml
+@@ -35,7 +35,6 @@ rustc-hash.workspace = true
+ serde_json = { workspace = true, features = ["preserve_order"] }
+ serde.workspace = true
+ num_cpus = "1.15.0"
+-mimalloc = { version = "0.1.30", default-features = false, optional = true }
+ lsp-server.workspace = true
+ tracing.workspace = true
+ tracing-subscriber.workspace = true
