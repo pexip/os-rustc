@@ -26,10 +26,10 @@ Forwarded: no
  2 files changed, 10 insertions(+), 1 deletion(-)
 
 diff --git a/compiler/rustc_codegen_ssa/src/back/link.rs b/compiler/rustc_codegen_ssa/src/back/link.rs
-index 6a2a394..371c386 100644
+index e2081ad..e0594f9 100644
 --- a/compiler/rustc_codegen_ssa/src/back/link.rs
 +++ b/compiler/rustc_codegen_ssa/src/back/link.rs
-@@ -2573,6 +2573,13 @@ fn add_order_independent_options(
+@@ -2548,6 +2548,13 @@ fn add_order_independent_options(
      }
  
      add_rpath_args(cmd, sess, codegen_results, out_filename);

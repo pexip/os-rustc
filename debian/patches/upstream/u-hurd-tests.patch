@@ -22,10 +22,10 @@ Signed-off-by: Fabian Grünbichler <git@fabian.gruenbichler.email>
  7 files changed, 13 insertions(+)
 
 diff --git a/src/tools/compiletest/src/directive-list.rs b/src/tools/compiletest/src/directive-list.rs
-index bdd0b80..f3546c7 100644
+index 01068af..7952c7a 100644
 --- a/src/tools/compiletest/src/directive-list.rs
 +++ b/src/tools/compiletest/src/directive-list.rs
-@@ -59,6 +59,7 @@ const KNOWN_DIRECTIVE_NAMES: &[&str] = &[
+@@ -58,6 +58,7 @@ const KNOWN_DIRECTIVE_NAMES: &[&str] = &[
      "ignore-gnu",
      "ignore-haiku",
      "ignore-horizon",
@@ -34,10 +34,10 @@ index bdd0b80..f3546c7 100644
      "ignore-i686-pc-windows-msvc",
      "ignore-illumos",
 diff --git a/src/tools/compiletest/src/header/tests.rs b/src/tools/compiletest/src/header/tests.rs
-index 4d75c38..7f09722 100644
+index 618b66d..5708375 100644
 --- a/src/tools/compiletest/src/header/tests.rs
 +++ b/src/tools/compiletest/src/header/tests.rs
-@@ -329,6 +329,7 @@ fn ignore_target() {
+@@ -332,6 +332,7 @@ fn ignore_target() {
      assert!(check_ignore(&config, "//@ ignore-x86_64-unknown-linux-gnu"));
      assert!(check_ignore(&config, "//@ ignore-x86_64"));
      assert!(check_ignore(&config, "//@ ignore-linux"));
@@ -75,10 +75,11 @@ index 5b30c06..9ef0d5a 100644
      let ok = PathBuf::from("ok");
      if env::var("YOU_ARE_A_LINKER").is_ok() {
 diff --git a/tests/ui/associated-consts/issue-93775.rs b/tests/ui/associated-consts/issue-93775.rs
-index c9044e2..5fb093d 100644
+index 88e88b5..0981abc 100644
 --- a/tests/ui/associated-consts/issue-93775.rs
 +++ b/tests/ui/associated-consts/issue-93775.rs
-@@ -1,5 +1,6 @@
+@@ -4,6 +4,7 @@
+ 
  //@ build-pass
  // ignore-tidy-linelength
 +//@ ignore-hurd

@@ -16,10 +16,10 @@ Signed-off-by: Fabian Grünbichler <f.gruenbichler@proxmox.com>
  1 file changed, 3 insertions(+), 17 deletions(-)
 
 diff --git a/src/bootstrap/src/core/builder/cargo.rs b/src/bootstrap/src/core/builder/cargo.rs
-index 0e53660..e76bcb2 100644
+index 55e4cc4..47ab244 100644
 --- a/src/bootstrap/src/core/builder/cargo.rs
 +++ b/src/bootstrap/src/core/builder/cargo.rs
-@@ -655,24 +655,10 @@ impl Builder<'_> {
+@@ -657,24 +657,10 @@ impl Builder<'_> {
          match mode {
              Mode::Std | Mode::ToolBootstrap | Mode::ToolStd => {}
              Mode::Rustc | Mode::Codegen | Mode::ToolRustc => {

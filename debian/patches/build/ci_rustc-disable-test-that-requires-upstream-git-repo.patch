@@ -13,11 +13,11 @@ Signed-off-by: Fabian Grünbichler <git@fabian.gruenbichler.email>
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/src/bootstrap/src/core/builder/tests.rs b/src/bootstrap/src/core/builder/tests.rs
-index d6580fe..6ddeacd 100644
+index 6f5ff53..756a25c 100644
 --- a/src/bootstrap/src/core/builder/tests.rs
 +++ b/src/bootstrap/src/core/builder/tests.rs
-@@ -212,7 +212,8 @@ fn alias_and_path_for_library() {
-     assert_eq!(first(cache.all::<doc::Std>()), &[doc_std!(A => A, stage = 0)]);
+@@ -202,7 +202,8 @@ fn alias_and_path_for_library() {
+     ]);
  }
  
 -#[test]

@@ -46,5 +46,4 @@ vendor/blake3-skip-embedded-C-code-use-pure-implementation.patch
 build/ci_rustc-disable-test-that-requires-upstream-git-repo.patch
 build/bootstrap-don-t-attempt-to-download-rustc-in-tests.patch
 behaviour/proc-macro-srv-make-usage-of-RTLD_DEEPBIND-portable.patch
-upstream/fix-hurd-build-stat64.st_fsid-was-renamed-to-st_dev.patch
 bootstrap/bootstrap-revert-cross-build-breaking-change.patch

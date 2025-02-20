@@ -6,6 +6,7 @@
 
 # False-positive, file(1) misidentifies mime type
 compiler/rustc_error_codes/src/error_codes/E0469.md
+src/doc/book/nostarch/chapter17.md
 src/doc/reference/src/crates-and-source-files.md
 src/doc/reference/src/items/extern-crates.md
 src/doc/reference/src/items/modules.md
@@ -52,11 +53,13 @@ src/doc/edition-guide/src/rust-2018/index.md
 src/doc/edition-guide/src/rust-2021/disjoint-capture-in-closures.md
 src/doc/edition-guide/src/rust-2021/prelude.md
 src/doc/edition-guide/src/rust-2021/raw-lifetimes.md
+src/doc/edition-guide/src/rust-2024/*.md
 src/doc/embedded-book/src/*/*.md
 src/doc/nomicon/src/intro.md
 src/doc/reference/README.md
 src/doc/reference/docs/authoring.md
 src/doc/reference/docs/review-policy.md
+src/doc/reference/src/attributes/diagnostics.md
 src/doc/reference/src/conditional-compilation.md
 src/doc/reference/src/expressions/closure-expr.md
 src/doc/reference/src/inline-assembly.md
@@ -69,6 +72,7 @@ src/doc/rust-by-example/src/trait/dyn.md
 src/doc/rust-by-example/src/unsafe/asm.md
 src/doc/rustc-dev-guide/src/*.md
 src/doc/rustc-dev-guide/src/*/*.md
+src/doc/rustc-dev-guide/src/borrow_check/region_inference/closure_constraints.md
 src/doc/rustc/src/instrument-coverage.md
 src/doc/rustc/src/lints/groups.md
 src/doc/rustc/src/platform-support/armeb-unknown-linux-gnueabi.md
@@ -81,9 +85,12 @@ src/doc/rustc/src/targets/known-issues.md
 src/doc/rustdoc/src/*.md
 src/doc/style-guide/src/nightly.md
 src/doc/unstable-book/src/*/*.md
+src/etc/completions/x.fish
+src/etc/completions/x.ps1
 src/etc/completions/x.py.fish
 src/etc/completions/x.py.ps1
 src/etc/completions/x.py.sh
+src/etc/completions/x.sh
 src/etc/third-party/README.txt
 src/librustdoc/html/highlight/fixtures/sample.html
 src/librustdoc/html/static/scrape-examples-help.md
@@ -169,7 +176,7 @@ vendor/portable-atomic-*/build.rs
 vendor/portable-atomic-*/src/imp/atomic128/README.md
 vendor/portable-atomic-*/src/imp/interrupt/README.md
 vendor/portable-atomic-*/src/lib.rs
-vendor/portable-atomic-1.9.0/src/imp/atomic64/README.md
+vendor/portable-atomic-1.*/src/imp/atomic64/README.md
 vendor/pulldown-cmark-*/tests/suite/footnotes.rs
 vendor/pulldown-cmark-*/tests/suite/old_footnotes.rs
 vendor/rustc-demangle-*/src/legacy.rs
@@ -183,6 +190,8 @@ vendor/spki-*/tests/spki.rs
 vendor/stable_deref_trait-*/src/lib.rs
 vendor/syntect-*/src/html.rs
 vendor/syntect-*/src/parsing/parser.rs
+vendor/sysinfo-0.*/migration_guide.md
+vendor/tenthash-0.*/tests/test_vectors.rs
 vendor/tracing-subscriber-*/src/fmt/format/json.rs
 vendor/unicase-*/src/lib.rs
 vendor/unicode-normalization-*/src/stream_safe.rs
@@ -202,6 +211,8 @@ vendor/zerovec-*/src/map2d/map.rs
 # The below ones are OK since they're actually part of rust's own source code
 # and are not "embedded libraries".
 src/ci/docker/scripts/qemu-bare-bones-addentropy.c
+src/ci/package-lock.json
+src/ci/package.json
 src/doc/book/*/ferris.js
 src/doc/book/ferris.js
 src/doc/reference/src/attributes-redirect.html
@@ -212,26 +223,27 @@ src/librustdoc/html/static/js/*.js
 src/tools/cargo/src/cargo/core/compiler/timings.js
 src/tools/error_index_generator/*.js
 src/tools/rustc-perf/collector/compile-benchmarks/*/perf-config.json
-src/tools/rustdoc-gui/.eslintrc.js
-src/tools/rustdoc-gui/tester.js
-src/tools/rustdoc-js/.eslintrc.js
-src/tools/rustdoc-js/tester.js
 src/tools/rustc-perf/site/frontend/*.json
 src/tools/rustc-perf/site/frontend/.parcelrc
 src/tools/rustc-perf/site/frontend/.prettierrc.json
 src/tools/rustc-perf/site/frontend/src/*.ts
 src/tools/rustc-perf/site/frontend/src/*/*.ts
-src/tools/rustc-perf/site/frontend/src/*/*/*.ts
-src/tools/rustc-perf/site/frontend/src/*/*/*/*.ts
-src/tools/rustc-perf/site/frontend/src/*/*/*/*/*.ts
-src/tools/rustc-perf/site/frontend/src/*/*/*/*/*/*.ts
 src/tools/rustc-perf/site/frontend/src/*/*.vue
+src/tools/rustc-perf/site/frontend/src/*/*/*.ts
 src/tools/rustc-perf/site/frontend/src/*/*/*.vue
+src/tools/rustc-perf/site/frontend/src/*/*/*/*.ts
 src/tools/rustc-perf/site/frontend/src/*/*/*/*.vue
+src/tools/rustc-perf/site/frontend/src/*/*/*/*/*.ts
 src/tools/rustc-perf/site/frontend/src/*/*/*/*/*.vue
+src/tools/rustc-perf/site/frontend/src/*/*/*/*/*/*.ts
 src/tools/rustc-perf/site/frontend/src/*/*/*/*/*/*.vue
 src/tools/rustc-perf/site/frontend/static/schedule.js
+src/tools/rustdoc-gui/.eslintrc.js
+src/tools/rustdoc-gui/tester.js
+src/tools/rustdoc-js/.eslintrc.js
+src/tools/rustdoc-js/tester.js
 vendor/mdbook-0.*/src/theme/toc.js.hbs
+vendor/sysinfo-0.*/funding.json
 
 # rustc-perf benchmark inputs
 src/tools/rustc-perf/collector/compile-benchmarks/cargo-*/src/cargo/core/compiler/timings.js
@@ -411,7 +423,6 @@ library/core/tests/num/dec2flt/parse.rs
 library/portable-simd/crates/core_simd/tests/mask_ops_impl/*.rs
 library/portable-simd/crates/core_simd/webdriver.json
 library/std/src/sys/path/windows/tests.rs
-library/stdarch/ci/gba.json
 library/stdarch/crates/std_detect/src/detect/test_data/*.auxv
 library/stdarch/crates/stdarch-verify/x86-intel.xml
 library/stdarch/intrinsics_data/arm_intrinsics.json
@@ -459,6 +470,7 @@ tests/auxiliary/rust_test_helpers.c
 tests/coverage/*.cov-map
 tests/coverage/*/*.cov-map
 tests/debuginfo/type-names.cdb.js
+tests/mir-opt/dataflow.main.maybe_init.borrowck.dot
 tests/run-make/*/*.c
 tests/run-make/libtest-junit/output-default.xml
 tests/run-make/libtest-junit/output-stdout-success.xml
@@ -479,12 +491,12 @@ tests/ui/error-emitter/highlighting.svg
 tests/ui/error-emitter/highlighting.windows.svg
 tests/ui/error-emitter/multiline-multipart-suggestion.svg
 tests/ui/error-emitter/multiline-multipart-suggestion.windows.svg
+tests/ui/error-emitter/multiline-removal-suggestion.svg
 tests/ui/error-emitter/unicode-output.svg
 tests/ui/impl-trait/diagnostics/highlight-difference-between-expected-trait-and-found-trait.svg
 tests/ui/macros/not-utf8.bin
 tests/ui/suggestions/incorrect-variant-literal.svg
 tests/ui/traits/object/print_vtable_sizes.stdout
-vendor/annotate-snippets-*/tests/fixtures/no-color/*.svg
 vendor/annotate-snippets-*/tests/fixtures/no-color/strip_line_non_ws.toml
 vendor/basic-toml-*/tests/invalid-encoder/array-mixed-types-ints-and-floats.json
 vendor/basic-toml-*/tests/valid/*.json
@@ -570,7 +582,7 @@ vendor/rinja_parser-0.*/tests/unary-recursion.txt
 vendor/rusqlite-*/test.csv
 vendor/rustc-demangle-*/src/lib.rs
 vendor/rustc-demangle-*/src/v0-large-test-symbols/early-recursion-limit
-vendor/ruzstd-0.7.2/test_fixtures/abc.txt.zst
+vendor/ruzstd-0.7.*/test_fixtures/abc.txt.zst
 vendor/schemars-0.*/examples/*.schema.json
 vendor/schemars-0.*/tests/expected/*.json
 vendor/sec1-*/tests/examples/p256-priv.der
@@ -594,7 +606,6 @@ vendor/vcpkg-*/test-data/normalized/installed/vcpkg/updates/status
 vendor/walkdir-*/compare/nftw.c
 vendor/wast-*/tests/parse-fail/*.wat
 vendor/wast-*/tests/parse-fail/*.wat.err
-vendor/web-sys-*/tests/wasm/*.js
 vendor/wit-component-*/tests/components/link-dl-openable-builtin-libdl-with-unused/component.wat
 vendor/wit-component-*/tests/interfaces/*.wat
 vendor/wit-parser-*/tests/ui/*.wit.json
@@ -619,6 +630,8 @@ vendor/icu_locid_transform_data-*/data/macros/locid_transform_likelysubtags_ext_
 vendor/icu_locid_transform_data-*/data/macros/locid_transform_likelysubtags_l_v1.rs.data
 vendor/icu_locid_transform_data-*/data/macros/locid_transform_likelysubtags_sr_v1.rs.data
 vendor/icu_locid_transform_data-*/data/macros/locid_transform_script_dir_v1.rs.data
+vendor/icu_normalizer_data-1.*/data/macros/*.rs.data
+vendor/icu_properties_data-1.*/data/macros/*.rs.data
 vendor/linux-raw-sys-*/src/x86_64/general.rs
 vendor/pest_meta-*/src/grammar.rs
 vendor/regex-syntax-*/src/unicode_tables/*.rs
@@ -746,7 +759,6 @@ vendor/gix-odb-*/src/store_impls/loose/find.rs
 vendor/gix-path-*/src/env/git/tests.rs
 vendor/gix-pathspec-*/src/lib.rs
 vendor/gix-pathspec-*/src/parse.rs
-vendor/gix-protocol-*/src/fetch/delegate.rs
 vendor/gix-ref-*/src/store/packed/decode.rs
 vendor/gix-ref-*/src/store/packed/decode/tests.rs
 vendor/gix-revision-*/src/spec/parse/function.rs

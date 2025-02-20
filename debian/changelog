@@ -1,3 +1,17 @@
+rustc (1.85.0+dfsg1-1) unstable; urgency=medium
+
+  * New (stable) upstream release.
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Thu, 20 Feb 2025 19:23:02 +0100
+
+rustc (1.85.0~beta.9+dfsg1-1~exp1) experimental; urgency=medium
+
+  * New upstream release 1.85.0~beta999
+  * build docs with -j1 to make them reproducible
+  * build: make windows libstd build opt-in
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Mon, 17 Feb 2025 13:24:42 +0100
+
 rustc (1.84.0+dfsg1-2) unstable; urgency=medium
 
   * revert upstream commit breaking cross builds

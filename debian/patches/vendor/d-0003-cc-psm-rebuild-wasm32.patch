@@ -4,27 +4,27 @@ Subject: d-0003-cc-psm-rebuild-wasm32
 
 Forwarded: not-needed
 ---
- vendor/cc-1.1.22/src/lib.rs | 2 +-
- vendor/psm-0.1.23/build.rs  | 7 ++-----
+ vendor/cc-1.2.0/src/lib.rs | 2 +-
+ vendor/psm-0.1.24/build.rs | 7 ++-----
  2 files changed, 3 insertions(+), 6 deletions(-)
 
-diff --git a/vendor/cc-1.1.22/src/lib.rs b/vendor/cc-1.1.22/src/lib.rs
-index 9855698..d238251 100644
---- a/vendor/cc-1.1.22/src/lib.rs
-+++ b/vendor/cc-1.1.22/src/lib.rs
-@@ -2954,7 +2954,7 @@ impl Build {
-                     if self.cpp {
-                         "clang++".to_string()
-                     } else {
--                        "clang".to_string()
-+                        "rust-clang".to_string()
-                     }
-                 } else if target.contains("vxworks") {
-                     if self.cpp {
-diff --git a/vendor/psm-0.1.23/build.rs b/vendor/psm-0.1.23/build.rs
+diff --git a/vendor/cc-1.2.0/src/lib.rs b/vendor/cc-1.2.0/src/lib.rs
+index a0aaa30..202ff17 100644
+--- a/vendor/cc-1.2.0/src/lib.rs
++++ b/vendor/cc-1.2.0/src/lib.rs
+@@ -2623,7 +2623,7 @@ impl Build {
+         let (env, msvc, gnu, traditional, clang) = if self.cpp {
+             ("CXX", "cl.exe", "g++", "c++", "clang++")
+         } else {
+-            ("CC", "cl.exe", "gcc", "cc", "clang")
++            ("CC", "cl.exe", "gcc", "cc", "rust-clang")
+         };
+ 
+         // On historical Solaris systems, "cc" may have been Sun Studio, which
+diff --git a/vendor/psm-0.1.24/build.rs b/vendor/psm-0.1.24/build.rs
 index bc84149..a299ab5 100644
---- a/vendor/psm-0.1.23/build.rs
-+++ b/vendor/psm-0.1.23/build.rs
+--- a/vendor/psm-0.1.24/build.rs
++++ b/vendor/psm-0.1.24/build.rs
 @@ -51,7 +51,7 @@ fn find_assembly(
          ("sparc", _, _, _) => Some(("src/arch/sparc_sysv.s", true)),
          ("riscv32", _, _, _) => Some(("src/arch/riscv.s", true)),

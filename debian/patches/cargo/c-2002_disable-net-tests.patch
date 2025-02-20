@@ -122,7 +122,7 @@ index b765678..ed695bd 100644
      let p = project()
          .file(
 diff --git a/src/tools/cargo/tests/testsuite/publish.rs b/src/tools/cargo/tests/testsuite/publish.rs
-index 403473e..d94a0fa 100644
+index 4bcb9194..0fce483 100644
 --- a/src/tools/cargo/tests/testsuite/publish.rs
 +++ b/src/tools/cargo/tests/testsuite/publish.rs
 @@ -90,7 +90,7 @@ fn validate_upload_li() {

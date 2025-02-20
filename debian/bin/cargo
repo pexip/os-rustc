@@ -64,8 +64,8 @@ import shutil
 import subprocess
 import sys
 
-FLAGS = "CFLAGS CXXFLAGS CPPFLAGS LDFLAGS"
-ARCHES = "DEB_HOST_GNU_TYPE DEB_HOST_RUST_TYPE"
+FLAGS = ('CFLAGS', 'CXXFLAGS', 'CPPFLAGS', 'LDFLAGS')
+ARCHES = ('DEB_HOST_GNU_TYPE', 'DEB_HOST_RUST_TYPE')
 SYSTEM_REGISTRY = "/usr/share/cargo/registry"
 
 def log(*args):
@@ -75,13 +75,14 @@ def logrun(*args, **kwargs):
     log("running subprocess", args, kwargs)
     return subprocess.run(*args, **kwargs)
 
-def sourcepath(p=None):
-    return os.path.join(os.getcwd(), p) if p else os.getcwd()
+def in_cwd(p=None):
+    cwd = os.getcwd()
+    return os.path.join(cwd, p) if p else cwd
 
 def prepare_debian(cargo_home, registry, cratespec, host_gnu_type, ldflags, link_from_system, extra_rustflags):
-    registry_path = sourcepath(registry)
+    registry_path = in_cwd(registry)
     if link_from_system:
-        log("linking %s/* into %s/" % (SYSTEM_REGISTRY, registry_path))
+        log(f'linking {SYSTEM_REGISTRY}/* into {registry_path}/')
         os.makedirs(registry_path, exist_ok=True)
         crates = os.listdir(SYSTEM_REGISTRY) if os.path.isdir(SYSTEM_REGISTRY) else []
         for c in crates:
@@ -89,21 +90,20 @@ def prepare_debian(cargo_home, registry, cratespec, host_gnu_type, ldflags, link
             if not os.path.islink(target):
                 os.symlink(os.path.join(SYSTEM_REGISTRY, c), target)
     elif not os.path.exists(registry_path):
-        raise ValueError("non-existent registry: %s" % registry)
+        raise ValueError(f'non-existent registry: {registry}')
 
     rustflags = "-C debuginfo=2 -C strip=none --cap-lints warn".split()
-    rustflags.extend(["-C", "linker=%s-gcc" % host_gnu_type])
+    rustflags.extend(["-C", f'linker={host_gnu_type}-gcc'])
     for f in ldflags:
-        rustflags.extend(["-C", "link-arg=%s" % f])
+        rustflags.extend(["-C", f'link-arg={f}'])
     if link_from_system:
         rustflags.extend([
             # Note that this order is important! Rust evaluates these options in
             # priority of reverse order, so if the second option were in front,
             # it would never be used, because any paths in registry_path are
-            # also in sourcepath().
-            "--remap-path-prefix", "%s=%s/%s" %
-                (sourcepath(), SYSTEM_REGISTRY, cratespec.replace("_", "-")),
-            "--remap-path-prefix", "%s=%s" % (registry_path, SYSTEM_REGISTRY),
+            # also in in_cwd().
+            "--remap-path-prefix", f'{in_cwd()}={SYSTEM_REGISTRY}/{cratespec.replace("_", "-")}',
+            "--remap-path-prefix", f'{registry_path}={SYSTEM_REGISTRY}',
         ])
     rustflags.extend(extra_rustflags.split())
 
@@ -114,7 +114,7 @@ def prepare_debian(cargo_home, registry, cratespec, host_gnu_type, ldflags, link
     #rustflags.extend(["-C", "prefer-dynamic"])
 
     os.makedirs(cargo_home, exist_ok=True)
-    with open("%s/config.toml" % cargo_home, "w") as fp:
+    with open(os.path.join(cargo_home, 'config.toml'), "w") as fp:
         fp.write("""[source.crates-io]
 replace-with = "dh-cargo-registry"
 
@@ -132,14 +132,14 @@ debug = true
 
 def install(destdir, cratespec, host_rust_type, crate_in_registry, install_prefix, *args):
     crate, version = cratespec.rsplit("_", 1)
-    log("installing into destdir '%s' prefix '%s'" % (destdir, install_prefix))
+    log(f"installing into destdir '{destdir}' prefix '{install_prefix}'")
     install_target = destdir + install_prefix
     logrun(["env", "RUST_BACKTRACE=1",
         # set CARGO_TARGET_DIR so build products are saved in target/
         # normally `cargo install` deletes them when it exits
-        "CARGO_TARGET_DIR=" + sourcepath("target"),
+        "CARGO_TARGET_DIR=" + in_cwd("target"),
         "/usr/bin/cargo"] + list(args) +
-        ([crate, "--vers", version] if crate_in_registry else ["--path", sourcepath()]) +
+        ([crate, "--vers", version] if crate_in_registry else ["--path", in_cwd()]) +
         ["--root", install_target], check=True)
     logrun(["rm", "-f", "%s/.crates.toml" % install_target])
     logrun(["rm", "-f", "%s/.crates2.json" % install_target])
@@ -158,11 +158,11 @@ def main(*args):
     if not cargo_home.endswith("/debian/cargo_home"):
         os.execv("/usr/bin/cargo", ["cargo"] + list(args))
 
-    if any(f not in os.environ for f in FLAGS.split()):
-        raise ValueError("not all of %s set; did you call dpkg-buildflags?" % FLAGS)
+    if any(f not in os.environ for f in FLAGS):
+        raise ValueError(f'not all of {FLAGS} set; did you call dpkg-buildflags?')
 
-    if any(f not in os.environ for f in ARCHES.split()):
-        raise ValueError("not all of %s set; did you include architecture.mk?" % ARCHES)
+    if any(f not in os.environ for f in ARCHES):
+        raise ValueError(f'not all of {ARCHES} set; did you include architecture.mk?')
 
     build_options = os.getenv("DEB_BUILD_OPTIONS", "").split()
     build_profiles = os.getenv("DEB_BUILD_PROFILES", "").split()
@@ -190,12 +190,12 @@ def main(*args):
     host_rust_type = os.getenv("DEB_HOST_RUST_TYPE", "")
     host_gnu_type = os.getenv("DEB_HOST_GNU_TYPE", "")
 
-    log("options, profiles, parallel, lto:", build_options, build_profiles, parallel, lto)
-    log("rust_type, gnu_type:", ", ".join([host_rust_type, host_gnu_type]))
+    log(f'options = {build_options}, profiles = {build_profiles}, parallel = {parallel}, lto = {lto}')
+    log(f'rust_type = {host_rust_type}, gnu_type = {host_gnu_type}')
 
     if "RUSTFLAGS" in os.environ:
-        # see https://github.com/rust-lang/cargo/issues/6338 for explanation on why we must do this
-        log("unsetting RUSTFLAGS and assuming it will be (or already was) added to $CARGO_HOME/config.toml")
+        # https://github.com/rust-lang/cargo/issues/6338
+        log('unsetting RUSTFLAGS for rust-lang/cargo#6338; add them to .cargo/config.toml')
         extra_rustflags = os.environ["RUSTFLAGS"]
         del os.environ["RUSTFLAGS"]
     else:
@@ -241,9 +241,9 @@ def main(*args):
             shutil.rmtree(cargo_home)
         return 0
 
-    cargo_config = "%s/config.toml" % cargo_home
+    cargo_config = os.path.join(cargo_home, 'config.toml')
     if not os.path.exists(cargo_config):
-        raise ValueError("does not exist: %s, did you run `cargo prepare-debian <registry>`?" % cargo_config)
+        raise ValueError(f'does not exist: {cargo_config}, did you run `cargo prepare-debian <registry>`?')
 
     if subcmd == "install":
         return install(os.getenv("DESTDIR", ""),

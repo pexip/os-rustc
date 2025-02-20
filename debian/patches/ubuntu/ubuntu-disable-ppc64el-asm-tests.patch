@@ -9,7 +9,7 @@ Forwarded: not-needed
  2 files changed, 6 insertions(+), 1 deletion(-)
 
 diff --git a/compiler/rustc_lint/src/builtin.rs b/compiler/rustc_lint/src/builtin.rs
-index bda982a..d996304 100644
+index 6e82395..7577812 100644
 --- a/compiler/rustc_lint/src/builtin.rs
 +++ b/compiler/rustc_lint/src/builtin.rs
 @@ -2750,7 +2750,10 @@ declare_lint! {
@@ -25,7 +25,7 @@ index bda982a..d996304 100644
      ///
      /// fn main() {
 diff --git a/compiler/rustc_lint_defs/src/builtin.rs b/compiler/rustc_lint_defs/src/builtin.rs
-index 9036741..f902a69 100644
+index 2f23ab2..fa2585d 100644
 --- a/compiler/rustc_lint_defs/src/builtin.rs
 +++ b/compiler/rustc_lint_defs/src/builtin.rs
 @@ -2927,11 +2927,13 @@ declare_lint! {
