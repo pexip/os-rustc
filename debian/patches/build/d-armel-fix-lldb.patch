@@ -8,15 +8,15 @@ Forwarded: no
  1 file changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/src/bootstrap/src/core/build_steps/test.rs b/src/bootstrap/src/core/build_steps/test.rs
-index 2b8f1d1..bb572db 100644
+index 557f71c..acda398 100644
 --- a/src/bootstrap/src/core/build_steps/test.rs
 +++ b/src/bootstrap/src/core/build_steps/test.rs
-@@ -1935,7 +1935,11 @@ NOTE: if you're sure you want to do this, please open an issue as to why. In the
+@@ -1893,7 +1893,11 @@ NOTE: if you're sure you want to do this, please open an issue as to why. In the
              .ok();
          if let Some(ref vers) = lldb_version {
              cmd.arg("--lldb-version").arg(vers);
--            let lldb_python_dir = run(Command::new(lldb_exe).arg("-P")).ok();
-+            let lldb_python_dir = Command::new(lldb_exe)
+-            let lldb_python_dir = run(Command::new(&lldb_exe).arg("-P")).ok();
++            let lldb_python_dir = Command::new(&lldb_exe)
 +                .arg("-P")
 +                .output()
 +                .map(|output| String::from_utf8_lossy(&output.stdout).to_string())

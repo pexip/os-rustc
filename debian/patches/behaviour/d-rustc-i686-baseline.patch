@@ -42,10 +42,10 @@ index 3a8540a..bc4fea5 100644
              }
          }
 diff --git a/tests/ui/sse2.rs b/tests/ui/sse2.rs
-index fa6d797..8822846 100644
+index 9ed6f6f..a283a0a 100644
 --- a/tests/ui/sse2.rs
 +++ b/tests/ui/sse2.rs
-@@ -15,7 +15,7 @@ fn main() {
+@@ -16,7 +16,7 @@ fn main() {
          }
          Err(_) => return,
      }

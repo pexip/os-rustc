@@ -1,0 +1,26 @@
+From: =?utf-8?q?Fabian_Gr=C3=BCnbichler?= <f.gruenbichler@proxmox.com>
+Date: Wed, 31 Jul 2024 10:29:04 +0200
+Subject: onig_sys: use system lib
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+
+Signed-off-by: Fabian Grünbichler <f.gruenbichler@proxmox.com>
+---
+ vendor/onig_sys-69.8.1/build.rs | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/vendor/onig_sys-69.8.1/build.rs b/vendor/onig_sys-69.8.1/build.rs
+index 138e9d8..be1e128 100644
+--- a/vendor/onig_sys-69.8.1/build.rs
++++ b/vendor/onig_sys-69.8.1/build.rs
+@@ -219,7 +219,7 @@ fn bindgen_headers(path: &str) {
+ 
+ pub fn main() {
+     let link_type = link_type_override();
+-    let require_pkg_config = env_var_bool("RUSTONIG_SYSTEM_LIBONIG").unwrap_or(false);
++    let require_pkg_config = env_var_bool("RUSTONIG_SYSTEM_LIBONIG").unwrap_or(true);
+ 
+     if require_pkg_config || link_type == Some(LinkType::Dynamic) {
+         let mut conf = Config::new();

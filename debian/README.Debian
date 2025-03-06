@@ -137,19 +137,20 @@ To use these for manual crossbuilding:
 WASM
 ~~~~
 
-We ship two different wasm32 targets - wasm32-unknown-unknown and wasm32-wasi -
-in the libstd-rust-dev-wasm32 package.
+We ship three different wasm32 targets - wasm32-unknown-unknown, wasm32-wasip1
+(previously known as wasm32-wasi) and wasm32-p2 - in the libstd-rust-dev-wasm32
+package.
 
 wasm32-unknown-unknown is suitable for web stuff, where you typically will need
 to depending on the rust-wasm-bindgen, js-sys, and web-sys crates. Here, calls
 to libstd stuff (such as println!()) will silently do nothing, as defined in
 ``library/std/src/sys/wasm/mod.rs`` and explained in upstream #48564.
 
-wasm32-wasi is suitable for non-web stuff, and is closer to a "normal" target
-where you expect libstd to be available, and for println!() to actually print
-to stdout. If you just want to cross-compile a regular non-wasm library or
-program to wasm for whatever reason, and only want to run it natively and not
-inside a web browser, use this target.
+wasm32-wasip1/wasm32-wasip2 are suitable for non-web stuff, and are closer to a
+"normal" target where you expect libstd to be available, and for println!() to
+actually print to stdout. If you just want to cross-compile a regular non-wasm
+library or program to wasm for whatever reason, and only want to run it
+natively and not inside a web browser, use one of these targets.
 
 To run the generated wasm, you can either:
 

@@ -15,13 +15,11 @@ prune/d-0001-pkg-config-no-special-snowflake.patch
 prune/d-0002-mdbook-strip-embedded-libs.patch
 prune/d-0005-no-jemalloc.patch
 prune/d-0010-cargo-remove-vendored-c-crates.patch
-prune/opener-cherry-pick-fix-to-avoid-vendored-dbus.patch
 prune/d-0011-cargo-remove-nghttp2.patch
 prune/d-0020-remove-windows-dependencies.patch
 prune/d-0021-vendor-remove-windows-dependencies.patch
 vendor/u-hurd-gix-index.patch
 vendor/u-hurd-gix-index-2.patch
-vendor/u-hurd-socket2.patch
 vendor/u-hurd-rustix.patch
 vendor/d-0003-cc-psm-rebuild-wasm32.patch
 build/d-bootstrap-rustflags.patch
@@ -43,3 +41,4 @@ behaviour/d-rustdoc-disable-embedded-fonts.patch
 ubuntu/ubuntu-disable-ppc64el-asm-tests.patch
 ubuntu/ubuntu-ignore-arm-doctest.patch
 upstream/Revert-loongarch-add-frecipe-and-relax-target-feature.patch
+vendor/onig_sys-use-system-lib.patch

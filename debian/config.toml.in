@@ -49,6 +49,10 @@ linker = "DEB_TARGET_GNU_TYPE-gcc"
 )dnl
 [target.wasm32-wasi]
 wasi-root = "/usr"
+[target.wasm32-wasip1]
+wasi-root = "/usr"
+[target.wasm32-wasip2]
+wasi-root = "/usr"
 
 [llvm]
 link-shared = true
