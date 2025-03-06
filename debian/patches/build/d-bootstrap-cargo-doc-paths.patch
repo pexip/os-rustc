@@ -212,10 +212,10 @@ index 8ad5b42..f93d3da 100644
  
  ### The Rustdoc Book
 diff --git a/src/doc/reference/src/conditional-compilation.md b/src/doc/reference/src/conditional-compilation.md
-index f83dbfe..578b524 100644
+index f52c90d..4bfb9dd 100644
 --- a/src/doc/reference/src/conditional-compilation.md
 +++ b/src/doc/reference/src/conditional-compilation.md
-@@ -394,6 +394,6 @@ println!("I'm running on a {} machine!", machine_kind);
+@@ -395,6 +395,6 @@ println!("I'm running on a {} machine!", machine_kind);
  [`target_feature` attribute]: attributes/codegen.md#the-target_feature-attribute
  [attribute]: attributes.md
  [attributes]: attributes.md
@@ -239,10 +239,10 @@ index 9038efd..770680d 100644
  [file an issue]: https://github.com/rust-lang/reference/issues
  [lifetime of temporaries]: expressions.html#temporaries
 diff --git a/src/doc/reference/src/linkage.md b/src/doc/reference/src/linkage.md
-index 82864b0..db1508c 100644
+index 3ac6bb2..6a6ed89 100644
 --- a/src/doc/reference/src/linkage.md
 +++ b/src/doc/reference/src/linkage.md
-@@ -201,7 +201,7 @@ fn main() {
+@@ -206,7 +206,7 @@ fn main() {
  }
  ```
  
@@ -372,10 +372,10 @@ index 72b44e0..cfe71b2 100644
  # Working with other languages
  
 diff --git a/src/tools/linkchecker/main.rs b/src/tools/linkchecker/main.rs
-index 18ea70c..760d377 100644
+index a85aca8..47f17f5 100644
 --- a/src/tools/linkchecker/main.rs
 +++ b/src/tools/linkchecker/main.rs
-@@ -290,6 +290,10 @@ impl Checker {
+@@ -292,6 +292,10 @@ impl Checker {
                          return;
                      }
                  }

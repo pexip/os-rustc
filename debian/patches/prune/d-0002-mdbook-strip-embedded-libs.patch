@@ -137,10 +137,10 @@ index 3876555..18ec61f 100644
          <!-- Custom JS scripts -->
          {{#each additional_js}}
 diff --git a/src/tools/linkchecker/main.rs b/src/tools/linkchecker/main.rs
-index 32f935d..18ea70c 100644
+index 72ae3ed..a85aca8 100644
 --- a/src/tools/linkchecker/main.rs
 +++ b/src/tools/linkchecker/main.rs
-@@ -164,7 +164,17 @@ impl Checker {
+@@ -166,7 +166,17 @@ impl Checker {
          for entry in t!(dir.read_dir()).map(|e| t!(e)) {
              let path = entry.path();
              // Goes through symlinks
@@ -159,7 +159,7 @@ index 32f935d..18ea70c 100644
              if metadata.is_dir() {
                  self.walk(&path, report);
              } else {
-@@ -177,7 +187,15 @@ impl Checker {
+@@ -179,7 +189,15 @@ impl Checker {
      fn check(&mut self, file: &Path, report: &mut Report) {
          let (pretty_path, entry) = self.load_file(file, report);
          let source = match entry {
@@ -176,7 +176,7 @@ index 32f935d..18ea70c 100644
              FileEntry::Dir => unreachable!("never with `check` path"),
              FileEntry::OtherFile => return,
              FileEntry::Redirect { .. } => return,
-@@ -266,6 +284,12 @@ impl Checker {
+@@ -268,6 +286,12 @@ impl Checker {
          let (target_pretty_path, target_entry) = self.load_file(&path, report);
          let (target_source, target_ids) = match target_entry {
              FileEntry::Missing => {

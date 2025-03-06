@@ -5,3 +5,11 @@
 Tests: create-and-build-crate
 Restrictions: rw-build-tree, allow-stderr, needs-internet
 Depends: cargo, ca-certificates
+
+Tests: create-and-build-wasm-wasip1-crate
+Restrictions: rw-build-tree, allow-stderr, needs-internet
+Depends: cargo, ca-certificates, libstd-rust-dev-wasm32, rust-llvm
+
+Tests: create-and-build-wasm-wasip2-crate
+Restrictions: rw-build-tree, allow-stderr, needs-internet
+Depends: cargo, ca-certificates, libstd-rust-dev-wasm32, rust-llvm

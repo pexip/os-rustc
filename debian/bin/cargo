@@ -168,7 +168,7 @@ def main(*args):
     build_profiles = os.getenv("DEB_BUILD_PROFILES", "").split()
 
     parallel = []
-    lto = 0
+    lto = ""
     for o in build_options:
         if o.startswith("parallel="):
             parallel = ["-j" + o[9:]]
@@ -176,9 +176,9 @@ def main(*args):
             opt_arg = o[9:]
             for arg in opt_arg.split(","):
                 if opt_arg == "-lto":
-                    lto = -1
+                    lto = "false"
                 elif opt_arg == "+lto":
-                    lto = 1
+                    lto = "\"thin\""
                 else:
                     log(f"WARNING: unhandled optimization flag: {opt_arg}")
 
@@ -231,10 +231,9 @@ def main(*args):
     if nocheck and subcmd in ("test", "bench"):
         return 0
 
-    if lto == 1:
-        newargs.append("--config profile.release.lto = \"thin\"")
-    elif lto == -1:
-        newargs.append("--config profile.release.lto = false")
+    if lto:
+        newargs.append("--config")
+        newargs.append(f"profile.release.lto={lto}")
 
     if subcmd == "clean":
         logrun(["env", "RUST_BACKTRACE=1", "/usr/bin/cargo"] + list(newargs), check=True)

@@ -22,6 +22,7 @@ vendor/pasetors-*/src/version2.rs
 vendor/pasetors-*/src/version3.rs
 vendor/pasetors-*/src/version4.rs
 vendor/term-*/src/terminfo/parser/names.rs
+vendor/wit-component-0.210.0/libdl.so
 
 # False-positive, "verylongtext" but OK
 CONTRIBUTING.md
@@ -29,12 +30,14 @@ README.md
 RELEASES.md
 compiler/rustc_baked_icu_data/src/data/mod.rs
 compiler/rustc_codegen_cranelift/docs/dwarf.md
+compiler/rustc_codegen_gcc/.github/workflows/stdarch.yml
 compiler/rustc_codegen_gcc/Readme.md
 compiler/rustc_codegen_ssa/messages.ftl
 compiler/rustc_incremental/messages.ftl
 library/core/src/ffi/c_*.md
 library/portable-simd/*.md
 library/std/src/sys/pal/sgx/abi/entry.S
+library/std/src/sys/pal/windows/c/windows_sys.rs
 library/stdarch/CONTRIBUTING.md
 library/stdarch/crates/core_arch/src/aarch64/neon/generated.rs
 library/stdarch/crates/std_detect/README.md
@@ -46,6 +49,8 @@ src/doc/edition-guide/src/rust-2021/disjoint-capture-in-closures.md
 src/doc/edition-guide/src/rust-2021/prelude.md
 src/doc/embedded-book/src/*/*.md
 src/doc/nomicon/src/intro.md
+src/doc/reference/docs/authoring.md
+src/doc/reference/src/conditional-compilation.md
 src/doc/reference/src/expressions/closure-expr.md
 src/doc/reference/src/inline-assembly.md
 src/doc/reference/src/unsafe-keyword.md
@@ -66,6 +71,7 @@ src/doc/rustc/src/targets/known-issues.md
 src/doc/rustdoc/src/*.md
 src/doc/style-guide/src/nightly.md
 src/doc/unstable-book/src/*/*.md
+src/etc/completions/x.py.fish
 src/etc/completions/x.py.ps1
 src/etc/completions/x.py.sh
 src/etc/third-party/README.txt
@@ -134,13 +140,16 @@ vendor/humansize-*/src/lib.rs
 vendor/icu_list-*/src/provider/serde_dfa.rs
 vendor/kstring-*/benches/clone.rs
 vendor/lazy_static-*/src/lib.rs
+vendor/lexopt-0.*/DESIGN.md
 vendor/libdbus-sys-*/cross_compile.md
 vendor/maplit-*/README.rst
 vendor/mdbook-*/CONTRIBUTING.md
 vendor/nu-ansi-term-*/src/style.rs
 vendor/openssl-*/src/dh.rs
+vendor/openssl-sys-*/build/main.rs
 vendor/p384-*/src/arithmetic/hash2curve.rs
 vendor/pasetors-*/src/token.rs
+vendor/portable-atomic-*/build.rs
 vendor/portable-atomic-*/src/imp/atomic128/README.md
 vendor/portable-atomic-*/src/imp/interrupt/README.md
 vendor/portable-atomic-*/src/lib.rs
@@ -293,7 +302,7 @@ src/tools/rustc-perf/collector/compile-benchmarks/webrender-2022/webrender/doc/*
 src/tools/rustc-perf/collector/compile-benchmarks/webrender-2022/wrench/reftests/*/*.png
 
 # And these ones are actual helper files, not embedded bad code
-vendor/cc-1.0.*/src/detect_compiler_family.c
+vendor/cc-1.*/src/detect_compiler_family.c
 vendor/libz-sys-*/src/smoke.c
 vendor/openssl-sys-*/build/expando.c
 vendor/sharded-slab-*/flake.lock
@@ -312,6 +321,7 @@ vendor/stacker-*/src/arch/windows.c
 
 # False-positive, misc
 */*/.github/actions/github-release/*
+compiler/rustc_codegen_gcc/target_specs/m68k-unknown-linux-gnu.json
 src/ci/github-actions/problem_matchers.json
 src/doc/book/listings/ch14-more-about-cargo/output-only-01-adder-crate/add/rustfmt-ignore
 src/doc/rustc-dev-guide/src/queries/example-0.counts.txt
@@ -444,6 +454,7 @@ tests/ui/error-emitter/highlighting.windows.svg
 tests/ui/error-emitter/multiline-multipart-suggestion.svg
 tests/ui/error-emitter/multiline-multipart-suggestion.windows.svg
 tests/ui/macros/not-utf8.bin
+tests/ui/suggestions/incorrect-variant-literal.svg
 tests/ui/traits/object/print_vtable_sizes.stdout
 vendor/annotate-snippets-*/tests/fixtures/no-color/*.svg
 vendor/annotate-snippets-*/tests/fixtures/no-color/strip_line_non_ws.toml
@@ -551,7 +562,13 @@ vendor/walkdir-*/compare/nftw.c
 vendor/wasm-bindgen-*/tests/headless/*
 vendor/wasm-bindgen-*/tests/wasm/*
 vendor/wasm-bindgen-*/tests/worker/modules.js
+vendor/wast-*/tests/parse-fail/*.wat
+vendor/wast-*/tests/parse-fail/*.wat.err
 vendor/web-sys-*/tests/wasm/*.js
+vendor/wit-component-*/tests/components/link-dl-openable-builtin-libdl-with-unused/component.wat
+vendor/wit-component-*/tests/interfaces/*.wat
+vendor/wit-parser-*/tests/ui/*.wit.json
+vendor/wit-parser-*/tests/ui/kinds-of-deps/deps/e.wasm
 vendor/xmlparser-*/tests/integration/*.rs
 vendor/yaml-rust-*/tests/specexamples.rs.inc
 vendor/zip-*/tests/data/*.zip
@@ -568,7 +585,7 @@ src/tools/rust-analyzer/crates/parser/src/syntax_kind/generated.rs
 vendor/icu_locid_transform_data-*/data/macros/fallback_likelysubtags_v1.rs.data
 vendor/icu_locid_transform_data-*/data/macros/fallback_parents_v1.rs.data
 vendor/icu_locid_transform_data-*/data/macros/fallback_supplement_co_v1.rs.data
-vendor/icu_locid_transform_data-*/data/macros/locid_transform_aliases_v1.rs.data
+vendor/icu_locid_transform_data-*/data/macros/locid_transform_aliases_v2.rs.data
 vendor/icu_locid_transform_data-*/data/macros/locid_transform_likelysubtags_ext_v1.rs.data
 vendor/icu_locid_transform_data-*/data/macros/locid_transform_likelysubtags_l_v1.rs.data
 vendor/icu_locid_transform_data-*/data/macros/locid_transform_likelysubtags_sr_v1.rs.data
@@ -586,7 +603,9 @@ vendor/unicode-normalization-*/src/tables.rs
 vendor/unicode-script-*/src/tables.rs
 vendor/unicode-segmentation-*/src/tables.rs
 vendor/wasi-*/src/lib_generated.rs
+vendor/wasm-component-ld-*/src/wasi_snapshot_preview1.*.wasm
 vendor/windows-bindgen-*/default/*.winmd
+vendor/wit-component-*/tests/components/error-link-missing-symbols/error.txt
 
 # Compromise, ideally we'd package these in their own package
 src/librustdoc/html/static/fonts/*.woff2
@@ -598,6 +617,7 @@ compiler/rustc_driver/src/lib.rs
 compiler/rustc_expand/src/mbe/quoted.rs
 compiler/rustc_infer/src/infer/freshen.rs
 compiler/rustc_macros/src/symbols/tests.rs
+compiler/rustc_type_ir/src/search_graph/mod.rs
 compiler/stable_mir/src/mir/visit.rs
 library/alloc/src/slice/tests.rs
 library/std/src/sys/pal/unix/process/process_unix.rs
@@ -611,8 +631,8 @@ src/tools/cargo/crates/mdman/src/format/text.rs
 src/tools/cargo/crates/mdman/src/lib.rs
 src/tools/clippy/clippy_lints/src/needless_pass_by_value.rs
 src/tools/clippy/clippy_lints/src/pass_by_ref_or_value.rs
+src/tools/compiletest/src/header/tests.rs
 src/tools/rust-analyzer/crates/cfg/src/tests.rs
-src/tools/rust-analyzer/crates/hir-def/src/attr/tests.rs
 src/tools/rust-analyzer/crates/ide-assists/src/handlers/number_representation.rs
 src/tools/rust-analyzer/crates/ide-db/src/syntax_helpers/format_string_exprs.rs
 src/tools/rust-analyzer/crates/parser/src/lib.rs
@@ -688,7 +708,7 @@ vendor/gix-features-*/src/zlib/stream/inflate.rs
 vendor/gix-object-*/src/commit/ref_iter.rs
 vendor/gix-object-*/src/tag/ref_iter.rs
 vendor/gix-odb-*/src/store_impls/loose/find.rs
-vendor/gix-path-*/src/env/git.rs
+vendor/gix-path-*/src/env/git/tests.rs
 vendor/gix-pathspec-*/src/lib.rs
 vendor/gix-pathspec-*/src/parse.rs
 vendor/gix-protocol-*/src/fetch/delegate.rs

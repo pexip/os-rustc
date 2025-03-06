@@ -1,0 +1,59 @@
+From: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Date: Fri, 26 Jul 2024 12:04:05 +0200
+Subject: add hurd-amd64 target
+
+https://github.com/rust-lang/rust/pull/128345
+
+commit a90b3ff9d0c2ac2edb48a90b78c5f587841472ad
+
+    added support for GNU/Hurd on x86_64
+---
+ compiler/rustc_target/src/spec/mod.rs              |  1 +
+ .../src/spec/targets/x86_64_unknown_hurd_gnu.rs    | 26 ++++++++++++++++++++++
+ 2 files changed, 27 insertions(+)
+ create mode 100644 compiler/rustc_target/src/spec/targets/x86_64_unknown_hurd_gnu.rs
+
+diff --git a/compiler/rustc_target/src/spec/mod.rs b/compiler/rustc_target/src/spec/mod.rs
+index 607eeac..95ef3a8 100644
+--- a/compiler/rustc_target/src/spec/mod.rs
++++ b/compiler/rustc_target/src/spec/mod.rs
+@@ -1641,6 +1641,7 @@ supported_targets! {
+     ("x86_64-unknown-haiku", x86_64_unknown_haiku),
+ 
+     ("i686-unknown-hurd-gnu", i686_unknown_hurd_gnu),
++    ("x86_64-unknown-hurd-gnu", x86_64_unknown_hurd_gnu),
+ 
+     ("aarch64-apple-darwin", aarch64_apple_darwin),
+     ("arm64e-apple-darwin", arm64e_apple_darwin),
+diff --git a/compiler/rustc_target/src/spec/targets/x86_64_unknown_hurd_gnu.rs b/compiler/rustc_target/src/spec/targets/x86_64_unknown_hurd_gnu.rs
+new file mode 100644
+index 0000000..3fb7484
+--- /dev/null
++++ b/compiler/rustc_target/src/spec/targets/x86_64_unknown_hurd_gnu.rs
+@@ -0,0 +1,26 @@
++use crate::spec::{base, Cc, LinkerFlavor, Lld, StackProbeType, Target};
++
++pub fn target() -> Target {
++    let mut base = base::hurd_gnu::opts();
++    base.cpu = "x86-64".into();
++    base.plt_by_default = false;
++    base.max_atomic_width = Some(64);
++    base.add_pre_link_args(LinkerFlavor::Gnu(Cc::Yes, Lld::No), &["-m64"]);
++    base.stack_probes = StackProbeType::Inline;
++    base.supports_xray = true;
++
++    Target {
++        llvm_target: "x86_64-unknown-hurd-gnu".into(),
++        metadata: crate::spec::TargetMetadata {
++            description: Some("64-bit GNU/Hurd".into()),
++            tier: Some(3),
++            host_tools: Some(true),
++            std: Some(true),
++        },
++        pointer_width: 64,
++        data_layout:
++            "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128".into(),
++        arch: "x86_64".into(),
++        options: base,
++    }
++}

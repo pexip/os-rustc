@@ -1,9 +1,9 @@
-usr/bin/lld-17 usr/bin/rust-lld
-usr/bin/clang-17 usr/bin/rust-clang
-usr/bin/llvm-dwp-17 usr/bin/rust-llvm-dwp
+usr/bin/lld-18 usr/bin/rust-lld
+usr/bin/clang-18 usr/bin/rust-clang
+usr/bin/llvm-dwp-18 usr/bin/rust-llvm-dwp
 # for -Z gcc-ld=lld, see compiler/rustc_codegen_ssa/src/back/link.rs for logic
 usr/bin/rust-lld usr/lib/rustlib/${env:DEB_HOST_RUST_TYPE}/bin/gcc-ld/ld
 usr/bin/rust-lld usr/lib/rustlib/${env:DEB_HOST_RUST_TYPE}/bin/gcc-ld/ld64
 # For applications that use cargo-binutils, e.g. grcov
-usr/bin/llvm-profdata-17 usr/lib/rustlib/${env:DEB_HOST_RUST_TYPE}/bin/llvm-profdata
-usr/bin/llvm-cov-17 usr/lib/rustlib/${env:DEB_HOST_RUST_TYPE}/bin/llvm-cov
+usr/bin/llvm-profdata-18 usr/lib/rustlib/${env:DEB_HOST_RUST_TYPE}/bin/llvm-profdata
+usr/bin/llvm-cov-18 usr/lib/rustlib/${env:DEB_HOST_RUST_TYPE}/bin/llvm-cov

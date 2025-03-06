@@ -23,7 +23,7 @@ target = ["DEB_TARGET_RUST_TYPE"]
 docs = false
 
 extended = true
-tools = ["cargo", "clippy", "rustfmt", "rustdoc", "rust-analyzer-proc-macro-srv"]
+tools = ["cargo", "clippy", "rustfmt", "rustdoc", "rust-analyzer-proc-macro-srv", "wasm-component-ld"]
 
 # we use pre-built LLVM, so can't optimize compiler-rt
 optimized-compiler-builtins = false
