@@ -212,10 +212,10 @@ index 8ad5b42..f93d3da 100644
  
  ### The Rustdoc Book
 diff --git a/src/doc/reference/src/conditional-compilation.md b/src/doc/reference/src/conditional-compilation.md
-index f52c90d..4bfb9dd 100644
+index e445475..45bcc99 100644
 --- a/src/doc/reference/src/conditional-compilation.md
 +++ b/src/doc/reference/src/conditional-compilation.md
-@@ -395,6 +395,6 @@ println!("I'm running on a {} machine!", machine_kind);
+@@ -375,6 +375,6 @@ println!("I'm running on a {} machine!", machine_kind);
  [`target_feature` attribute]: attributes/codegen.md#the-target_feature-attribute
  [attribute]: attributes.md
  [attributes]: attributes.md
@@ -224,7 +224,7 @@ index f52c90d..4bfb9dd 100644
  [crate type]: linkage.md
  [static C runtime]: linkage.md#static-and-dynamic-c-runtimes
 diff --git a/src/doc/reference/src/introduction.md b/src/doc/reference/src/introduction.md
-index 9038efd..770680d 100644
+index 2bf5beb..e06aa50 100644
 --- a/src/doc/reference/src/introduction.md
 +++ b/src/doc/reference/src/introduction.md
 @@ -135,8 +135,8 @@ We also want the reference to be as normative as possible, so if you see anythin
@@ -239,10 +239,10 @@ index 9038efd..770680d 100644
  [file an issue]: https://github.com/rust-lang/reference/issues
  [lifetime of temporaries]: expressions.html#temporaries
 diff --git a/src/doc/reference/src/linkage.md b/src/doc/reference/src/linkage.md
-index 3ac6bb2..6a6ed89 100644
+index 48a1c8e..8cf841b 100644
 --- a/src/doc/reference/src/linkage.md
 +++ b/src/doc/reference/src/linkage.md
-@@ -206,7 +206,7 @@ fn main() {
+@@ -216,7 +216,7 @@ fn main() {
  }
  ```
  
@@ -252,10 +252,10 @@ index 3ac6bb2..6a6ed89 100644
  To use this feature locally, you typically will use the `RUSTFLAGS` environment
  variable to specify flags to the compiler through Cargo. For example to compile
 diff --git a/src/doc/reference/src/procedural-macros.md b/src/doc/reference/src/procedural-macros.md
-index 32b847c..0cf09eb 100644
+index a97755f..b43f2ff 100644
 --- a/src/doc/reference/src/procedural-macros.md
 +++ b/src/doc/reference/src/procedural-macros.md
-@@ -331,7 +331,7 @@ Note that neither declarative nor procedural macros support doc comment tokens
+@@ -335,7 +335,7 @@ Note that neither declarative nor procedural macros support doc comment tokens
  their equivalent `#[doc = r"str"]` attributes when passed to macros.
  
  [Attribute macros]: #attribute-macros
@@ -263,7 +263,7 @@ index 32b847c..0cf09eb 100644
 +[Cargo's build scripts]: ../../../cargo/book/reference/build-scripts.html
  [Derive macros]: #derive-macros
  [Function-like macros]: #function-like-procedural-macros
- [`Delimiter::None`]: ../proc_macro/enum.Delimiter.html#variant.None
+ [`Delimiter::None`]: proc_macro::Delimiter::None
 diff --git a/src/doc/rustc/src/linker-plugin-lto.md b/src/doc/rustc/src/linker-plugin-lto.md
 index ab95aa2..8023f33 100644
 --- a/src/doc/rustc/src/linker-plugin-lto.md
@@ -291,15 +291,18 @@ index 5643c6a..a3458d8 100644
  [overview of CML]: https://fuchsia.dev/fuchsia-src/concepts/components/v2/component_manifests
  [reference for the file format]: https://fuchsia.dev/reference/cml
 diff --git a/src/doc/rustc/src/targets/custom.md b/src/doc/rustc/src/targets/custom.md
-index a67cb10..764ed34 100644
+index a332d24..7725514 100644
 --- a/src/doc/rustc/src/targets/custom.md
 +++ b/src/doc/rustc/src/targets/custom.md
-@@ -14,4 +14,4 @@ To see it for a different target, add the `--target` flag:
+@@ -14,7 +14,7 @@ To see it for a different target, add the `--target` flag:
  rustc +nightly -Z unstable-options --target=wasm32-unknown-unknown --print target-spec-json
  ```
  
 -To use a custom target, see the (unstable) [`build-std` feature](../../cargo/reference/unstable.html#build-std) of `cargo`.
 +To use a custom target, see the (unstable) [`build-std` feature](../../../../cargo/book/reference/unstable.html#build-std) of `cargo`.
+ 
+ ## Custom Target Lookup Path
+ 
 diff --git a/src/doc/rustc/src/tests/index.md b/src/doc/rustc/src/tests/index.md
 index 32baed9..2c36c1d 100644
 --- a/src/doc/rustc/src/tests/index.md
@@ -359,10 +362,10 @@ index dbb7414..73876b0 100644
  For example:
  ```cmd
 diff --git a/src/doc/unstable-book/src/compiler-flags/sanitizer.md b/src/doc/unstable-book/src/compiler-flags/sanitizer.md
-index 72b44e0..cfe71b2 100644
+index 24940f0..73446fa 100644
 --- a/src/doc/unstable-book/src/compiler-flags/sanitizer.md
 +++ b/src/doc/unstable-book/src/compiler-flags/sanitizer.md
-@@ -854,7 +854,7 @@ It is strongly recommended to combine sanitizers with recompiled and
+@@ -883,7 +883,7 @@ It is strongly recommended to combine sanitizers with recompiled and
  instrumented standard library, for example using [cargo `-Zbuild-std`
  functionality][build-std].
  
@@ -372,10 +375,10 @@ index 72b44e0..cfe71b2 100644
  # Working with other languages
  
 diff --git a/src/tools/linkchecker/main.rs b/src/tools/linkchecker/main.rs
-index a85aca8..47f17f5 100644
+index 318d1be..ad881a7 100644
 --- a/src/tools/linkchecker/main.rs
 +++ b/src/tools/linkchecker/main.rs
-@@ -292,6 +292,10 @@ impl Checker {
+@@ -294,6 +294,10 @@ impl Checker {
                          return;
                      }
                  }

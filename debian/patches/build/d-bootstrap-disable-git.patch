@@ -1,18 +1,18 @@
 From: Matthijs van Otterdijk <matthijs@wirevirt.net>
 Date: Thu, 14 Jul 2022 13:17:38 +0200
-Subject: Don't check for cargo-vendor when building from (Debian's) git
+Subject: bootstrap: always use commit info file instead of checking .git
 
 Forwarded: not-needed
 ---
  src/bootstrap/src/core/build_steps/dist.rs | 6 ++++--
- src/bootstrap/src/utils/channel.rs         | 6 ++++++
- 2 files changed, 10 insertions(+), 2 deletions(-)
+ src/bootstrap/src/utils/channel.rs         | 5 +++--
+ 2 files changed, 7 insertions(+), 4 deletions(-)
 
 diff --git a/src/bootstrap/src/core/build_steps/dist.rs b/src/bootstrap/src/core/build_steps/dist.rs
-index 1e9d202..5fe4b9e 100644
+index 4957de2..1bdc965 100644
 --- a/src/bootstrap/src/core/build_steps/dist.rs
 +++ b/src/bootstrap/src/core/build_steps/dist.rs
-@@ -1011,8 +1011,10 @@ impl Step for PlainSourceTarball {
+@@ -1013,8 +1013,10 @@ impl Step for PlainSourceTarball {
  
          // If we're building from git or tarball sources, we need to vendor
          // a complete distribution.
@@ -23,22 +23,25 @@ index 1e9d202..5fe4b9e 100644
 +        //         repository, but cargo-vendor should not be installed or run.
 +        if false
          {
-             // FIXME: This code looks _very_ similar to what we have in `src/core/build_steps/vendor.rs`
-             // perhaps it should be removed in favor of making `dist` perform the `vendor` step?
+             builder.require_and_update_all_submodules();
+ 
 diff --git a/src/bootstrap/src/utils/channel.rs b/src/bootstrap/src/utils/channel.rs
-index f8bcb58..9163b42 100644
+index 3ae512e..fbc3472 100644
 --- a/src/bootstrap/src/utils/channel.rs
 +++ b/src/bootstrap/src/utils/channel.rs
-@@ -36,6 +36,12 @@ pub struct Info {
- 
+@@ -36,12 +36,13 @@ pub struct Info {
  impl GitInfo {
      pub fn new(omit_git_hash: bool, dir: &Path) -> GitInfo {
-+        //
-+        // Debian: returning early because the Debian package is also in a git
-+        //         repository, but we don't want to parse gitinfo. This is
-+        //         needed for the bootstrap tests to work which running for
-+        //         Debian git.
-+        return GitInfo::Absent;
          // See if this even begins to look like a git dir
-         if !dir.join(".git").exists() {
+-        if !dir.join(".git").exists() {
++        // Debian: always use commit info file, since our .git is not upstreams..
++        //if !dir.join(".git").exists() {
              match read_commit_info_file(dir) {
+                 Some(info) => return GitInfo::RecordedForTarball(info),
+                 None => return GitInfo::Absent,
+             }
+-        }
++        //}
+ 
+         // Make sure git commands work
+         match helpers::git(Some(dir)).arg("rev-parse").as_command_mut().output() {

@@ -11,13 +11,13 @@ commit 3ff489613e871677693b39c93ddc208c2ec584fc
     This is the same as linux_like/linux/gnu's __timeval for ut_tv for 64bit
     architectures.
 ---
- vendor/libc-0.2.155/src/unix/hurd/mod.rs | 5 +++++
+ vendor/libc-0.2.158/src/unix/hurd/mod.rs | 5 +++++
  1 file changed, 5 insertions(+)
 
-diff --git a/vendor/libc-0.2.155/src/unix/hurd/mod.rs b/vendor/libc-0.2.155/src/unix/hurd/mod.rs
-index 2701649..42493b8 100644
---- a/vendor/libc-0.2.155/src/unix/hurd/mod.rs
-+++ b/vendor/libc-0.2.155/src/unix/hurd/mod.rs
+diff --git a/vendor/libc-0.2.158/src/unix/hurd/mod.rs b/vendor/libc-0.2.158/src/unix/hurd/mod.rs
+index 71f1ac8..ad422fe 100644
+--- a/vendor/libc-0.2.158/src/unix/hurd/mod.rs
++++ b/vendor/libc-0.2.158/src/unix/hurd/mod.rs
 @@ -450,6 +450,11 @@ s! {
          pub tv_nsec: __syscall_slong_t,
      }

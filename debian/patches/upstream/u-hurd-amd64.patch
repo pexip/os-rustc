@@ -14,10 +14,10 @@ commit a90b3ff9d0c2ac2edb48a90b78c5f587841472ad
  create mode 100644 compiler/rustc_target/src/spec/targets/x86_64_unknown_hurd_gnu.rs
 
 diff --git a/compiler/rustc_target/src/spec/mod.rs b/compiler/rustc_target/src/spec/mod.rs
-index 607eeac..95ef3a8 100644
+index d5f227a..4fca50d 100644
 --- a/compiler/rustc_target/src/spec/mod.rs
 +++ b/compiler/rustc_target/src/spec/mod.rs
-@@ -1641,6 +1641,7 @@ supported_targets! {
+@@ -1645,6 +1645,7 @@ supported_targets! {
      ("x86_64-unknown-haiku", x86_64_unknown_haiku),
  
      ("i686-unknown-hurd-gnu", i686_unknown_hurd_gnu),

@@ -1,0 +1,55 @@
+From: =?utf-8?q?Fabian_Gr=C3=BCnbichler?= <git@fabian.gruenbichler.email>
+Date: Wed, 23 Oct 2024 22:37:25 +0200
+Subject: ignore broken debuginfo tests
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+Forwarded: yes
+
+Signed-off-by: Fabian Grünbichler <git@fabian.gruenbichler.email>
+---
+ tests/debuginfo/by-value-non-immediate-argument.rs | 2 ++
+ tests/debuginfo/macro-stepping.rs                  | 3 ++-
+ tests/debuginfo/method-on-enum.rs                  | 2 ++
+ 3 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/tests/debuginfo/by-value-non-immediate-argument.rs b/tests/debuginfo/by-value-non-immediate-argument.rs
+index f0a39a4..f6e0ea0 100644
+--- a/tests/debuginfo/by-value-non-immediate-argument.rs
++++ b/tests/debuginfo/by-value-non-immediate-argument.rs
+@@ -1,6 +1,8 @@
+ //@ min-lldb-version: 1800
+ //@ min-gdb-version: 13.0
+ //@ compile-flags:-g
++//Debian: broken, see https://github.com/rust-lang/rust/issues/129662#issuecomment-2313102689
++//@ ignore-gdb
+ 
+ // === GDB TESTS ===================================================================================
+ 
+diff --git a/tests/debuginfo/macro-stepping.rs b/tests/debuginfo/macro-stepping.rs
+index 35bb6de..dec0eff 100644
+--- a/tests/debuginfo/macro-stepping.rs
++++ b/tests/debuginfo/macro-stepping.rs
+@@ -2,7 +2,8 @@
+ //@ ignore-aarch64
+ //@ min-lldb-version: 1800
+ //@ min-gdb-version: 13.0
+-
++//Debian: broken, see https://github.com/rust-lang/rust/issues/130896
++//@ ignore-gdb
+ //@ aux-build:macro-stepping.rs
+ 
+ #![allow(unused)]
+diff --git a/tests/debuginfo/method-on-enum.rs b/tests/debuginfo/method-on-enum.rs
+index a570144..68a82a5 100644
+--- a/tests/debuginfo/method-on-enum.rs
++++ b/tests/debuginfo/method-on-enum.rs
+@@ -1,5 +1,7 @@
+ //@ min-lldb-version: 1800
+ //@ min-gdb-version: 13.0
++//Debian: broken, see https://github.com/rust-lang/rust/issues/129662#issuecomment-2313102689
++//@ ignore-gdb
+ 
+ //@ compile-flags:-g
+ 

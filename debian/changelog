@@ -1,3 +1,46 @@
+rustc (1.82.0+dfsg1-2) unstable; urgency=medium
+
+  * build: re-enable clang-rt on armel/armhf
+  * build: drop workaround for riscv64/loong64
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Tue, 29 Oct 2024 13:18:35 +0100
+
+rustc (1.82.0+dfsg1-1) unstable; urgency=medium
+
+  * rust-src: ship original Cargo.lock file to fix rust-analyzer for libstd,
+    and allow `-Z build-std`
+  * build: disable profiler support on armel/armhf
+  * build: extend riscv64 workaround to loong64
+  * cargo wrapper: fix LTO position in argument lists (Closes: #1086025)
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Fri, 25 Oct 2024 16:21:38 +0200
+
+rustc (1.82.0+dfsg1-1~exp3) experimental; urgency=medium
+
+  * conditonalize riscv64 workaround
+  * fix or disable more broken tests
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Wed, 23 Oct 2024 20:39:25 +0200
+
+rustc (1.82.0+dfsg1-1~exp2) experimental; urgency=medium
+
+  * fix some test breakage
+  * riscv64: unbreak compiler_builtin build
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Wed, 23 Oct 2024 18:03:55 +0200
+
+rustc (1.82.0+dfsg1-1~exp1) experimental; urgency=medium
+
+  * New upstream release
+  * New wasi-libc version 0.0~git20240708.3f43ea9
+  * switch to LLVM 19
+  * set LLVM profiler RT path via config
+  * update bootstrap git commit info patch
+  * re-instate bootstrap test config patch
+  * make rust-src cleanup more robust
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Tue, 22 Oct 2024 11:17:40 +0200
+
 rustc (1.81.0+dfsg1-2+pexip24u3) pexip; urgency=medium
 
   * Remove llvm18 check

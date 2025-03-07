@@ -9,17 +9,17 @@ Forwarded: not-needed
 ---
  Cargo.toml                                 |  6 ------
  src/bootstrap/bootstrap.py                 |  4 ----
- src/bootstrap/src/core/build_steps/test.rs | 13 +------------
+ src/bootstrap/src/core/build_steps/test.rs | 10 +---------
  src/bootstrap/src/core/builder.rs          | 31 +-----------------------------
  src/tools/build_helper/src/util.rs         | 21 +-------------------
  src/tools/rust-analyzer/Cargo.toml         | 11 ++++++++++-
- 6 files changed, 13 insertions(+), 73 deletions(-)
+ 6 files changed, 13 insertions(+), 70 deletions(-)
 
 diff --git a/Cargo.toml b/Cargo.toml
-index ce87a8c..1751db1 100644
+index d4b8425..7610ad1 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -20,21 +20,15 @@ members = [
+@@ -18,21 +18,15 @@ members = [
    "src/tools/tidy",
    "src/tools/tier-check",
    "src/tools/build-manifest",
@@ -42,10 +42,10 @@ index ce87a8c..1751db1 100644
    "src/tools/lld-wrapper",
    "src/tools/collect-license-metadata",
 diff --git a/src/bootstrap/bootstrap.py b/src/bootstrap/bootstrap.py
-index 4e8e0fd..7a4790d 100644
+index 71f69e0..2462aa1 100644
 --- a/src/bootstrap/bootstrap.py
 +++ b/src/bootstrap/bootstrap.py
-@@ -1007,10 +1007,6 @@ class RustBuild(object):
+@@ -1024,10 +1024,6 @@ class RustBuild(object):
          args = [self.cargo(), "build", "--manifest-path",
                  os.path.join(self.rust_root, "src/bootstrap/Cargo.toml")]
          args.extend("--verbose" for _ in range(self.verbose))
@@ -57,34 +57,31 @@ index 4e8e0fd..7a4790d 100644
              args.append("--features")
              args.append("build-metrics")
 diff --git a/src/bootstrap/src/core/build_steps/test.rs b/src/bootstrap/src/core/build_steps/test.rs
-index 3f0cbde..33b68e0 100644
+index 84a6b26..ac210ab 100644
 --- a/src/bootstrap/src/core/build_steps/test.rs
 +++ b/src/bootstrap/src/core/build_steps/test.rs
-@@ -2398,18 +2398,7 @@ impl Step for RustcGuide {
+@@ -2409,15 +2409,7 @@ impl Step for RustcGuide {
      }
  
      fn run(self, builder: &Builder<'_>) {
--        let relative_path = Path::new("src").join("doc").join("rustc-dev-guide");
--        builder.update_submodule(&relative_path);
+-        let relative_path = "src/doc/rustc-dev-guide";
+-        builder.require_submodule(relative_path, None);
 -
 -        let src = builder.src.join(relative_path);
 -        let mut rustbook_cmd = builder.tool_cmd(Tool::Rustbook).delay_failure();
 -        rustbook_cmd.arg("linkcheck").arg(&src);
--        let toolstate = if rustbook_cmd.run(builder).is_success() {
--            ToolState::TestPass
--        } else {
--            ToolState::TestFail
--        };
+-        let toolstate =
+-            if rustbook_cmd.run(builder) { ToolState::TestPass } else { ToolState::TestFail };
 -        builder.save_toolstate("rustc-dev-guide", toolstate);
 +        builder.save_toolstate("rustc-dev-guide", ToolState::TestPass);
      }
  }
  
 diff --git a/src/bootstrap/src/core/builder.rs b/src/bootstrap/src/core/builder.rs
-index 6d6df650..0cd0e2d 100644
+index ff0d1f3..6e3efeb 100644
 --- a/src/bootstrap/src/core/builder.rs
 +++ b/src/bootstrap/src/core/builder.rs
-@@ -778,24 +778,13 @@ impl<'a> Builder<'a> {
+@@ -782,24 +782,13 @@ impl<'a> Builder<'a> {
                  tool::Linkchecker,
                  tool::CargoTest,
                  tool::Compiletest,
@@ -109,7 +106,7 @@ index 6d6df650..0cd0e2d 100644
                  tool::OptimizedDist,
                  tool::CoverageDump,
                  tool::LlvmBitcodeLinker,
-@@ -834,12 +823,7 @@ impl<'a> Builder<'a> {
+@@ -839,12 +828,7 @@ impl<'a> Builder<'a> {
                  check::Rustdoc,
                  check::CodegenBackend,
                  check::Clippy,
@@ -119,10 +116,10 @@ index 6d6df650..0cd0e2d 100644
 -                check::Rls,
                  check::Rustfmt,
 -                check::RustAnalyzer,
+                 check::TestFloatParse,
                  check::Bootstrap,
              ),
-             Kind::Test => describe!(
-@@ -872,7 +856,6 @@ impl<'a> Builder<'a> {
+@@ -878,7 +862,6 @@ impl<'a> Builder<'a> {
                  test::TierCheck,
                  test::Cargotest,
                  test::Cargo,
@@ -130,7 +127,7 @@ index 6d6df650..0cd0e2d 100644
                  test::ErrorIndex,
                  test::Distcheck,
                  test::Nomicon,
-@@ -887,8 +870,6 @@ impl<'a> Builder<'a> {
+@@ -893,8 +876,6 @@ impl<'a> Builder<'a> {
                  test::EmbeddedBook,
                  test::EditionGuide,
                  test::Rustfmt,
@@ -139,7 +136,7 @@ index 6d6df650..0cd0e2d 100644
                  test::Clippy,
                  test::CompiletestTest,
                  test::CrateRunMakeSupport,
-@@ -927,7 +908,6 @@ impl<'a> Builder<'a> {
+@@ -934,7 +915,6 @@ impl<'a> Builder<'a> {
                  doc::CargoBook,
                  doc::Clippy,
                  doc::ClippyBook,
@@ -147,7 +144,7 @@ index 6d6df650..0cd0e2d 100644
                  doc::EmbeddedBook,
                  doc::EditionGuide,
                  doc::StyleGuide,
-@@ -948,11 +928,8 @@ impl<'a> Builder<'a> {
+@@ -955,11 +935,8 @@ impl<'a> Builder<'a> {
                  dist::Analysis,
                  dist::Src,
                  dist::Cargo,
@@ -159,7 +156,7 @@ index 6d6df650..0cd0e2d 100644
                  dist::LlvmTools,
                  dist::LlvmBitcodeLinker,
                  dist::RustDev,
-@@ -975,10 +952,8 @@ impl<'a> Builder<'a> {
+@@ -982,10 +959,8 @@ impl<'a> Builder<'a> {
                  // install the same binaries twice for each tool, leaving backup files (*.old) as a result.
                  install::Rustc,
                  install::Cargo,
@@ -170,7 +167,7 @@ index 6d6df650..0cd0e2d 100644
                  install::LlvmTools,
                  install::Src,
              ),
-@@ -986,7 +961,6 @@ impl<'a> Builder<'a> {
+@@ -993,7 +968,6 @@ impl<'a> Builder<'a> {
                  run::BuildManifest,
                  run::BumpStage0,
                  run::ReplaceVersionPlaceholder,
@@ -178,7 +175,7 @@ index 6d6df650..0cd0e2d 100644
                  run::CollectLicenseMetadata,
                  run::GenerateCopyright,
                  run::GenerateWindowsSys,
-@@ -2131,10 +2105,7 @@ impl<'a> Builder<'a> {
+@@ -2138,10 +2112,7 @@ impl<'a> Builder<'a> {
              }
          }
  
@@ -221,7 +218,7 @@ index 72c05c4..3be35b7 100644
 +    return &[];
  }
 diff --git a/src/tools/rust-analyzer/Cargo.toml b/src/tools/rust-analyzer/Cargo.toml
-index d4c3b7a..1ed6f26 100644
+index aa7bd2d..558a43b 100644
 --- a/src/tools/rust-analyzer/Cargo.toml
 +++ b/src/tools/rust-analyzer/Cargo.toml
 @@ -1,5 +1,14 @@

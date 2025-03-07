@@ -30,10 +30,10 @@ index 5008069..af37dfc 100644
  max_level_info = ['rustc_driver_impl/max_level_info']
  rustc_use_parallel_compiler = ['rustc_driver_impl/rustc_use_parallel_compiler']
 diff --git a/src/tools/rust-analyzer/crates/profile/Cargo.toml b/src/tools/rust-analyzer/crates/profile/Cargo.toml
-index 5989dc6..20eab31 100644
+index 2e3413f..f823aa1 100644
 --- a/src/tools/rust-analyzer/crates/profile/Cargo.toml
 +++ b/src/tools/rust-analyzer/crates/profile/Cargo.toml
-@@ -14,7 +14,6 @@ doctest = false
+@@ -15,7 +15,6 @@ doctest = false
  [dependencies]
  cfg-if = "1.0.0"
  libc.workspace = true
@@ -41,7 +41,7 @@ index 5989dc6..20eab31 100644
  
  [target.'cfg(target_os = "linux")'.dependencies]
  perf-event = "=0.4.7"
-@@ -24,7 +23,6 @@ windows-sys = { version = "0.52", features = ["Win32_System_Threading", "Win32_S
+@@ -25,7 +24,6 @@ windows-sys = { version = "0.52", features = ["Win32_System_Threading", "Win32_S
  
  [features]
  cpu_profiler = []
