@@ -1,7 +1,7 @@
 rustc (1.82.0+dfsg1-2+pexip24u1) pexip; urgency=medium
 
   * New upstream release
-  * Use llvm-17
+  * Revert use of llvm-17 (instead use llvm-19).
 
  -- Huw Jones <huw@pexip.com>  Fri, 07 Mar 2025 16:14:11 +0000
 
