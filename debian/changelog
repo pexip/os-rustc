@@ -1,3 +1,9 @@
+rustc (1.81.0+dfsg1-2+pexip24u2) pexip; urgency=medium
+
+  * Use t64 libllv17
+
+ -- Huw Jones <huw@pexip.com>  Fri, 07 Mar 2025 11:23:01 +0000
+
 rustc (1.81.0+dfsg1-2+pexip24u1) pexip; urgency=medium
 
   * New upstream release
