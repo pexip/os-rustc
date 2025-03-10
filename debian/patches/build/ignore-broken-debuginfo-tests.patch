@@ -15,13 +15,13 @@ Signed-off-by: Fabian Grünbichler <git@fabian.gruenbichler.email>
  3 files changed, 6 insertions(+), 1 deletion(-)
 
 diff --git a/tests/debuginfo/by-value-non-immediate-argument.rs b/tests/debuginfo/by-value-non-immediate-argument.rs
-index f0a39a4..f6e0ea0 100644
+index 192f6ef..f0807ee 100644
 --- a/tests/debuginfo/by-value-non-immediate-argument.rs
 +++ b/tests/debuginfo/by-value-non-immediate-argument.rs
-@@ -1,6 +1,8 @@
- //@ min-lldb-version: 1800
+@@ -2,6 +2,8 @@
  //@ min-gdb-version: 13.0
  //@ compile-flags:-g
+ //@ ignore-windows-gnu: #128973
 +//Debian: broken, see https://github.com/rust-lang/rust/issues/129662#issuecomment-2313102689
 +//@ ignore-gdb
  
@@ -42,7 +42,7 @@ index 35bb6de..dec0eff 100644
  
  #![allow(unused)]
 diff --git a/tests/debuginfo/method-on-enum.rs b/tests/debuginfo/method-on-enum.rs
-index a570144..68a82a5 100644
+index 754b4a2..7fd5411 100644
 --- a/tests/debuginfo/method-on-enum.rs
 +++ b/tests/debuginfo/method-on-enum.rs
 @@ -1,5 +1,7 @@

@@ -4,24 +4,14 @@ Subject: d-disable-download-tests
 
 Forwarded: no
 ---
- src/bootstrap/src/core/config/tests.rs | 6 ++++++
- 1 file changed, 6 insertions(+)
+ src/bootstrap/src/core/config/tests.rs | 3 +++
+ 1 file changed, 3 insertions(+)
 
 diff --git a/src/bootstrap/src/core/config/tests.rs b/src/bootstrap/src/core/config/tests.rs
-index 219c5a6..4a51358 100644
+index 9c67010..d5d9e8a 100644
 --- a/src/bootstrap/src/core/config/tests.rs
 +++ b/src/bootstrap/src/core/config/tests.rs
-@@ -20,6 +20,9 @@ fn parse(config: &str) -> Config {
- 
- #[test]
- fn download_ci_llvm() {
-+    // Debian: this will attempt to download LLVM
-+    return;
-+
-     if crate::core::build_steps::llvm::is_ci_llvm_modified(&parse("")) {
-         eprintln!("Detected LLVM as non-available: running in CI and modified LLVM in this change");
-         return;
-@@ -51,6 +54,9 @@ fn download_ci_llvm() {
+@@ -46,6 +46,9 @@ fn download_ci_llvm() {
  //   - https://github.com/rust-lang/rust/pull/109162#issuecomment-1496782487
  #[test]
  fn detect_src_and_out() {

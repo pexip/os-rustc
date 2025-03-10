@@ -8,10 +8,10 @@ Bug: https://github.com/rust-lang/rust/issues/68973
  1 file changed, 2 insertions(+)
 
 diff --git a/compiler/rustc_target/src/spec/base/windows_gnu.rs b/compiler/rustc_target/src/spec/base/windows_gnu.rs
-index 7346e42..df4b4ea 100644
+index e975102..9876a4f 100644
 --- a/compiler/rustc_target/src/spec/base/windows_gnu.rs
 +++ b/compiler/rustc_target/src/spec/base/windows_gnu.rs
-@@ -47,6 +47,8 @@ pub fn opts() -> TargetOptions {
+@@ -40,6 +40,8 @@ pub(crate) fn opts() -> TargetOptions {
          "-lmingwex",
          "-luser32",
          "-lkernel32",

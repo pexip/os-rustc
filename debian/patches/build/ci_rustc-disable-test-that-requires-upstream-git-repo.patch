@@ -1,0 +1,29 @@
+From: =?utf-8?q?Fabian_Gr=C3=BCnbichler?= <git@fabian.gruenbichler.email>
+Date: Wed, 4 Dec 2024 17:50:43 +0100
+Subject: ci_rustc: disable test that requires upstream git repo
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+Gbp-Pq: Topic build
+Forwarded: not-needed
+
+Signed-off-by: Fabian Grünbichler <git@fabian.gruenbichler.email>
+---
+ src/bootstrap/src/core/builder/tests.rs | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/bootstrap/src/core/builder/tests.rs b/src/bootstrap/src/core/builder/tests.rs
+index 4fb7cf4..f0ab410 100644
+--- a/src/bootstrap/src/core/builder/tests.rs
++++ b/src/bootstrap/src/core/builder/tests.rs
+@@ -212,7 +212,8 @@ fn alias_and_path_for_library() {
+     assert_eq!(first(cache.all::<doc::Std>()), &[doc_std!(A => A, stage = 0)]);
+ }
+ 
+-#[test]
++// Debian: this test doesn't work since it tries to detect dirty git state..
++#[allow(dead_code)]
+ fn ci_rustc_if_unchanged_logic() {
+     let config = Config::parse_inner(
+         Flags::parse(&[

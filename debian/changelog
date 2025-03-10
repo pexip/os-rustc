@@ -1,3 +1,19 @@
+rustc (1.83.0+dfsg1-1) unstable; urgency=medium
+
+  * upload to unstable
+  * fix/ignore some test failures
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Wed, 04 Dec 2024 18:07:54 +0100
+
+rustc (1.83.0+dfsg1-1~exp1) experimental; urgency=medium
+
+  * New upstream release
+  * config: disable downloading LLVM from CI
+  * blake3: adapt build.rs to skip bundled C code
+  * remove libstd shared library
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Sun, 01 Dec 2024 16:53:12 +0100
+
 rustc (1.82.0+dfsg1-2+pexip24u1) pexip; urgency=medium
 
   * New upstream release

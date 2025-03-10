@@ -7,13 +7,13 @@ Content-Transfer-Encoding: 8bit
 
 Signed-off-by: Fabian Grünbichler <debian@fabian.gruenbichler.email>
 ---
- vendor/libz-sys-1.1.19/build.rs | 8 +++-----
+ vendor/libz-sys-1.1.20/build.rs | 8 +++-----
  1 file changed, 3 insertions(+), 5 deletions(-)
 
-diff --git a/vendor/libz-sys-1.1.19/build.rs b/vendor/libz-sys-1.1.19/build.rs
+diff --git a/vendor/libz-sys-1.1.20/build.rs b/vendor/libz-sys-1.1.20/build.rs
 index cab160a..810084e 100644
---- a/vendor/libz-sys-1.1.19/build.rs
-+++ b/vendor/libz-sys-1.1.19/build.rs
+--- a/vendor/libz-sys-1.1.20/build.rs
++++ b/vendor/libz-sys-1.1.20/build.rs
 @@ -81,12 +81,10 @@ fn main() {
      //
      // Apple platforms have libz.1.dylib, and it's usually available even when

@@ -430,6 +430,7 @@ debian/dh_auto_install.stamp:
 
 	mkdir -p $(DEB_DESTDIR)/usr/lib/$(DEB_HOST_MULTIARCH)/
 	mv $(DEB_DESTDIR)/usr/lib/lib*.so $(DEB_DESTDIR)/usr/lib/$(DEB_HOST_MULTIARCH)/
+	rm $(DEB_DESTDIR)/usr/lib/rustlib/$(DEB_HOST_RUST_TYPE)/lib/libstd-*.so
 
 	# Replace duplicated compile-time/run-time dylibs with symlinks
 	@set -e; \
