@@ -4,7 +4,6 @@ Source: https://www.rust-lang.org
 Files-Excluded:
  .gitmodules
  *.min.js
- src/gcc
  src/llvm-project
 # Pre-generated docs
  src/tools/rustfmt/docs
@@ -65,14 +64,15 @@ Files-Excluded:
  vendor/aho-corasick-0.7.20
  vendor/aho-corasick-1.0.2
  vendor/allocator-api2-0.2.16
+ vendor/allocator-api2-0.2.18
  vendor/alloc-no-stdlib-2.0.4
  vendor/alloc-stdlib-0.2.2
  vendor/analyzeme-12.0.0
+ vendor/annotate-snippets-0.11.4
  vendor/ansi-str-0.8.0
  vendor/ansi_term-0.12.1
  vendor/ansitok-0.2.0
  vendor/anstream-0.6.15
- vendor/anstream-0.6.17
  vendor/anstyle-1.0.8
  vendor/anstyle-lossy-1.1.2
  vendor/anstyle-parse-0.2.5
@@ -111,6 +111,7 @@ Files-Excluded:
  vendor/brotli-decompressor-2.3.4
  vendor/bstr-0.2.16
  vendor/bstr-0.2.17
+ vendor/bstr-1.10.0
  vendor/bstr-1.4.0
  vendor/bstr-1.9.1
  vendor/bumpalo-3.12.0
@@ -123,35 +124,43 @@ Files-Excluded:
  vendor/bytes-1.1.0
  vendor/bytes-1.4.0
  vendor/bytes-1.6.0
+ vendor/bytes-1.7.1
  vendor/bytesize-1.1.0
  vendor/camino-1.1.4
  vendor/camino-1.1.6
  vendor/camino-1.1.7
  vendor/cargo_metadata-0.15.3
+ vendor/cargo_metadata-0.19.0
  vendor/cargo-platform-0.1.2
+ vendor/cargo-platform-0.1.8
  vendor/cargo-util-0.1.2
  vendor/cast-0.2.7
  vendor/cc-1.0.68
  vendor/cc-1.0.72
  vendor/cc-1.0.73
+ vendor/cc-1.0.98
  vendor/cc-1.0.99
- vendor/cc-1.1.34
+ vendor/cc-1.1.22
  vendor/cfg-if-0.1.10
  vendor/chrono-0.4.19
+ vendor/chrono-0.4.38
  vendor/chrono-tz-0.10.0
  vendor/chrono-tz-build-0.4.0
  vendor/cipher-0.4.4
  vendor/clap-2.33.3
  vendor/clap-2.34.0
  vendor/clap-4.1.10
- vendor/clap-4.5.18
- vendor/clap_builder-4.5.18
- vendor/clap_complete-4.5.29
+ vendor/clap-4.5.20
+ vendor/clap_builder-4.5.20
  vendor/clap_complete-4.5.35
+ vendor/clap_complete-4.5.37
  vendor/clap_derive-3.1.4
  vendor/clap_derive-4.1.9
  vendor/clap_lex-0.3.3
+ vendor/clap_lex-0.7.2
  vendor/colorchoice-1.0.2
+ vendor/color-print-0.3.6
+ vendor/color-print-proc-macro-0.3.6
  vendor/combine-4.6.3
  vendor/commoncrypto-0.2.0
  vendor/commoncrypto-sys-0.2.0
@@ -164,40 +173,46 @@ Files-Excluded:
  vendor/core-foundation-0.9.3
  vendor/core-foundation-sys-0.8.3
  vendor/cpufeatures-0.2.12
+ vendor/cpufeatures-0.2.15
  vendor/cpufeatures-0.2.5
  vendor/crabgrind-0.1.10
- vendor/cranelift-bforest-0.113.0
- vendor/cranelift-bitset-0.113.0
- vendor/cranelift-codegen-0.113.0
- vendor/cranelift-codegen-meta-0.113.0
- vendor/cranelift-codegen-shared-0.113.0
- vendor/cranelift-control-0.113.0
- vendor/cranelift-entity-0.113.0
- vendor/cranelift-frontend-0.113.0
- vendor/cranelift-isle-0.113.0
- vendor/cranelift-jit-0.113.0
- vendor/cranelift-module-0.113.0
- vendor/cranelift-native-0.113.0
- vendor/cranelift-object-0.113.0
+ vendor/cranelift-bforest-0.114.0
+ vendor/cranelift-bitset-0.114.0
+ vendor/cranelift-codegen-0.114.0
+ vendor/cranelift-codegen-meta-0.114.0
+ vendor/cranelift-codegen-shared-0.114.0
+ vendor/cranelift-control-0.114.0
+ vendor/cranelift-entity-0.114.0
+ vendor/cranelift-frontend-0.114.0
+ vendor/cranelift-isle-0.114.0
+ vendor/cranelift-jit-0.114.0
+ vendor/cranelift-module-0.114.0
+ vendor/cranelift-native-0.114.0
+ vendor/cranelift-object-0.114.0
  vendor/crates-io-0.33.1
  vendor/crc32fast-1.3.2
  vendor/crc32fast-1.4.0
  vendor/criterion-0.3.5
  vendor/criterion-plot-0.4.4
  vendor/crossbeam-channel-0.5.12
+ vendor/crossbeam-channel-0.5.13
  vendor/crossbeam-channel-0.5.1
  vendor/crossbeam-channel-0.5.4
  vendor/crossbeam-deque-0.8.1
  vendor/crossbeam-deque-0.8.4
+ vendor/crossbeam-deque-0.8.5
  vendor/crossbeam-epoch-0.9.17
  vendor/crossbeam-epoch-0.9.5
  vendor/crossbeam-epoch-0.9.8
  vendor/crossbeam-utils-0.8.18
  vendor/crossbeam-utils-0.8.19
+ vendor/crossbeam-utils-0.8.20
  vendor/crossbeam-utils-0.8.5
  vendor/crossbeam-utils-0.8.7
  vendor/crossbeam-utils-0.8.8
  vendor/crypto-hash-0.3.4
+ vendor/cssparser-0.31.2
+ vendor/cssparser-macros-0.6.1
  vendor/csv-1.1.6
  vendor/csv-1.2.1
  vendor/csv-core-0.1.10
@@ -210,16 +225,21 @@ Files-Excluded:
  vendor/decodeme-12.0.0
  vendor/der_derive-0.7.3
  vendor/derive-error-chain-0.10.1
+ vendor/derive_more-0.99.18
  vendor/diesel_derives-1.4.1
  vendor/difflib-0.4.0
  vendor/digest-0.10.6
  vendor/dirs-4.0.0
  vendor/dirs-sys-0.3.7
  vendor/dotenv-0.10.1
+ vendor/dtoa-1.0.9
+ vendor/dtoa-short-0.3.5
+ vendor/ego-tree-0.6.3
  vendor/either-1.10.0
  vendor/either-1.6.1
  vendor/either-1.8.1
  vendor/encode_unicode-0.3.6
+ vendor/encode_unicode-1.0.0
  vendor/encoding_rs-0.8.28
  vendor/encoding_rs-0.8.30
  vendor/encoding_rs-0.8.32
@@ -229,9 +249,11 @@ Files-Excluded:
  vendor/env_logger-0.7.1
  vendor/env_logger-0.9.0
  vendor/errno-0.2.8
+ vendor/errno-0.3.9
  vendor/errno-dragonfly-0.1.2
  vendor/error-chain-0.10.0
  vendor/escargot-0.5.7
+ vendor/expect-test-1.5.0
  vendor/fallible-iterator-0.2.0
  vendor/fastrand-1.7.0
  vendor/fastrand-1.9.0
@@ -244,32 +266,43 @@ Files-Excluded:
  vendor/flate2-1.0.22
  vendor/flate2-1.0.25
  vendor/flate2-1.0.31
+ vendor/flate2-1.0.34
  vendor/fm-0.2.2
  vendor/form_urlencoded-1.0.1
  vendor/form_urlencoded-1.1.0
  vendor/fs_extra-1.2.0
  vendor/fuchsia-cprng-0.1.1
  vendor/futures-0.3.27
+ vendor/futures-0.3.30
  vendor/futures-channel-0.3.19
  vendor/futures-channel-0.3.21
  vendor/futures-channel-0.3.27
+ vendor/futures-channel-0.3.30
  vendor/futures-core-0.3.19
  vendor/futures-core-0.3.21
  vendor/futures-core-0.3.27
+ vendor/futures-core-0.3.30
  vendor/futures-executor-0.3.27
+ vendor/futures-executor-0.3.30
  vendor/futures-io-0.3.21
  vendor/futures-io-0.3.27
+ vendor/futures-io-0.3.30
  vendor/futures-macro-0.3.27
+ vendor/futures-macro-0.3.30
  vendor/futures-sink-0.3.19
  vendor/futures-sink-0.3.21
  vendor/futures-sink-0.3.27
+ vendor/futures-sink-0.3.30
  vendor/futures-task-0.3.19
  vendor/futures-task-0.3.21
  vendor/futures-task-0.3.27
+ vendor/futures-task-0.3.30
  vendor/futures-util-0.3.19
  vendor/futures-util-0.3.21
  vendor/futures-util-0.3.27
+ vendor/futures-util-0.3.30
  vendor/fwdansi-1.1.0
+ vendor/fxhash-0.2.1
  vendor/gccjit-2.2.0
  vendor/gccjit_sys-0.3.0
  vendor/generic-array-0.14.6
@@ -280,6 +313,7 @@ Files-Excluded:
  vendor/git2-0.13.25
  vendor/git2-curl-0.14.1
  vendor/glob-0.3.0
+ vendor/glob-0.3.1
  vendor/globset-0.4.10
  vendor/globset-0.4.14
  vendor/globset-0.4.7
@@ -296,7 +330,6 @@ Files-Excluded:
  vendor/h2-0.3.12
  vendor/h2-0.3.26
  vendor/half-1.8.2
- vendor/handlebars-5.1.2
  vendor/hashbrown-0.11.2
  vendor/hashbrown-0.14.3
  vendor/hashlink-0.8.4
@@ -308,22 +341,31 @@ Files-Excluded:
  vendor/hermit-abi-0.3.1
  vendor/hex-0.3.2
  vendor/home-0.5.3
+ vendor/home-0.5.9
  vendor/http-0.2.6
  vendor/http-0.2.9
+ vendor/http-1.1.0
  vendor/httparse-1.6.0
  vendor/httparse-1.8.0
+ vendor/httparse-1.9.4
  vendor/http-body-0.4.4
  vendor/http-body-0.4.5
+ vendor/http-body-1.0.1
+ vendor/http-body-util-0.1.2
  vendor/httpdate-1.0.2
  vendor/humantime-1.3.0
  vendor/humantime-serde-1.0.1
  vendor/hyper-0.14.18
  vendor/hyper-0.14.25
+ vendor/hyper-1.4.1
+ vendor/hyper-rustls-0.27.3
  vendor/hyper-tls-0.5.0
+ vendor/hyper-util-0.1.8
  vendor/iana-time-zone-0.1.53
  vendor/idna-0.1.5
  vendor/idna-0.2.3
  vendor/idna-0.3.0
+ vendor/idna-0.5.0
  vendor/ignore-0.4.18
  vendor/ignore-0.4.20
  vendor/ignore-0.4.22
@@ -338,6 +380,7 @@ Files-Excluded:
  vendor/insta-1.13.0
  vendor/instant-0.1.12
  vendor/io-lifetimes-1.0.8
+ vendor/ipnet-2.10.0
  vendor/ipnet-2.4.0
  vendor/ipnet-2.7.1
  vendor/ipnetwork-0.17.0
@@ -346,6 +389,7 @@ Files-Excluded:
  vendor/itertools-0.10.1
  vendor/itertools-0.10.3
  vendor/itoa-0.4.7
+ vendor/itoa-1.0.11
  vendor/itoa-1.0.1
  vendor/itoa-1.0.6
  vendor/jemallocator-0.3.2
@@ -353,7 +397,6 @@ Files-Excluded:
  vendor/jemalloc-ctl-0.5.0
  vendor/jemalloc-sys-0.3.2
  vendor/jemalloc-sys-0.5.3+5.3.0-patched
- vendor/jemalloc-sys-0.5.4+5.3.0-patched
  vendor/jiff-tzdb-0.1.1
  vendor/jiff-tzdb-platform-0.1.1
  vendor/jobserver-0.1.22
@@ -363,6 +406,7 @@ Files-Excluded:
  vendor/js-sys-0.3.56
  vendor/js-sys-0.3.61
  vendor/js-sys-0.3.69
+ vendor/js-sys-0.3.70
  vendor/junction-1.2.0
  vendor/kernel32-sys-0.2.2
  vendor/kstring-1.0.6
@@ -376,15 +420,14 @@ Files-Excluded:
  vendor/libc-0.2.150
  vendor/libc-0.2.155
  vendor/libc-0.2.158
- vendor/libc-0.2.159
- vendor/libc-0.2.161
- vendor/libc-0.2.162
+ vendor/libc-0.2.167
  vendor/libc-0.2.94
  vendor/libc-0.2.97
  vendor/libffi-3.2.0
  vendor/libffi-sys-2.3.0
  vendor/libgit2-sys-0.12.26+1.3.0
  vendor/libloading-0.8.4
+ vendor/libloading-0.8.5
  vendor/libm-0.1.4
  vendor/libm-0.2.6
  vendor/libm-0.2.8
@@ -408,13 +451,13 @@ Files-Excluded:
  vendor/mach2-0.4.2
  vendor/matches-0.1.9
  vendor/md-5-0.10.5
- vendor/mdbook-0.4.40
  vendor/measureme-10.1.3
  vendor/measureme-12.0.0
  vendor/memchr-0.1.11
  vendor/memchr-2.4.0
  vendor/memchr-2.4.1
  vendor/memchr-2.5.0
+ vendor/memchr-2.7.2
  vendor/memmap2-0.3.0
  vendor/memoffset-0.6.4
  vendor/memoffset-0.6.5
@@ -422,6 +465,8 @@ Files-Excluded:
  vendor/mime-0.3.16
  vendor/miniz_oxide-0.4.4
  vendor/miniz_oxide-0.6.2
+ vendor/miniz_oxide-0.7.3
+ vendor/miniz_oxide-0.8.0
  vendor/mio-0.7.14
  vendor/mio-0.8.2
  vendor/miow-0.3.7
@@ -445,9 +490,10 @@ Files-Excluded:
  vendor/object-0.36.1
  vendor/object-0.36.2
  vendor/object-0.36.3
- vendor/object-0.36.4
+ vendor/object-0.36.5
  vendor/once_cell-1.10.0
  vendor/once_cell-1.19.0
+ vendor/once_cell-1.20.0
  vendor/once_cell-1.7.2
  vendor/once_cell-1.8.0
  vendor/once_cell-1.9.0
@@ -492,10 +538,15 @@ Files-Excluded:
  vendor/pest_generator-2.7.9
  vendor/pest_meta-2.5.6
  vendor/pest_meta-2.7.9
+ vendor/phf-0.10.1
  vendor/phf-0.11.1
+ vendor/phf_codegen-0.10.0
+ vendor/phf_macros-0.11.2
  vendor/phf_shared-0.11.1
  vendor/pin-project-1.0.10
+ vendor/pin-project-1.1.5
  vendor/pin-project-internal-1.0.10
+ vendor/pin-project-internal-1.1.5
  vendor/pin-project-lite-0.2.14
  vendor/pin-project-lite-0.2.8
  vendor/pin-project-lite-0.2.9
@@ -521,15 +572,20 @@ Files-Excluded:
  vendor/proc-macro2-1.0.32
  vendor/proc-macro2-1.0.36
  vendor/proc-macro2-1.0.70
- vendor/proc-macro2-1.0.86
+ vendor/proc-macro2-1.0.84
+ vendor/proc-macro2-1.0.89
  vendor/proc-macro-error-1.0.4
  vendor/proc-macro-error-attr-1.0.4
  vendor/prometheus-0.13.3
  vendor/proptest-1.0.0
  vendor/proptest-derive-0.3.0
+ vendor/pulldown-cmark-0.12.1
  vendor/quickcheck-1.0.3
  vendor/quick-error-2.0.1
  vendor/quick-xml-0.26.0
+ vendor/quinn-0.11.3
+ vendor/quinn-proto-0.11.8
+ vendor/quinn-udp-0.5.4
  vendor/quote-0.3.15
  vendor/quote-0.6.13
  vendor/quote-1.0.10
@@ -538,6 +594,7 @@ Files-Excluded:
  vendor/quote-1.0.16
  vendor/quote-1.0.33
  vendor/quote-1.0.36
+ vendor/quote-1.0.37
  vendor/quote-1.0.9
  vendor/r2d2-0.8.9
  vendor/rand-0.3.23
@@ -560,7 +617,8 @@ Files-Excluded:
  vendor/redox_syscall-0.2.16
  vendor/redox_syscall-0.4.1
  vendor/redox_syscall-0.5.3
- vendor/redox_syscall-0.5.6
+ vendor/redox_syscall-0.5.4
+ vendor/redox_syscall-0.5.7
  vendor/redox_users-0.4.3
  vendor/redox_users-0.4.5
  vendor/ref-cast-1.0.6
@@ -584,14 +642,18 @@ Files-Excluded:
  vendor/remove_dir_all-0.5.3
  vendor/reqwest-0.11.10
  vendor/reqwest-0.11.14
+ vendor/reqwest-0.12.7
  vendor/rgb-0.8.36
  vendor/ring-0.16.20
+ vendor/ring-0.17.8
  vendor/rmp-0.8.11
  vendor/rmp-serde-1.1.1
  vendor/rusqlite-0.28.0
+ vendor/rustc_apfloat-0.2.1+llvm-462a31f5a5ab
  vendor/rustc-build-sysroot-0.5.4
  vendor/rustc-demangle-0.1.21
  vendor/rustc-demangle-0.1.23
+ vendor/rustc-hash-2.0.0
  vendor/rustc_version-0.4.0
  vendor/rustc-workspace-hack-1.0.0
  vendor/rust-embed-6.6.0
@@ -600,6 +662,11 @@ Files-Excluded:
  vendor/rustfix-0.6.0
  vendor/rustix-0.36.10
  vendor/rustix-0.38.37
+ vendor/rustix-0.38.40
+ vendor/rustls-0.23.13
+ vendor/rustls-pemfile-2.1.3
+ vendor/rustls-pki-types-1.8.0
+ vendor/rustls-webpki-0.102.8
  vendor/rust_team_data-1.0.0
  vendor/rustversion-1.0.5
  vendor/ruzstd-0.7.0
@@ -609,16 +676,19 @@ Files-Excluded:
  vendor/schannel-0.1.19
  vendor/schannel-0.1.21
  vendor/schannel-0.1.23
- vendor/schannel-0.1.26
+ vendor/schannel-0.1.27
  vendor/scheduled-thread-pool-0.2.5
  vendor/scopeguard-1.1.0
+ vendor/scraper-0.20.0
  vendor/security-framework-2.6.1
  vendor/security-framework-2.8.2
  vendor/security-framework-3.0.0
  vendor/security-framework-sys-2.12.0
  vendor/security-framework-sys-2.6.1
  vendor/security-framework-sys-2.8.0
+ vendor/selectors-0.25.0
  vendor/semver-1.0.17
+ vendor/semver-1.0.23
  vendor/semver-1.0.4
  vendor/semver-1.0.6
  vendor/serde-1.0.126
@@ -627,8 +697,9 @@ Files-Excluded:
  vendor/serde-1.0.136
  vendor/serde-1.0.157
  vendor/serde-1.0.204
- vendor/serde-1.0.206
  vendor/serde-1.0.210
+ vendor/serde-1.0.215
+ vendor/serde-1.0.216
  vendor/serde_cbor-0.11.2
  vendor/serde_derive-1.0.126
  vendor/serde_derive-1.0.130
@@ -636,12 +707,14 @@ Files-Excluded:
  vendor/serde_derive-1.0.136
  vendor/serde_derive-1.0.157
  vendor/serde_derive-1.0.204
- vendor/serde_derive-1.0.206
  vendor/serde_derive-1.0.210
+ vendor/serde_derive-1.0.215
+ vendor/serde_derive-1.0.216
  vendor/serde_ignored-0.1.2
  vendor/serde_json-1.0.121
  vendor/serde_json-1.0.124
  vendor/serde_json-1.0.128
+ vendor/serde_json-1.0.132
  vendor/serde_json-1.0.64
  vendor/serde_json-1.0.69
  vendor/serde_json-1.0.74
@@ -651,6 +724,7 @@ Files-Excluded:
  vendor/serde_spanned-0.6.7
  vendor/serde_urlencoded-0.7.1
  vendor/serde_yaml-0.8.23
+ vendor/servo_arc-0.3.0
  vendor/sha1-0.10.5
  vendor/sha2-0.10.6
  vendor/shellexpand-2.1.2
@@ -669,7 +743,9 @@ Files-Excluded:
  vendor/socket2-0.4.4
  vendor/socket2-0.4.9
  vendor/socket2-0.5.6
+ vendor/socket2-0.5.7
  vendor/spin-0.5.2
+ vendor/spin-0.9.8
  vendor/spmc-0.3.0
  vendor/stringprep-0.1.2
  vendor/strip-ansi-escapes-0.1.1
@@ -677,6 +753,7 @@ Files-Excluded:
  vendor/strsim-0.8.0
  vendor/str_stack-0.1.0
  vendor/subtle-2.4.1
+ vendor/subtle-2.5.0
  vendor/syn-0.11.11
  vendor/syn-0.15.44
  vendor/syn-1.0.73
@@ -685,10 +762,10 @@ Files-Excluded:
  vendor/syn-1.0.86
  vendor/syn-1.0.89
  vendor/syn-2.0.41
+ vendor/syn-2.0.66
  vendor/syn-2.0.70
- vendor/syn-2.0.72
- vendor/syn-2.0.74
- vendor/syn-2.0.79
+ vendor/syn-2.0.90
+ vendor/sync_wrapper-1.0.1
  vendor/synom-0.11.3
  vendor/syn-test-suite-0.0.0+test
  vendor/tabled-0.14.0
@@ -705,12 +782,17 @@ Files-Excluded:
  vendor/termcolor-1.1.3
  vendor/termcolor-1.2.0
  vendor/terminal_size-0.1.17
+ vendor/terminal_size-0.4.0
  vendor/textwrap-0.11.0
  vendor/textwrap-0.15.0
  vendor/thiserror-1.0.40
  vendor/thiserror-1.0.63
+ vendor/thiserror-1.0.65
+ vendor/thiserror-2.0.3
  vendor/thiserror-impl-1.0.40
  vendor/thiserror-impl-1.0.63
+ vendor/thiserror-impl-1.0.65
+ vendor/thiserror-impl-2.0.3
  vendor/thousands-0.2.0
  vendor/thread-id-2.0.0
  vendor/thread_local-0.2.7
@@ -720,20 +802,27 @@ Files-Excluded:
  vendor/tikv-jemallocator-0.5.4
  vendor/tikv-jemalloc-ctl-0.5.4
  vendor/tikv-jemalloc-sys-0.5.4+5.3.0-patched
+ vendor/tikv-jemalloc-sys-0.6.0+5.3.0-1-ge13ca993e8ccb9ba9847cc330696e02839f328f7
  vendor/time-0.1.44
+ vendor/time-0.3.36
+ vendor/time-macros-0.2.18
  vendor/tinyvec-1.5.1
  vendor/tinyvec-1.6.0
+ vendor/tinyvec-1.8.0
  vendor/tinyvec_macros-0.1.0
  vendor/tls_codec-0.4.1
  vendor/tls_codec_derive-0.4.1
  vendor/tokio-1.16.1
  vendor/tokio-1.17.0
  vendor/tokio-1.26.0
+ vendor/tokio-1.37.0
  vendor/tokio-macros-1.7.0
  vendor/tokio-macros-1.8.2
  vendor/tokio-native-tls-0.3.0
  vendor/tokio-native-tls-0.3.1
  vendor/tokio-postgres-0.7.7
+ vendor/tokio-rustls-0.26.0
+ vendor/tokio-stream-0.1.15
  vendor/tokio-stream-0.1.8
  vendor/tokio-test-0.4.2
  vendor/tokio-util-0.6.9
@@ -743,18 +832,23 @@ Files-Excluded:
  vendor/toml_edit-0.12.6
  vendor/toml_edit-0.22.20
  vendor/tower-0.4.11
+ vendor/tower-0.4.13
  vendor/tower-layer-0.3.1
+ vendor/tower-layer-0.3.3
  vendor/tower-service-0.3.1
  vendor/tower-service-0.3.2
+ vendor/tower-service-0.3.3
  vendor/tracing-0.1.29
  vendor/tracing-0.1.32
  vendor/tracing-attributes-0.1.18
+ vendor/tracing-attributes-0.1.27
  vendor/tracing-core-0.1.21
  vendor/tracing-core-0.1.23
  vendor/trybuild-1.0.52
  vendor/trycmd-0.12.2
  vendor/try-lock-0.2.3
  vendor/try-lock-0.2.4
+ vendor/try-lock-0.2.5
  vendor/typenum-1.15.0
  vendor/typenum-1.16.0
  vendor/ucd-trie-0.1.5
@@ -769,6 +863,7 @@ Files-Excluded:
  vendor/unicode-bidi-0.3.15
  vendor/unicode-bidi-0.3.7
  vendor/unicode-ident-1.0.12
+ vendor/unicode-ident-1.0.13
  vendor/unicode-ident-1.0.8
  vendor/unicode-normalization-0.1.19
  vendor/unicode-normalization-0.1.22
@@ -786,9 +881,11 @@ Files-Excluded:
  vendor/unic-ucd-segment-0.9.0
  vendor/unic-ucd-version-0.9.0
  vendor/untrusted-0.7.1
+ vendor/untrusted-0.9.0
  vendor/url-1.7.2
  vendor/url-2.2.2
  vendor/url-2.3.1
+ vendor/url-2.5.2
  vendor/utf8parse-0.2.0
  vendor/utf8parse-0.2.1
  vendor/utf8-ranges-0.1.3
@@ -804,34 +901,43 @@ Files-Excluded:
  vendor/walkdir-2.3.2
  vendor/walkdir-2.3.3
  vendor/want-0.3.0
+ vendor/want-0.3.1
  vendor/wasi-0.10.0+wasi-snapshot-preview1
  vendor/wasi-0.10.2+wasi-snapshot-preview1
  vendor/wasm-bindgen-0.2.78
  vendor/wasm-bindgen-0.2.79
  vendor/wasm-bindgen-0.2.84
  vendor/wasm-bindgen-0.2.92
+ vendor/wasm-bindgen-0.2.93
  vendor/wasm-bindgen-backend-0.2.78
  vendor/wasm-bindgen-backend-0.2.79
  vendor/wasm-bindgen-backend-0.2.84
  vendor/wasm-bindgen-backend-0.2.92
+ vendor/wasm-bindgen-backend-0.2.93
  vendor/wasm-bindgen-futures-0.4.29
  vendor/wasm-bindgen-futures-0.4.34
+ vendor/wasm-bindgen-futures-0.4.43
  vendor/wasm-bindgen-macro-0.2.78
  vendor/wasm-bindgen-macro-0.2.79
  vendor/wasm-bindgen-macro-0.2.84
  vendor/wasm-bindgen-macro-0.2.92
+ vendor/wasm-bindgen-macro-0.2.93
  vendor/wasm-bindgen-macro-support-0.2.78
  vendor/wasm-bindgen-macro-support-0.2.79
  vendor/wasm-bindgen-macro-support-0.2.84
  vendor/wasm-bindgen-macro-support-0.2.92
+ vendor/wasm-bindgen-macro-support-0.2.93
  vendor/wasm-bindgen-shared-0.2.78
  vendor/wasm-bindgen-shared-0.2.79
  vendor/wasm-bindgen-shared-0.2.84
  vendor/wasm-bindgen-shared-0.2.92
- vendor/wasmtime-jit-icache-coherence-26.0.0
+ vendor/wasm-bindgen-shared-0.2.93
+ vendor/wasmtime-jit-icache-coherence-27.0.0
+ vendor/webpki-roots-0.26.3
  vendor/web-sys-0.3.55
  vendor/web-sys-0.3.56
  vendor/web-sys-0.3.61
+ vendor/web-sys-0.3.69
  vendor/winapi-0.2.8
  vendor/winapi-0.3.9
  vendor/winapi-build-0.1.1
@@ -863,7 +969,10 @@ Files-Excluded:
  vendor/windows-implement-0.57.0
  vendor/windows-interface-0.56.0
  vendor/windows-interface-0.57.0
+ vendor/windows-registry-0.2.0
  vendor/windows-result-0.1.2
+ vendor/windows-result-0.2.0
+ vendor/windows-strings-0.1.0
  vendor/windows-sys-0.42.0
  vendor/windows-sys-0.45.0
  vendor/windows-sys-0.48.0
@@ -884,6 +993,7 @@ Files-Excluded:
  vendor/winnow-0.5.30
  vendor/winnow-0.6.18
  vendor/winreg-0.10.1
+ vendor/winsplit-0.1.0
  vendor/x509-cert-0.2.5
  vendor/xattr-0.2.2
  vendor/xattr-0.2.3
@@ -1054,7 +1164,6 @@ Comment: see https://github.com/rust-num/num
 Files:
  vendor/string_cache-*/*
  vendor/string_cache_codegen-*/*
- vendor/unicode-bidi-*/*
 Copyright: 2015-2017 Alex Crichton <alex@alexcrichton.com>
            2015-2017 Keegan McAllister <kmcallister@mozilla.com>
            2015-2017 Chris Morgan <me@chrismorgan.info>
@@ -1999,6 +2108,11 @@ Copyright: 2018-2023 Nick Fitzgerald <fitzgen@gmail.com>
 License: MIT or Apache-2.0
 Comment: see https://github.com/fitzgen/id-arena
 
+Files: vendor/idna_adapter-*/*
+Copyright: 2024-2024 The rust-url developers
+License: Apache-2.0 OR MIT
+Comment: see https://github.com/hsivonen/idna_adapter
+
 Files: vendor/im-rc-*/*
 Copyright: 2017-2022 Bodil Stokke <bodil@bodil.org>
 License: MPL-2.0+
@@ -2033,11 +2147,6 @@ Files: vendor/inotify-sys-0.*/*
 Copyright: 2017-2021 Hanno Braun <hb@hannobraun.de>
 License: ISC
 Comment: see https://github.com/hannobraun/inotify-sys
-
-Files: vendor/instant-*/*
-Copyright: 2019-2020 sebcrozet <developer@crozet.re>
-License: BSD-3-Clause
-Comment: see https://github.com/sebcrozet/instant
 
 Files: vendor/intl_pluralrules-*/*
 Copyright: 2018-2021 Kekoa Riggin <kekoariggin@gmail.com>
@@ -2088,28 +2197,6 @@ Comment:
 Files: vendor/web-sys-*/*
 Copyright: 2018-2024 The wasm-bindgen Developers
 License: MIT or Apache-2.0
-Comment:
- see https://github.com/rustwasm/wasm-bindgen/tee/master/crates/web-sys
-
-Files: vendor/web-sys-*/webidls/enabled/*.webidl
-       vendor/web-sys-*/webidls/unavailable_option_primitive/*.webidl
-       vendor/web-sys-*/webidls/unstable/*.webidl
-Copyright:
- 2004-2011 Apple Computer, Inc., Mozilla Foundation, and Opera Software ASA.
- 2012-2018 W3C® (MIT, ERCIM, Keio)
-License: MPL-2.0
-Comment:
- see https://github.com/rustwasm/wasm-bindgen/tee/master/crates/web-sys
-
-Files: vendor/web-sys-*/webidls/enabled/MediaCapabilities.webidl
-Copyright: 2018 the Contributors to the Media Capabilities Specification
-License: MPL-2.0
-Comment:
- see https://github.com/rustwasm/wasm-bindgen/tee/master/crates/web-sys
-
-Files: vendor/web-sys-*/webidls/enabled/PointerEvent.webidl
-Copyright: 2013 Microsoft Open Technologies, Inc. */
-License: MPL-2.0
 Comment:
  see https://github.com/rustwasm/wasm-bindgen/tee/master/crates/web-sys
 
@@ -3021,6 +3108,11 @@ Copyright: 2015-2017 Keegan McAllister <mcallister.keegan@gmail.com>
 License: MIT or Apache-2.0
 Comment: see https://github.com/servo/tendril
 
+Files: vendor/tenthash-*/*
+Copyright: 2022-2025 Nathan Vegdahl <cessen@cessen.com>
+License: MIT OR Apache-2.0
+Comment: see https://github.com/cessen/tenthash/
+
 Files: vendor/term-*/*
 Copyright:
  2014-2021 The Rust Project Developers
@@ -3211,6 +3303,16 @@ Files: vendor/unwinding-*/*
 Copyright: 2021-2024 Gary Guo <gary@garyguo.net>
 License: MIT OR Apache-2.0
 Comment: see https://github.com/nbdd0121/unwinding/
+
+Files: vendor/utf16_iter-*/*
+Copyright: 2022-2023 Henri Sivonen <hsivonen@hsivonen.fi>
+License: Apache-2.0 OR MIT
+Comment: see https://github.com/hsivonen/utf16_iter
+
+Files: vendor/utf8_iter-*/*
+Copyright: 2022-2023 Henri Sivonen <hsivonen@hsivonen.fi>
+License: Apache-2.0 OR MIT
+Comment: see https://github.com/hsivonen/utf8_iter
 
 Files: vendor/utf8-width-*/*
 Copyright: 2020-2023 Magic Len <len@magiclen.org>
@@ -3457,6 +3559,16 @@ Copyright:
 License: MIT
 Comment: see https://github.com/tokio-rs/valuable
 
+Files: vendor/web-time-*/*
+Copyright: Copyright (c) 2023 dAxpeDDa
+License: MIT OR Apache-2.0
+Comment: see https://github.com/daxpedda/web-time
+
+Files: vendor/write16-*/*
+Copyright: 2022-2023 Henri Sivonen <hsivonen@hsivonen.fi>
+License: Apache-2.0 OR MIT
+Comment: see https://github.com/hsivonen/write16
+
 Files: vendor/write-json-*/*
 Copyright: 2020-2020 Aleksey Kladov <aleksey.kladov@gmail.com>
 License: MIT OR Apache-2.0
@@ -3484,11 +3596,16 @@ License: MIT
 Comment: see https://github.com/zip-rs/zip.git
 
 Files:
+ vendor/icu_collections-*/*
  vendor/icu_list-*/*
  vendor/icu_list_data-*/*
  vendor/icu_locid-*/*
  vendor/icu_locid_transform-*/*
  vendor/icu_locid_transform_data-*/*
+ vendor/icu_normalizer-*/*
+ vendor/icu_normalizer_data-*/*
+ vendor/icu_properties-*/*
+ vendor/icu_properties_data-*/*
  vendor/icu_provider-*/*
  vendor/icu_provider_adapters-*/*
  vendor/icu_provider_macros-*/*

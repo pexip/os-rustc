@@ -8,7 +8,7 @@ Subject: c-disable-fs-specific-test
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/tools/cargo/tests/testsuite/metadata.rs b/src/tools/cargo/tests/testsuite/metadata.rs
-index a923c30..0bc5720 100644
+index 5c9015a..437cf5d 100644
 --- a/src/tools/cargo/tests/testsuite/metadata.rs
 +++ b/src/tools/cargo/tests/testsuite/metadata.rs
 @@ -4297,7 +4297,7 @@ fn dep_kinds_workspace() {

@@ -9,27 +9,27 @@ Forwarded: not-needed
 
 Signed-off-by: Fabian Grünbichler <git@fabian.gruenbichler.email>
 ---
- vendor/blake3-1.5.4/Cargo.toml |  2 +-
- vendor/blake3-1.5.4/build.rs   | 18 ++++++++++++------
+ vendor/blake3-1.5.5/Cargo.toml |  2 +-
+ vendor/blake3-1.5.5/build.rs   | 18 ++++++++++++------
  2 files changed, 13 insertions(+), 7 deletions(-)
 
-diff --git a/vendor/blake3-1.5.4/Cargo.toml b/vendor/blake3-1.5.4/Cargo.toml
-index b4b0e98..a801d25 100644
---- a/vendor/blake3-1.5.4/Cargo.toml
-+++ b/vendor/blake3-1.5.4/Cargo.toml
-@@ -109,7 +109,7 @@ version = "3.8.0"
+diff --git a/vendor/blake3-1.5.5/Cargo.toml b/vendor/blake3-1.5.5/Cargo.toml
+index b30c1fd..2744571 100644
+--- a/vendor/blake3-1.5.5/Cargo.toml
++++ b/vendor/blake3-1.5.5/Cargo.toml
+@@ -110,7 +110,7 @@ version = "3.8.0"
  version = "1.1.12"
  
  [features]
 -default = ["std"]
 +default = ["std", "pure"]
+ digest = ["dep:digest"]
  mmap = [
      "std",
-     "dep:memmap2",
-diff --git a/vendor/blake3-1.5.4/build.rs b/vendor/blake3-1.5.4/build.rs
+diff --git a/vendor/blake3-1.5.5/build.rs b/vendor/blake3-1.5.5/build.rs
 index 57f72b7..952b864 100644
---- a/vendor/blake3-1.5.4/build.rs
-+++ b/vendor/blake3-1.5.4/build.rs
+--- a/vendor/blake3-1.5.5/build.rs
++++ b/vendor/blake3-1.5.5/build.rs
 @@ -275,7 +275,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
      }
  

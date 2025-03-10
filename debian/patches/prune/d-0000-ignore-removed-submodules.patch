@@ -7,13 +7,12 @@ order to both reduce the orig tarball and the vendored crates within.
 
 Forwarded: not-needed
 ---
- Cargo.toml                                 |  6 ------
- src/bootstrap/bootstrap.py                 |  4 ----
- src/bootstrap/src/core/build_steps/test.rs | 10 +---------
- src/bootstrap/src/core/builder/cargo.rs    |  5 +----
- src/bootstrap/src/core/builder/mod.rs      | 23 -----------------------
- src/build_helper/src/util.rs               | 21 +--------------------
- 6 files changed, 3 insertions(+), 66 deletions(-)
+ Cargo.toml                              |  6 ------
+ src/bootstrap/bootstrap.py              |  4 ----
+ src/bootstrap/src/core/builder/cargo.rs |  5 +----
+ src/bootstrap/src/core/builder/mod.rs   | 23 -----------------------
+ src/build_helper/src/util.rs            | 21 +--------------------
+ 5 files changed, 2 insertions(+), 57 deletions(-)
 
 diff --git a/Cargo.toml b/Cargo.toml
 index b773030..7d9b7ba 100644
@@ -42,12 +41,12 @@ index b773030..7d9b7ba 100644
    "src/tools/lld-wrapper",
    "src/tools/collect-license-metadata",
 diff --git a/src/bootstrap/bootstrap.py b/src/bootstrap/bootstrap.py
-index d7ae029..07b073d 100644
+index 535bdec..3726682 100644
 --- a/src/bootstrap/bootstrap.py
 +++ b/src/bootstrap/bootstrap.py
-@@ -1031,10 +1031,6 @@ class RustBuild(object):
-         args = [self.cargo(), "build", "--manifest-path",
-                 os.path.join(self.rust_root, "src/bootstrap/Cargo.toml")]
+@@ -1129,10 +1129,6 @@ class RustBuild(object):
+             "-Zroot-dir=" + self.rust_root,
+         ]
          args.extend("--verbose" for _ in range(self.verbose))
 -        if self.use_locked_deps:
 -            args.append("--locked")
@@ -56,32 +55,11 @@ index d7ae029..07b073d 100644
          if self.get_toml("metrics", "build"):
              args.append("--features")
              args.append("build-metrics")
-diff --git a/src/bootstrap/src/core/build_steps/test.rs b/src/bootstrap/src/core/build_steps/test.rs
-index dcea9f5..1a8e187 100644
---- a/src/bootstrap/src/core/build_steps/test.rs
-+++ b/src/bootstrap/src/core/build_steps/test.rs
-@@ -2443,15 +2443,7 @@ impl Step for RustcGuide {
-     }
- 
-     fn run(self, builder: &Builder<'_>) {
--        let relative_path = "src/doc/rustc-dev-guide";
--        builder.require_submodule(relative_path, None);
--
--        let src = builder.src.join(relative_path);
--        let mut rustbook_cmd = builder.tool_cmd(Tool::Rustbook).delay_failure();
--        rustbook_cmd.arg("linkcheck").arg(&src);
--        let toolstate =
--            if rustbook_cmd.run(builder) { ToolState::TestPass } else { ToolState::TestFail };
--        builder.save_toolstate("rustc-dev-guide", toolstate);
-+        builder.save_toolstate("rustc-dev-guide", ToolState::TestPass);
-     }
- }
- 
 diff --git a/src/bootstrap/src/core/builder/cargo.rs b/src/bootstrap/src/core/builder/cargo.rs
-index 0688a1d..e1e19fd 100644
+index 432fbb8..a73e6cf 100644
 --- a/src/bootstrap/src/core/builder/cargo.rs
 +++ b/src/bootstrap/src/core/builder/cargo.rs
-@@ -1131,10 +1131,7 @@ impl Builder<'_> {
+@@ -1140,10 +1140,7 @@ impl Builder<'_> {
              }
          }
  
@@ -94,10 +72,10 @@ index 0688a1d..e1e19fd 100644
          }
  
 diff --git a/src/bootstrap/src/core/builder/mod.rs b/src/bootstrap/src/core/builder/mod.rs
-index d59e0fa..927abe6 100644
+index 30e42a5..579918d 100644
 --- a/src/bootstrap/src/core/builder/mod.rs
 +++ b/src/bootstrap/src/core/builder/mod.rs
-@@ -787,26 +787,14 @@ impl<'a> Builder<'a> {
+@@ -841,26 +841,14 @@ impl<'a> Builder<'a> {
                  tool::Linkchecker,
                  tool::CargoTest,
                  tool::Compiletest,
@@ -124,7 +102,7 @@ index d59e0fa..927abe6 100644
                  tool::OptimizedDist,
                  tool::CoverageDump,
                  tool::LlvmBitcodeLinker,
-@@ -847,10 +835,6 @@ impl<'a> Builder<'a> {
+@@ -901,10 +889,6 @@ impl<'a> Builder<'a> {
                  check::Rustdoc,
                  check::CodegenBackend,
                  check::Clippy,
@@ -135,7 +113,7 @@ index d59e0fa..927abe6 100644
                  check::Rustfmt,
                  check::RustAnalyzer,
                  check::TestFloatParse,
-@@ -900,8 +884,6 @@ impl<'a> Builder<'a> {
+@@ -958,8 +942,6 @@ impl<'a> Builder<'a> {
                  test::EmbeddedBook,
                  test::EditionGuide,
                  test::Rustfmt,
@@ -144,7 +122,7 @@ index d59e0fa..927abe6 100644
                  test::Clippy,
                  test::CompiletestTest,
                  test::CrateRunMakeSupport,
-@@ -941,7 +923,6 @@ impl<'a> Builder<'a> {
+@@ -1000,7 +982,6 @@ impl<'a> Builder<'a> {
                  doc::CargoBook,
                  doc::Clippy,
                  doc::ClippyBook,
@@ -152,7 +130,7 @@ index d59e0fa..927abe6 100644
                  doc::EmbeddedBook,
                  doc::EditionGuide,
                  doc::StyleGuide,
-@@ -964,11 +945,9 @@ impl<'a> Builder<'a> {
+@@ -1023,11 +1004,9 @@ impl<'a> Builder<'a> {
                  dist::Analysis,
                  dist::Src,
                  dist::Cargo,
@@ -164,7 +142,7 @@ index d59e0fa..927abe6 100644
                  dist::LlvmTools,
                  dist::LlvmBitcodeLinker,
                  dist::RustDev,
-@@ -994,7 +973,6 @@ impl<'a> Builder<'a> {
+@@ -1053,7 +1032,6 @@ impl<'a> Builder<'a> {
                  install::RustAnalyzer,
                  install::Rustfmt,
                  install::Clippy,
@@ -172,7 +150,7 @@ index d59e0fa..927abe6 100644
                  install::LlvmTools,
                  install::Src,
              ),
-@@ -1002,7 +980,6 @@ impl<'a> Builder<'a> {
+@@ -1061,7 +1039,6 @@ impl<'a> Builder<'a> {
                  run::BuildManifest,
                  run::BumpStage0,
                  run::ReplaceVersionPlaceholder,

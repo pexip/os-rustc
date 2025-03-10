@@ -73,7 +73,10 @@ endif  # End NOT_FOR_PEXIP_BOOKWORM
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
 NJOBS := -j $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
 endif
-RUSTBUILD = RUST_BACKTRACE=1 python3 src/bootstrap/bootstrap.py $(NJOBS)
+RUSTBUILD_COMMON = RUST_BACKTRACE=1 python3 src/bootstrap/bootstrap.py
+RUSTBUILD = $(RUSTBUILD_COMMON) $(NJOBS)
+# force reproducibility
+RUSTBUILD_DOCS = $(RUSTBUILD_COMMON) -j1
 RUSTBUILD_FLAGS = --stage 2 --config debian/config.toml --on-fail env
 # rust-tidy depends on lots of modules that we strip out of the build.
 # it also tries to access the network for some reason. so just disable it.
@@ -157,16 +160,16 @@ ifneq (,$(findstring nowasm,$(DEB_BUILD_PROFILES)))
 endif
 
 WINDOWS_SUPPORT := amd64 i386
-BUILD_WINDOWS := true
-ifneq (,$(findstring nowindows,$(DEB_BUILD_PROFILES)))
-  BUILD_WINDOWS := false
+BUILD_WINDOWS := false
+ifneq (,$(findstring pkg.rustc.windows,$(DEB_BUILD_PROFILES)))
+  BUILD_WINDOWS := true
 endif
 ifeq (,$(filter $(DEB_HOST_ARCH), $(WINDOWS_SUPPORT)))
   BUILD_WINDOWS := false
 else
   ifeq (,$(filter $(DEB_BUILD_ARCH), $(WINDOWS_SUPPORT)))
     ifeq (true,$(BUILD_WINDOWS))
-      $(error cannot cross-compile from $(DEB_BUILD_ARCH) to $(DEB_HOST_ARCH), unless "nowindows" is in DEB_BUILD_PROFILES)
+      $(error cannot cross-compile from $(DEB_BUILD_ARCH) to $(DEB_HOST_ARCH) with "pkg.rustc.windows" in DEB_BUILD_PROFILES)
     endif
   endif
   ifeq (i386,$(DEB_HOST_ARCH))
@@ -325,8 +328,8 @@ ifeq (true,$(BUILD_WASM))
 	  library/std
 endif
 ifeq (true,$(BUILD_DOCS))
-	$(RUSTBUILD) doc $(RUSTBUILD_FLAGS)
-	$(RUSTBUILD) doc $(RUSTBUILD_FLAGS) cargo # document cargo APIs
+	$(RUSTBUILD_DOCS) doc $(RUSTBUILD_FLAGS)
+	$(RUSTBUILD_DOCS) doc $(RUSTBUILD_FLAGS) cargo # document cargo APIs
 endif
 
 TEST_LOG = debian/rustc-tests.log

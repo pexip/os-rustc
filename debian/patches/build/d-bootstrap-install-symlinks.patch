@@ -12,7 +12,7 @@ Forwarded: not-needed
  1 file changed, 5 insertions(+), 2 deletions(-)
 
 diff --git a/src/tools/rust-installer/install-template.sh b/src/tools/rust-installer/install-template.sh
-index b477c3e..fd93316 100644
+index f7f408b..a3f0ceb 100644
 --- a/src/tools/rust-installer/install-template.sh
 +++ b/src/tools/rust-installer/install-template.sh
 @@ -617,7 +617,10 @@ install_components() {

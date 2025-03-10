@@ -8,7 +8,7 @@ Subject: u-rustc-llvm-cross-flags
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/compiler/rustc_llvm/build.rs b/compiler/rustc_llvm/build.rs
-index f092110..ac234cd 100644
+index d9d2829..bb6677e 100644
 --- a/compiler/rustc_llvm/build.rs
 +++ b/compiler/rustc_llvm/build.rs
 @@ -328,7 +328,7 @@ fn main() {

@@ -10,12 +10,12 @@ Forwarded: not-needed
  1 file changed, 12 insertions(+)
 
 diff --git a/src/bootstrap/src/core/builder/cargo.rs b/src/bootstrap/src/core/builder/cargo.rs
-index e1e19fd..0e53660 100644
+index a73e6cf..55e4cc4 100644
 --- a/src/bootstrap/src/core/builder/cargo.rs
 +++ b/src/bootstrap/src/core/builder/cargo.rs
-@@ -625,6 +625,18 @@ impl Builder<'_> {
-         hostflags.arg("-Zunstable-options");
-         hostflags.arg("--check-cfg=cfg(bootstrap)");
+@@ -627,6 +627,18 @@ impl Builder<'_> {
+         // #[cfg(bootstrap)] as we are transition `test` to userspace cfg
+         hostflags.arg("--check-cfg=cfg(test)");
  
 +        // Debian-specific stuff here
 +        // set linker flags from LDFLAGS

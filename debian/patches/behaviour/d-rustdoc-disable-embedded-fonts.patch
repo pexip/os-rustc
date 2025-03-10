@@ -10,10 +10,10 @@ Forwarded: not-needed
  2 files changed, 10 deletions(-)
 
 diff --git a/src/librustdoc/html/static/css/rustdoc.css b/src/librustdoc/html/static/css/rustdoc.css
-index 66a8a19..acc2c5a 100644
+index 2749638..4bb6ec7 100644
 --- a/src/librustdoc/html/static/css/rustdoc.css
 +++ b/src/librustdoc/html/static/css/rustdoc.css
-@@ -107,14 +107,6 @@ xmlns="http://www.w3.org/2000/svg" fill="black" height="18px">\
+@@ -109,14 +109,6 @@ xmlns="http://www.w3.org/2000/svg" fill="black" height="18px">\
  	font-display: swap;
  }
  
@@ -29,7 +29,7 @@ index 66a8a19..acc2c5a 100644
  	box-sizing: border-box;
  }
 diff --git a/src/librustdoc/html/static_files.rs b/src/librustdoc/html/static_files.rs
-index a4dc8cd..f721b0a 100644
+index 6457ac7..e8eaf3b 100644
 --- a/src/librustdoc/html/static_files.rs
 +++ b/src/librustdoc/html/static_files.rs
 @@ -109,8 +109,6 @@ static_files! {

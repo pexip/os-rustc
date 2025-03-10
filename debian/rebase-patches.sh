@@ -26,12 +26,21 @@ git branch -f debian/rebase-patches debian/experimental
 git checkout debian/rebase-patches
 
 gbp pq drop || true
-gbp pq import --no-patch-numbers
+
+read -p "import patches before upstream tarball? [Y/n]" x
+if [ "$x" != "n" ]; then
+    gbp pq import --no-patch-numbers
+    imported=1
+fi
 
 gbp import-orig "../rustc_${ver}${dfsg}.orig.tar.xz" \
   --upstream-branch=upstream/rebase-patches \
   --debian-branch=debian/rebase-patches \
   --no-sign-tags --no-pristine-tar --no-symlink-orig
+
+if [ "$imported" == "" ]; then
+    gbp pq import --no-patch-numbers || ( git tag -d "${upstream_tag}" && false)
+fi
 
 # rebase here
 echo "$0: Now manually rebase - run 'git rebase debian/rebase-patches'"
