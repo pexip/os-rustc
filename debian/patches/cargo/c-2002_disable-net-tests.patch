@@ -7,11 +7,11 @@ Forwarded: TODO
  .../cargo/tests/testsuite/credential_process.rs    |  14 +--
  src/tools/cargo/tests/testsuite/git_auth.rs        |   4 +-
  src/tools/cargo/tests/testsuite/net_config.rs      |   4 +-
- src/tools/cargo/tests/testsuite/publish.rs         | 110 ++++++++++-----------
- 4 files changed, 66 insertions(+), 66 deletions(-)
+ src/tools/cargo/tests/testsuite/publish.rs         | 113 +++++++++++----------
+ 4 files changed, 68 insertions(+), 67 deletions(-)
 
 diff --git a/src/tools/cargo/tests/testsuite/credential_process.rs b/src/tools/cargo/tests/testsuite/credential_process.rs
-index 391cdb3..fcf1a6f 100644
+index 130ca88..ab94fae 100644
 --- a/src/tools/cargo/tests/testsuite/credential_process.rs
 +++ b/src/tools/cargo/tests/testsuite/credential_process.rs
 @@ -65,7 +65,7 @@ fn get_token_test() -> (Project, TestRegistry) {
@@ -78,7 +78,7 @@ index 391cdb3..fcf1a6f 100644
      // Error when credential process does not output the expected format for a token.
      let cred_proj = project()
 diff --git a/src/tools/cargo/tests/testsuite/git_auth.rs b/src/tools/cargo/tests/testsuite/git_auth.rs
-index 0e52e14..3e18360 100644
+index c5fb553..99e9405 100644
 --- a/src/tools/cargo/tests/testsuite/git_auth.rs
 +++ b/src/tools/cargo/tests/testsuite/git_auth.rs
 @@ -105,7 +105,7 @@ fn setup_failed_auth_test() -> (SocketAddr, JoinHandle<()>, Arc<AtomicUsize>) {
@@ -122,7 +122,7 @@ index b765678..ed695bd 100644
      let p = project()
          .file(
 diff --git a/src/tools/cargo/tests/testsuite/publish.rs b/src/tools/cargo/tests/testsuite/publish.rs
-index 7771296..2f681d9 100644
+index 403473e..d94a0fa 100644
 --- a/src/tools/cargo/tests/testsuite/publish.rs
 +++ b/src/tools/cargo/tests/testsuite/publish.rs
 @@ -90,7 +90,7 @@ fn validate_upload_li() {
@@ -368,16 +368,17 @@ index 7771296..2f681d9 100644
  fn publish_with_patch() {
      let registry = RegistryBuilder::new().http_api().http_index().build();
      Package::new("bar", "1.0.0").publish();
-@@ -1386,7 +1386,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
+@@ -1385,7 +1385,8 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
+     );
  }
  
- #[expect(deprecated)]
 -#[cargo_test]
++#[expect(deprecated)]
 +#[allow(dead_code)]
  fn publish_checks_for_token_before_verify() {
      let registry = registry::RegistryBuilder::new()
          .no_configure_token()
-@@ -1440,7 +1440,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
+@@ -1439,7 +1440,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
          .run();
  }
  
@@ -386,7 +387,7 @@ index 7771296..2f681d9 100644
  fn publish_with_bad_source() {
      let p = project()
          .file(
-@@ -1487,7 +1487,7 @@ include `--registry crates-io` to use crates.io
+@@ -1486,7 +1487,7 @@ include `--registry crates-io` to use crates.io
  }
  
  // A dependency with both `git` and `version`.
@@ -395,7 +396,7 @@ index 7771296..2f681d9 100644
  fn publish_git_with_version() {
      let registry = RegistryBuilder::new().http_api().http_index().build();
  
-@@ -1646,7 +1646,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
+@@ -1656,7 +1657,7 @@ dependencies = [
      );
  }
  
@@ -404,7 +405,7 @@ index 7771296..2f681d9 100644
  fn publish_dev_dep_stripping() {
      let registry = RegistryBuilder::new().http_api().http_index().build();
      Package::new("normal-only", "1.0.0")
-@@ -2073,7 +2073,7 @@ features = ["cat"]
+@@ -2092,7 +2093,7 @@ features = ["cat"]
      );
  }
  
@@ -413,7 +414,7 @@ index 7771296..2f681d9 100644
  fn credentials_ambiguous_filename() {
      // `publish` generally requires a remote registry
      let registry = registry::RegistryBuilder::new().http_api().build();
-@@ -2133,7 +2133,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
+@@ -2152,7 +2153,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
  
  // --index will not load registry.token to avoid possibly leaking
  // crates.io token to another server.
@@ -422,7 +423,7 @@ index 7771296..2f681d9 100644
  fn index_requires_token() {
      // Use local registry for faster test times since no publish will occur
      let registry = registry::init();
-@@ -2168,7 +2168,7 @@ fn index_requires_token() {
+@@ -2187,7 +2188,7 @@ fn index_requires_token() {
  }
  
  // publish with source replacement without --registry
@@ -431,7 +432,7 @@ index 7771296..2f681d9 100644
  fn cratesio_source_replacement() {
      registry::init();
      let p = project()
-@@ -2198,7 +2198,7 @@ include `--registry dummy-registry` or `--registry crates-io`
+@@ -2217,7 +2218,7 @@ include `--registry dummy-registry` or `--registry crates-io`
  }
  
  // Registry returns an API error.
@@ -440,7 +441,7 @@ index 7771296..2f681d9 100644
  fn api_error_json() {
      let _registry = registry::RegistryBuilder::new()
          .alternative()
-@@ -2246,7 +2246,7 @@ Caused by:
+@@ -2265,7 +2266,7 @@ Caused by:
  }
  
  // Registry returns an API error with a 200 status code.
@@ -449,7 +450,7 @@ index 7771296..2f681d9 100644
  fn api_error_200() {
      let _registry = registry::RegistryBuilder::new()
          .alternative()
-@@ -2294,7 +2294,7 @@ Caused by:
+@@ -2313,7 +2314,7 @@ Caused by:
  }
  
  // Registry returns an error code without a JSON message.
@@ -458,7 +459,7 @@ index 7771296..2f681d9 100644
  fn api_error_code() {
      let _registry = registry::RegistryBuilder::new()
          .alternative()
-@@ -2349,7 +2349,7 @@ Caused by:
+@@ -2368,7 +2369,7 @@ Caused by:
  }
  
  // Registry has a network error.
@@ -467,7 +468,7 @@ index 7771296..2f681d9 100644
  fn api_curl_error() {
      let _registry = registry::RegistryBuilder::new()
          .alternative()
-@@ -2399,7 +2399,7 @@ Caused by:
+@@ -2418,7 +2419,7 @@ Caused by:
  }
  
  // Registry returns an invalid response.
@@ -476,7 +477,7 @@ index 7771296..2f681d9 100644
  fn api_other_error() {
      let _registry = registry::RegistryBuilder::new()
          .alternative()
-@@ -2449,7 +2449,7 @@ Caused by:
+@@ -2468,7 +2469,7 @@ Caused by:
          .run();
  }
  
@@ -485,7 +486,7 @@ index 7771296..2f681d9 100644
  fn in_package_workspace() {
      let registry = RegistryBuilder::new().http_api().http_index().build();
  
-@@ -2501,7 +2501,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
+@@ -2520,7 +2521,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
      validate_upload_li();
  }
  
@@ -494,7 +495,7 @@ index 7771296..2f681d9 100644
  fn with_duplicate_spec_in_members() {
      // Use local registry for faster test times since no publish will occur
      let registry = registry::init();
-@@ -2557,7 +2557,7 @@ fn with_duplicate_spec_in_members() {
+@@ -2576,7 +2577,7 @@ fn with_duplicate_spec_in_members() {
          .run();
  }
  
@@ -503,7 +504,7 @@ index 7771296..2f681d9 100644
  fn in_package_workspace_with_members_with_features_old() {
      let registry = RegistryBuilder::new().http_api().http_index().build();
  
-@@ -2609,7 +2609,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
+@@ -2628,7 +2629,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
      validate_upload_li();
  }
  
@@ -512,7 +513,7 @@ index 7771296..2f681d9 100644
  fn in_virtual_workspace() {
      // Use local registry for faster test times since no publish will occur
      let registry = registry::init();
-@@ -2647,7 +2647,7 @@ fn in_virtual_workspace() {
+@@ -2666,7 +2667,7 @@ fn in_virtual_workspace() {
          .run();
  }
  
@@ -521,7 +522,7 @@ index 7771296..2f681d9 100644
  fn in_virtual_workspace_with_p() {
      // `publish` generally requires a remote registry
      let registry = registry::RegistryBuilder::new().http_api().build();
-@@ -2706,7 +2706,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
+@@ -2725,7 +2726,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
          .run();
  }
  
@@ -530,7 +531,7 @@ index 7771296..2f681d9 100644
  fn in_package_workspace_not_found() {
      // Use local registry for faster test times since no publish will occur
      let registry = registry::init();
-@@ -2750,7 +2750,7 @@ fn in_package_workspace_not_found() {
+@@ -2769,7 +2770,7 @@ fn in_package_workspace_not_found() {
          .run();
  }
  
@@ -539,7 +540,7 @@ index 7771296..2f681d9 100644
  fn in_package_workspace_found_multiple() {
      // Use local registry for faster test times since no publish will occur
      let registry = registry::init();
-@@ -2806,7 +2806,7 @@ fn in_package_workspace_found_multiple() {
+@@ -2825,7 +2826,7 @@ fn in_package_workspace_found_multiple() {
          .run();
  }
  
@@ -548,7 +549,7 @@ index 7771296..2f681d9 100644
  // https://github.com/rust-lang/cargo/issues/10536
  fn publish_path_dependency_without_workspace() {
      // Use local registry for faster test times since no publish will occur
-@@ -2852,7 +2852,7 @@ fn publish_path_dependency_without_workspace() {
+@@ -2871,7 +2872,7 @@ fn publish_path_dependency_without_workspace() {
          .run();
  }
  
@@ -557,7 +558,7 @@ index 7771296..2f681d9 100644
  fn http_api_not_noop() {
      let registry = registry::RegistryBuilder::new().http_api().build();
  
-@@ -2914,7 +2914,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
+@@ -2933,7 +2934,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
      p.cargo("build").run();
  }
  
@@ -566,7 +567,7 @@ index 7771296..2f681d9 100644
  fn wait_for_first_publish() {
      // Counter for number of tries before the package is "published"
      let arc: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
-@@ -2997,7 +2997,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
+@@ -3016,7 +3017,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
  /// A separate test is needed for package names with - or _ as they hit
  /// the responder twice per cargo invocation. If that ever gets changed
  /// this test will need to be changed accordingly.
@@ -575,7 +576,7 @@ index 7771296..2f681d9 100644
  fn wait_for_first_publish_underscore() {
      // Counter for number of tries before the package is "published"
      let arc: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
-@@ -3094,7 +3094,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
+@@ -3113,7 +3114,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
      p.cargo("build").with_status(0).run();
  }
  
@@ -584,7 +585,7 @@ index 7771296..2f681d9 100644
  fn wait_for_subsequent_publish() {
      // Counter for number of tries before the package is "published"
      let arc: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
-@@ -3187,7 +3187,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
+@@ -3206,7 +3207,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
      p.cargo("check").with_status(0).run();
  }
  
@@ -593,7 +594,7 @@ index 7771296..2f681d9 100644
  fn skip_wait_for_publish() {
      // Intentionally using local registry so the crate never makes it to the index
      let registry = registry::init();
-@@ -3231,7 +3231,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
+@@ -3250,7 +3251,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
          .run();
  }
  
@@ -602,7 +603,7 @@ index 7771296..2f681d9 100644
  fn timeout_waiting_for_publish() {
      // Publish doesn't happen within the timeout window.
      let registry = registry::RegistryBuilder::new()
-@@ -3283,7 +3283,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
+@@ -3302,7 +3303,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
          .run();
  }
  
@@ -611,7 +612,16 @@ index 7771296..2f681d9 100644
  fn timeout_waiting_for_dependency_publish() {
      // Publish doesn't happen within the timeout window.
      let registry = registry::RegistryBuilder::new()
-@@ -3383,7 +3383,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
+@@ -3402,7 +3403,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
+         .run();
+ }
+ 
+-#[cargo_test]
++#[allow(dead_code)]
+ fn package_selection() {
+     let registry = registry::RegistryBuilder::new().http_api().build();
+     let p = project()
+@@ -3516,7 +3517,7 @@ See https://github.com/rust-lang/cargo/issues/10948 for more information about t
          .run();
  }
  

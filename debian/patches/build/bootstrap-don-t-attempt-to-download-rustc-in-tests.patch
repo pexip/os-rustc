@@ -1,0 +1,30 @@
+From: =?utf-8?q?Fabian_Gr=C3=BCnbichler?= <debian@fabian.gruenbichler.email>
+Date: Sat, 11 Jan 2025 16:37:16 +0100
+Subject: bootstrap: don't attempt to download rustc in tests
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+the tests use a default config, so we need to manually override this
+option..
+
+Signed-off-by: Fabian Grünbichler <debian@fabian.gruenbichler.email>
+---
+ src/bootstrap/src/core/config/config.rs | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/bootstrap/src/core/config/config.rs b/src/bootstrap/src/core/config/config.rs
+index 7c19ff1..8baa291 100644
+--- a/src/bootstrap/src/core/config/config.rs
++++ b/src/bootstrap/src/core/config/config.rs
+@@ -1435,6 +1435,10 @@ impl Config {
+             build.cargo = build.cargo.take().or(std::env::var_os("CARGO").map(|p| p.into()));
+             // Debian: don't optimize compiler-rt, the bundled sources are not available..
+             build.optimized_compiler_builtins = Some(false);
++
++            if let Some(ref mut rust) = toml.rust {
++                rust.download_rustc = Some(StringOrBool::Bool(false));
++            }
+         }
+ 
+         if let Some(include) = &toml.profile {

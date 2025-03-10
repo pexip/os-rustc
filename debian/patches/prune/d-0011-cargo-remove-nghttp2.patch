@@ -8,13 +8,13 @@ Last-Update: 2023-05-17
 
 Forwarded: not-needed
 ---
- vendor/curl-sys-0.4.76+curl-8.10.1/Cargo.toml | 2 +-
+ vendor/curl-sys-0.4.77+curl-8.10.1/Cargo.toml | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/vendor/curl-sys-0.4.76+curl-8.10.1/Cargo.toml b/vendor/curl-sys-0.4.76+curl-8.10.1/Cargo.toml
-index 8a30cdc..43b9be2 100644
---- a/vendor/curl-sys-0.4.76+curl-8.10.1/Cargo.toml
-+++ b/vendor/curl-sys-0.4.76+curl-8.10.1/Cargo.toml
+diff --git a/vendor/curl-sys-0.4.77+curl-8.10.1/Cargo.toml b/vendor/curl-sys-0.4.77+curl-8.10.1/Cargo.toml
+index 1133f00..1d2ec68 100644
+--- a/vendor/curl-sys-0.4.77+curl-8.10.1/Cargo.toml
++++ b/vendor/curl-sys-0.4.77+curl-8.10.1/Cargo.toml
 @@ -61,7 +61,7 @@ version = "0.3.3"
  [features]
  default = ["ssl"]

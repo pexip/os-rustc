@@ -6,14 +6,14 @@ Forwarded: not-needed
 
 ===================================================================
 ---
- src/bootstrap/src/core/builder.rs | 12 ++++++++++++
+ src/bootstrap/src/core/builder/cargo.rs | 12 ++++++++++++
  1 file changed, 12 insertions(+)
 
-diff --git a/src/bootstrap/src/core/builder.rs b/src/bootstrap/src/core/builder.rs
-index 48a73a6..6c08222 100644
---- a/src/bootstrap/src/core/builder.rs
-+++ b/src/bootstrap/src/core/builder.rs
-@@ -1652,6 +1652,18 @@ impl<'a> Builder<'a> {
+diff --git a/src/bootstrap/src/core/builder/cargo.rs b/src/bootstrap/src/core/builder/cargo.rs
+index e1e19fd..0e53660 100644
+--- a/src/bootstrap/src/core/builder/cargo.rs
++++ b/src/bootstrap/src/core/builder/cargo.rs
+@@ -625,6 +625,18 @@ impl Builder<'_> {
          hostflags.arg("-Zunstable-options");
          hostflags.arg("--check-cfg=cfg(bootstrap)");
  

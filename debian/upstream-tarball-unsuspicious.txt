@@ -12,6 +12,7 @@ src/doc/reference/src/items/modules.md
 src/doc/reference/src/types-redirect.html
 src/tools/cargo/src/doc/src/reference/registries.md
 src/tools/clippy/book/src/lint_configuration.md
+tests/rustdoc-ui/doctest/auxiliary/relative-dir.md
 vendor/base64-*/src/lib.rs
 vendor/chrono-*/src/lib.rs
 vendor/crunchy-0.2.2/src/lib.rs
@@ -22,6 +23,7 @@ vendor/pasetors-*/src/footer.rs
 vendor/pasetors-*/src/version2.rs
 vendor/pasetors-*/src/version3.rs
 vendor/pasetors-*/src/version4.rs
+vendor/syn-2.*/src/gen/token.css
 vendor/term-*/src/terminfo/parser/names.rs
 vendor/wit-component-*/libdl.so
 
@@ -49,8 +51,10 @@ src/doc/edition-guide/src/editions/index.md
 src/doc/edition-guide/src/rust-2018/index.md
 src/doc/edition-guide/src/rust-2021/disjoint-capture-in-closures.md
 src/doc/edition-guide/src/rust-2021/prelude.md
+src/doc/edition-guide/src/rust-2021/raw-lifetimes.md
 src/doc/embedded-book/src/*/*.md
 src/doc/nomicon/src/intro.md
+src/doc/reference/README.md
 src/doc/reference/docs/authoring.md
 src/doc/reference/docs/review-policy.md
 src/doc/reference/src/conditional-compilation.md
@@ -72,6 +76,7 @@ src/doc/rustc/src/platform-support/armv7-unknown-linux-uclibceabi.md
 src/doc/rustc/src/platform-support/armv7-unknown-linux-uclibceabihf.md
 src/doc/rustc/src/platform-support/unknown-uefi.md
 src/doc/rustc/src/platform-support/wasm32-wasip1-threads.md
+src/doc/rustc/src/platform-support/wasm32v1-none.md
 src/doc/rustc/src/targets/known-issues.md
 src/doc/rustdoc/src/*.md
 src/doc/style-guide/src/nightly.md
@@ -83,6 +88,7 @@ src/etc/third-party/README.txt
 src/librustdoc/html/highlight/fixtures/sample.html
 src/librustdoc/html/static/scrape-examples-help.md
 src/librustdoc/html/templates/page.html
+src/tools/cargo/crates/cargo-util-schemas/manifest.schema.json
 src/tools/cargo/src/cargo/sources/git/known_hosts.rs
 src/tools/cargo/src/doc/contrib/src/process/release.md
 src/tools/cargo/src/doc/src/guide/continuous-integration.md
@@ -91,6 +97,7 @@ src/tools/cargo/src/doc/src/reference/semver.md
 src/tools/rust-analyzer/crates/hir-def/src/macro_expansion_tests/builtin_fn_macro.rs
 src/tools/rust-analyzer/crates/ide-completion/src/completions/env_vars.rs
 src/tools/rust-analyzer/crates/rust-analyzer/src/diagnostics/to_proto.rs
+src/tools/rust-analyzer/docs/dev/setup.md
 src/tools/rust-analyzer/docs/user/manual.adoc
 src/tools/rustc-perf/LICENSES/Apache-2.0.txt
 src/tools/rustc-perf/LICENSES/MIT.txt
@@ -113,7 +120,7 @@ vendor/*/COPYRIGHT
 vendor/*/Cargo.toml
 vendor/*/FAQ.md
 vendor/*/LICENSE
-vendor/*/LICENSE-MIT
+vendor/*/LICENSE-*
 vendor/*/README.md
 vendor/*/Readme.md
 vendor/*/SPONSORS.md
@@ -146,6 +153,7 @@ vendor/html-escape-*/src/decode/element/decode_impl.rs
 vendor/html-escape-*/src/encode/element/encode_impl.rs
 vendor/humansize-*/src/lib.rs
 vendor/icu_list-*/src/provider/serde_dfa.rs
+vendor/jiff-0.*/tests/tc39_262/span/round.rs
 vendor/kstring-*/benches/clone.rs
 vendor/lazy_static-*/src/lib.rs
 vendor/lexopt-0.*/DESIGN.md
@@ -175,7 +183,6 @@ vendor/spki-*/tests/spki.rs
 vendor/stable_deref_trait-*/src/lib.rs
 vendor/syntect-*/src/html.rs
 vendor/syntect-*/src/parsing/parser.rs
-vendor/tinyvec-*/LICENSE-*.md
 vendor/tracing-subscriber-*/src/fmt/format/json.rs
 vendor/unicase-*/src/lib.rs
 vendor/unicode-normalization-*/src/stream_safe.rs
@@ -198,6 +205,7 @@ src/ci/docker/scripts/qemu-bare-bones-addentropy.c
 src/doc/book/*/ferris.js
 src/doc/book/ferris.js
 src/doc/reference/src/attributes-redirect.html
+src/doc/reference/theme/reference.js
 src/doc/rustc-dev-guide/mermaid-init.js
 src/librustdoc/html/static/.eslintrc.js
 src/librustdoc/html/static/js/*.js
@@ -223,6 +231,7 @@ src/tools/rustc-perf/site/frontend/src/*/*/*/*.vue
 src/tools/rustc-perf/site/frontend/src/*/*/*/*/*.vue
 src/tools/rustc-perf/site/frontend/src/*/*/*/*/*/*.vue
 src/tools/rustc-perf/site/frontend/static/schedule.js
+vendor/mdbook-0.*/src/theme/toc.js.hbs
 
 # rustc-perf benchmark inputs
 src/tools/rustc-perf/collector/compile-benchmarks/cargo-*/src/cargo/core/compiler/timings.js
@@ -374,6 +383,8 @@ src/tools/cargo/src/doc/theme/favicon.png
 src/tools/rust-analyzer/assets/logo-*.svg
 src/tools/rustc-perf/site/frontend/static/favicon-32x32.png
 src/tools/rustc-perf/site/frontend/static/favicon.svg
+vendor/*/logo.png
+vendor/*/logo.svg
 vendor/color-eyre-*/pictures/custom_section.png
 vendor/color-eyre-*/pictures/full.png
 vendor/color-eyre-*/pictures/minimal.png
@@ -382,7 +393,8 @@ vendor/color-spantrace-*/pictures/full.png
 vendor/color-spantrace-*/pictures/minimal.png
 vendor/mdbook-*/src/theme/favicon.png
 vendor/mdbook-*/src/theme/favicon.svg
-vendor/overload-*/logo.png
+vendor/petgraph-0.*/assets/*saurus*.png
+vendor/petgraph-0.*/assets/*saurus*.svg
 vendor/pretty_assertions-*/examples/*.png
 
 # Example code
@@ -457,14 +469,18 @@ tests/rustdoc-gui/src/huge_logo/src/lib.rs
 tests/rustdoc-gui/src/scrape_examples/examples/check-many-*.rs
 tests/rustdoc-js-std/*.js
 tests/rustdoc-js/*.js
+tests/rustdoc-ui/show-coverage-json.stdout
 tests/ui/*/*/*.stderr
 tests/ui/async-await/async-closures/clone-closure.run.stdout
-tests/ui/codemap_tests/huge_multispan_highlight.svg
+tests/ui/codemap_tests/huge_multispan_highlight.ascii.svg
+tests/ui/codemap_tests/huge_multispan_highlight.unicode.svg
 tests/ui/diagnostic-flags/colored-session-opt-error.svg
 tests/ui/error-emitter/highlighting.svg
 tests/ui/error-emitter/highlighting.windows.svg
 tests/ui/error-emitter/multiline-multipart-suggestion.svg
 tests/ui/error-emitter/multiline-multipart-suggestion.windows.svg
+tests/ui/error-emitter/unicode-output.svg
+tests/ui/impl-trait/diagnostics/highlight-difference-between-expected-trait-and-found-trait.svg
 tests/ui/macros/not-utf8.bin
 tests/ui/suggestions/incorrect-variant-literal.svg
 tests/ui/traits/object/print_vtable_sizes.stdout
@@ -476,6 +492,7 @@ vendor/basic-toml-*/tests/valid/table-whitespace.toml
 vendor/borsh-1.5.1/tests/roundtrip/test_cow.rs
 vendor/bstr-*/src/unicode/fsm/*.dfa
 vendor/cargo_metadata*/tests/test_samples.rs
+vendor/chalk-solve-0.*/src/infer/test.rs
 vendor/content_inspector-*/testdata/*
 vendor/der-*/tests/examples/spki.der
 vendor/diff-*/tests/data/gitignores.chars.diff
@@ -512,12 +529,13 @@ vendor/idna-*/tests/punycode_tests.json
 vendor/im-rc-*/proptest-regressions/*.txt
 vendor/im-rc-*/proptest-regressions/*/*.txt
 vendor/im-rc-*/proptest-regressions/ord/map
+vendor/jiff-0.*/src/tz/snapshots/*.snap
+vendor/jiff-0.*/src/tz/testdata/*.tzif
 vendor/lsp-types-*/tests/tsc-unix.lsif
 vendor/md-5-*/tests/data/*.blb
 vendor/mdbook-*/test_book/src/individual/paragraph.md
 vendor/mdbook-*/test_book/src/individual/table.md
 vendor/mdbook-*/tests/searchindex_fixture.json
-vendor/memchr-*/src/tests/*.json
 vendor/minifier-*/tests/files/main.js
 vendor/minifier-*/tests/files/minified_main.js
 vendor/minifier-*/tests/files/test.json
@@ -530,6 +548,7 @@ vendor/pasetors-*/test_vectors/*.json
 vendor/pasetors-*/test_vectors/*/*.json
 vendor/pem-rfc7468-*/tests/examples/*.der
 vendor/pem-rfc7468-*/tests/examples/*.pem
+vendor/petgraph-0.*/tests/res/graph_*.txt
 vendor/pkcs8-*/tests/examples/*.der
 vendor/pkcs8-*/tests/examples/*.pem
 vendor/pkcs8-*/tests/private_key.rs
@@ -552,6 +571,8 @@ vendor/rusqlite-*/test.csv
 vendor/rustc-demangle-*/src/lib.rs
 vendor/rustc-demangle-*/src/v0-large-test-symbols/early-recursion-limit
 vendor/ruzstd-0.7.2/test_fixtures/abc.txt.zst
+vendor/schemars-0.*/examples/*.schema.json
+vendor/schemars-0.*/tests/expected/*.json
 vendor/sec1-*/tests/examples/p256-priv.der
 vendor/sec1-*/tests/examples/p256-priv.pem
 vendor/serde_json-*/tests/lexical/parse.rs
@@ -578,7 +599,7 @@ vendor/wit-component-*/tests/components/link-dl-openable-builtin-libdl-with-unus
 vendor/wit-component-*/tests/interfaces/*.wat
 vendor/wit-parser-*/tests/ui/*.wit.json
 vendor/wit-parser-*/tests/ui/kinds-of-deps/deps/e.wasm
-vendor/wit-parser-0.219.0/tests/ui/parse-fail/conflicting-package.wit.result
+vendor/wit-parser-0.219.*/tests/ui/parse-fail/conflicting-package.wit.result
 vendor/zip-*/tests/data/*.zip
 
 # Compromise, ideally we'd autogenerate these
@@ -619,6 +640,14 @@ vendor/wit-component-*/tests/components/error-link-missing-symbols/error.txt
 src/librustdoc/html/static/fonts/*.woff2
 
 # file brokenness (detected as Algol source code)
+vendor/protobuf-support-3.*/src/lexer/tokenizer.rs
+vendor/gix-validate-0.*/src/tag.rs
+vendor/handlebars-6.*/examples/block_helper_macro_let.rs
+vendor/handlebars-6.*/tests/block_context.rs
+vendor/handlebars-6.*/tests/whitespace.rs
+vendor/jiff-0.*/src/fmt/offset.rs
+vendor/schemars_derive-0.*/src/attr/schemars_to_serde.rs
+vendor/schemars_derive-0.*/src/lib.rs
 compiler/rustc_builtin_macros/src/global_allocator.rs
 compiler/rustc_codegen_gcc/build_system/src/utils.rs
 compiler/rustc_driver/src/lib.rs
@@ -644,8 +673,8 @@ src/tools/rust-analyzer/crates/ide-assists/src/handlers/number_representation.rs
 src/tools/rust-analyzer/crates/ide-db/src/syntax_helpers/format_string_exprs.rs
 src/tools/rust-analyzer/crates/parser/src/lib.rs
 src/tools/rust-analyzer/crates/proc-macro-srv/src/tests/utils.rs
-src/tools/rust-analyzer/crates/salsa/src/runtime.rs
-src/tools/rust-analyzer/crates/salsa/src/runtime/local_state.rs
+src/tools/rust-analyzer/crates/ra-salsa/src/runtime.rs
+src/tools/rust-analyzer/crates/ra-salsa/src/runtime/local_state.rs
 src/tools/rust-analyzer/crates/syntax/src/ast/syntax_factory/constructors.rs
 src/tools/rust-analyzer/crates/syntax/src/syntax_editor/mapping.rs
 src/tools/rustfmt/src/formatting.rs
@@ -667,8 +696,8 @@ vendor/base64ct-*/src/*.rs
 vendor/base64ct-*/tests/*.rs
 vendor/bitflags-*/src/tests/*.rs
 vendor/bitflags-*/src/traits.rs
-vendor/blake3-1.5.2/src/test.rs
-vendor/blake3-1.5.2/src/traits.rs
+vendor/blake3-1.*/src/test.rs
+vendor/blake3-1.*/src/traits.rs
 vendor/block-buffer-*/tests/mod.rs
 vendor/camino-*/src/serde_impls.rs
 vendor/ciborium-*/tests/codec.rs
@@ -779,7 +808,7 @@ vendor/regex-automata-*/src/hybrid/dfa.rs
 vendor/regex-automata-*/src/meta/regex.rs
 vendor/regex-automata-*/src/regex.rs
 vendor/rinja-0.*/src/filters/mod.rs
-vendor/rinja-0.3.4/src/filters/builtin.rs
+vendor/rinja-0.3.*/src/filters/builtin.rs
 vendor/rinja_parser-0.*/src/lib.rs
 vendor/rusqlite-*/src/util/sqlite_string.rs
 vendor/rustc-rayon-*/tests/sort-panic-safe.rs
@@ -792,8 +821,6 @@ vendor/sha2-*/src/sha256.rs
 vendor/sha2-*/src/sha512.rs
 vendor/shell-words-*/src/lib.rs
 vendor/shlex-*/src/lib.rs
-vendor/snap-*/src/compress.rs
-vendor/snap-*/src/decompress.rs
 vendor/syn-*/src/attr.rs
 vendor/syn-*/src/custom_punctuation.rs
 vendor/syn-*/src/data.rs

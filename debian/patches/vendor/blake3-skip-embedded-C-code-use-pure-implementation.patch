@@ -9,16 +9,16 @@ Forwarded: not-needed
 
 Signed-off-by: Fabian Grünbichler <git@fabian.gruenbichler.email>
 ---
- vendor/blake3-1.5.2/Cargo.toml |  2 +-
- vendor/blake3-1.5.2/build.rs   | 18 ++++++++++++------
+ vendor/blake3-1.5.4/Cargo.toml |  2 +-
+ vendor/blake3-1.5.4/build.rs   | 18 ++++++++++++------
  2 files changed, 13 insertions(+), 7 deletions(-)
 
-diff --git a/vendor/blake3-1.5.2/Cargo.toml b/vendor/blake3-1.5.2/Cargo.toml
-index fe60aa7..5bc5644 100644
---- a/vendor/blake3-1.5.2/Cargo.toml
-+++ b/vendor/blake3-1.5.2/Cargo.toml
-@@ -101,7 +101,7 @@ version = "3.8.0"
- version = "1.0.4"
+diff --git a/vendor/blake3-1.5.4/Cargo.toml b/vendor/blake3-1.5.4/Cargo.toml
+index b4b0e98..a801d25 100644
+--- a/vendor/blake3-1.5.4/Cargo.toml
++++ b/vendor/blake3-1.5.4/Cargo.toml
+@@ -109,7 +109,7 @@ version = "3.8.0"
+ version = "1.1.12"
  
  [features]
 -default = ["std"]
@@ -26,11 +26,11 @@ index fe60aa7..5bc5644 100644
  mmap = [
      "std",
      "dep:memmap2",
-diff --git a/vendor/blake3-1.5.2/build.rs b/vendor/blake3-1.5.2/build.rs
-index af5805d..e568aa2 100644
---- a/vendor/blake3-1.5.2/build.rs
-+++ b/vendor/blake3-1.5.2/build.rs
-@@ -271,7 +271,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
+diff --git a/vendor/blake3-1.5.4/build.rs b/vendor/blake3-1.5.4/build.rs
+index 57f72b7..952b864 100644
+--- a/vendor/blake3-1.5.4/build.rs
++++ b/vendor/blake3-1.5.4/build.rs
+@@ -275,7 +275,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
      }
  
      if is_x86_64() || is_x86_32() {
@@ -43,7 +43,7 @@ index af5805d..e568aa2 100644
          if is_x86_32() || should_prefer_intrinsics() || is_pure() || support == NoCompiler {
              build_sse2_sse41_avx2_rust_intrinsics();
          } else {
-@@ -308,11 +312,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
+@@ -312,11 +316,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
      println!("cargo:rerun-if-env-changed=CFLAGS");
  
      // Ditto for source files, though these shouldn't change as often.
