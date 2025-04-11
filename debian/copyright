@@ -1929,6 +1929,9 @@ Comment: see https://github.com/gimli-rs/gimli
 
 
 Files:
+ extra/git2-*/*
+ extra/git2-curl-*/*
+ extra/libgit2-sys-*/*
  vendor/git2-*/*
  vendor/git2-curl-*/*
  vendor/libgit2-sys-*/*
