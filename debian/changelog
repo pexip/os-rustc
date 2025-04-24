@@ -1,3 +1,11 @@
+rustc (1.85.0+dfsg3-1) unstable; urgency=medium
+
+  * backport fix for gix-features CVE-2025-31130
+  * rust-lldb: fix lldb version (Closes: #1100950)
+  * cherry-pick fix for crossbeam-channel RUSTSEC-2025-0024
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Thu, 24 Apr 2025 17:47:57 +0200
+
 rustc (1.85.0+dfsg2-3) unstable; urgency=medium
 
   * baseline: enable SSE2 for i386 build (Closes: #1095862)
