@@ -1,0 +1,42 @@
+From: Petros Angelatos <petrosagg@gmail.com>
+Date: Tue, 8 Apr 2025 22:37:25 +0300
+Subject: RUSTSEC-2025-0024: sync::mpsc: prevent double free on `Drop`
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+This PR is fixing a regression introduced by #121646 that can lead to a
+double free when dropping the channel.
+
+The details of the bug can be found in the corresponding crossbeam PR
+https://github.com/crossbeam-rs/crossbeam/pull/1187
+
+Signed-off-by: Petros Angelatos <petrosagg@gmail.com>
+FG: cherry-pick from upstream b9e2ac5c7b1d6bb3b6f5fdfe0819eaf7e95bf7ff
+FG: drop test context
+Signed-off-by: Fabian Grünbichler <git@fabian.gruenbichler.email>
+---
+ library/std/src/sync/mpmc/list.rs | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/library/std/src/sync/mpmc/list.rs b/library/std/src/sync/mpmc/list.rs
+index d88914f..66444af1 100644
+--- a/library/std/src/sync/mpmc/list.rs
++++ b/library/std/src/sync/mpmc/list.rs
+@@ -564,9 +564,15 @@ impl<T> Channel<T> {
+             // In that case, just wait until it gets initialized.
+             while block.is_null() {
+                 backoff.spin_heavy();
+-                block = self.head.block.load(Ordering::Acquire);
++                block = self.head.block.swap(ptr::null_mut(), Ordering::AcqRel);
+             }
+         }
++        // After this point `head.block` is not modified again and it will be deallocated if it's
++        // non-null. The `Drop` code of the channel, which runs after this function, also attempts
++        // to deallocate `head.block` if it's non-null. Therefore this function must maintain the
++        // invariant that if a deallocation of head.block is attemped then it must also be set to
++        // NULL. Failing to do so will lead to the Drop code attempting a double free. For this
++        // reason both reads above do an atomic swap instead of a simple atomic load.
+ 
+         unsafe {
+             // Drop all messages between head and tail and deallocate the heap-allocated blocks.

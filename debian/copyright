@@ -1927,11 +1927,15 @@ Copyright:
 License: Apache-2.0 or MIT
 Comment: see https://github.com/gimli-rs/gimli
 
+FIles: extra/sha1-checked-*/*
+Copyright: 2024 RustCrypto Developers
+License: MIT or Apache-2.0
+Comment: see https://github.com/RustCrypto/hashes
 
 Files:
- extra/git2-*/*
- extra/git2-curl-*/*
- extra/libgit2-sys-*/*
+ extra/git2/*
+ extra/git2-curl/*
+ extra/libgit2-sys/*
  vendor/git2-*/*
  vendor/git2-curl-*/*
  vendor/libgit2-sys-*/*

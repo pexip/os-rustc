@@ -46,3 +46,5 @@ build/bootstrap-don-t-attempt-to-download-rustc-in-tests.patch
 behaviour/proc-macro-srv-make-usage-of-RTLD_DEEPBIND-portable.patch
 bootstrap/bootstrap-revert-cross-build-breaking-change.patch
 vendor/cargo-update-git2-bindings.patch
+vendor/gitoxide-backport-fix-for-CVE-2025-31130.patch
+upstream/RUSTSEC-2025-0024-sync-mpsc-prevent-double-free-on-Drop.patch
