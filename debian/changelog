@@ -1,3 +1,9 @@
+rustc (1.85.0+dfsg3-1+pexip25u1) pexip-trixie; urgency=medium
+
+  * New upstream release
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Fri, 16 May 2025 10:49:08 +0100
+
 rustc (1.85.0+dfsg3-1) unstable; urgency=medium
 
   * backport fix for gix-features CVE-2025-31130
