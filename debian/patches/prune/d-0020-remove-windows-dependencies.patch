@@ -153,10 +153,10 @@ index 092905f..bfb0700 100644
  default = ['backtrace']
  backtrace = ['addr2line', 'miniz_oxide', 'object', 'ruzstd']
 diff --git a/src/bootstrap/Cargo.toml b/src/bootstrap/Cargo.toml
-index d8775a6..3d16075 100644
+index 68e0591..f56f1dc 100644
 --- a/src/bootstrap/Cargo.toml
 +++ b/src/bootstrap/Cargo.toml
-@@ -64,21 +64,6 @@ xz2 = "0.1"
+@@ -66,21 +66,6 @@ xz2 = "0.1"
  # Dependencies needed by the build-metrics feature
  sysinfo = { version = "0.33.0", default-features = false, optional = true, features = ["system"] }
  

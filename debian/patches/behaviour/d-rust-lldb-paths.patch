@@ -11,7 +11,7 @@ Forwarded: not-needed
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/src/etc/rust-lldb b/src/etc/rust-lldb
-index bce72f1..38e76c2 100755
+index bce72f1..a45e0bc 100755
 --- a/src/etc/rust-lldb
 +++ b/src/etc/rust-lldb
 @@ -7,10 +7,10 @@ set -e
