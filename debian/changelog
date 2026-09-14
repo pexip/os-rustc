@@ -1,3 +1,9 @@
+rustc (1.85.1+dfsg1-1+pexip25u3+deb13u1) pexip-trixie; urgency=medium
+
+  * New upstream release
+
+ -- Huw Jones <huw@pexip.com>  Mon, 14 Sep 2026 15:49:14 +0100
+
 rustc (1.85.1+dfsg1-1+deb13u1) trixie; urgency=medium
 
   * New upstream point release 1.85.1 (Closes: #1135220)
