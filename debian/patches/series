@@ -48,3 +48,7 @@ bootstrap/bootstrap-revert-cross-build-breaking-change.patch
 vendor/cargo-update-git2-bindings.patch
 vendor/gitoxide-backport-fix-for-CVE-2025-31130.patch
 upstream/RUSTSEC-2025-0024-sync-mpsc-prevent-double-free-on-Drop.patch
+vendor/tar-CVE-2026-33056.patch
+vendor/tar-CVE-2026-33055.patch
+cargo/CVE-2026-5222-avoid-stripping-.git-suffix-when-for-non-gi.patch
+cargo/CVE-2026-5223-prohibit-unpacking-symlinks-and-other-unexp.patch

@@ -140,7 +140,6 @@ Files-Excluded:
  vendor/cc-1.0.73
  vendor/cc-1.0.98
  vendor/cc-1.0.99
- vendor/cc-1.1.22
  vendor/cfg-if-0.1.10
  vendor/chrono-0.4.19
  vendor/chrono-0.4.38

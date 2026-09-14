@@ -283,7 +283,7 @@ index c32a86c..3c1f918 100644
  [badges.maintenance]
  status = "passively-maintained"
 diff --git a/vendor/curl-0.4.47/Cargo.toml b/vendor/curl-0.4.47/Cargo.toml
-index 580f431..7ac8e91 100644
+index 580f431f..7ac8e91 100644
 --- a/vendor/curl-0.4.47/Cargo.toml
 +++ b/vendor/curl-0.4.47/Cargo.toml
 @@ -144,14 +144,3 @@ optional = true

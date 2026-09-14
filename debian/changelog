@@ -1,3 +1,13 @@
+rustc (1.85.1+dfsg1-1+deb13u1) trixie; urgency=medium
+
+  * New upstream point release 1.85.1 (Closes: #1135220)
+    - fix doctest merging with edition 2024
+    - fix rustdoc on 32-bit ARM
+  * backport tar CVE-2026-33055/CVE-2026-33056 fixes (Closes: #1135225)
+  * cherry-pick cargo CVE-2026-5222/CVE-2026-5223 fixes
+
+ -- Fabian Grünbichler <debian@fabian.gruenbichler.email>  Fri, 24 Jul 2026 18:02:33 +0200
+
 rustc (1.85.0+dfsg3-1+pexip25u2) pexip-trixie; urgency=medium
 
   * Trixie build for product distribution
